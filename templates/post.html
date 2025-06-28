@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{.Title}} - {{.SiteTitle}}</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
   </head>
   <body>
     <div class="container">
@@ -12,11 +16,7 @@
         <a href="{{.BaseURL}}"> Home </a>
         <h1>{{.Title}}</h1>
         <div class="post-meta">
-          {{range .Tags}}
-          <a href="/tag/{{.Slug}}/" class="tag-link"
-            ><span class="tag">{{.Name}}</span></a
-          >
-          {{end}} {{if .Author}}
+          {{if .Author}}
           <span class="author">By {{.Author}}</span>
           {{end}}
           <span class="post-date"
@@ -28,19 +28,26 @@
           >
           {{end}}
         </div>
-      </header>
-      <main class="prose">{{.HTMLContent}}</main>
-
-      {{if .LinkedFrom}}
-      <div class="backlinks">
-        <h3>Linked From</h3>
-        <ul>
-          {{range .LinkedFrom}}
-          <li><a href="{{.URL}}">{{.Title}}</a></li>
+        <div class="tags-container">
+          {{range .Tags}}
+          <a href="/tag/{{.Slug}}/" class="tag-link"
+            ><span class="tag">#{{.Name}}</span></a
+          >
           {{end}}
-        </ul>
-      </div>
-      {{end}}
+        </div>
+      </header>
+      <main class="prose">
+        {{.HTMLContent}} {{if .LinkedFrom}}
+        <div class="backlinks">
+          <h3>Linked From</h3>
+          <ul>
+            {{range .LinkedFrom}}
+            <li><a href="{{.URL}}">{{.Title}}</a></li>
+            {{end}}
+          </ul>
+        </div>
+        {{end}}
+      </main>
 
       <footer>
         <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>

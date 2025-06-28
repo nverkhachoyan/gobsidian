@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{.SiteTitle}}</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
   </head>
   <body>
     <div class="container">
@@ -15,45 +19,94 @@
         </p>
       </header>
 
-      {{if .Tags}}
-      <nav class="tags-nav">
-        <h2>Tags</h2>
-        <ul>
-          {{range .Tags}}
-          <li><a href="/tag/{{.Slug}}/">{{.Name}}</a></li>
-          {{end}}
-        </ul>
-      </nav>
-      {{end}}
+      <div class="content-wrapper">
+        <aside>
+          <div class="left-sidebar-item">
+            <h5 class="left-sidebar-item-title">Who am I?</h5>
+            <div class="left-sidebar-item-content">
+              <p>Somebody that you used to know</p>
+            </div>
+          </div>
 
-      <main>
-        {{if .Posts}}
-        <div class="post-grid">
-          {{range .Posts}}
-          <div class="post-card">
-            <h2><a href="{{.URL}}">{{.Title}}</a></h2>
-            <div class="post-card-meta">
-              {{range .Tags}}
-              <a href="/tag/{{.Slug}}/" class="tag-link">
-                <span class="tag">{{.Name}}</span>
-              </a>
-              {{end}} {{if .Author}}
-              <span class="author">{{.Author}}</span>
-              {{end}}
-              <span class="post-date">{{.Date.Format "January 2, 2006"}}</span>
+          {{if .FileTree}}
+          <div class="left-sidebar-item folder-tree-container">
+            <h5 class="left-sidebar-item-title">Folders</h5>
+            <div class="left-sidebar-item-content">
+              <nav class="file-tree-nav">
+                {{template "folder_tree" .FileTree}}
+              </nav>
+            </div>
+          </div>
+          {{end}} {{define "folder_tree"}}
+          <ul class="folder-list">
+            {{range .Children}}
+            <li class="folder-item">
+              <div class="folder-item-header">
+                <span class="folder-toggle">
+                  <i class="fas fa-folder folder-icon-closed"></i>
+                  <i class="fas fa-folder-open folder-icon-open"></i>
+                </span>
+                <a href="/{{.Path}}/" class="folder-name">{{.Name}}</a>
+              </div>
+              <div class="folder-children-container">
+                {{template "folder_tree" .}}
+              </div>
+            </li>
+            {{end}} {{range .Posts}}
+            <li class="file-item">
+              <i class="far fa-file-alt"></i>
+              <a href="{{.URL}}">{{.Title}}</a>
+            </li>
+            {{end}}
+          </ul>
+          {{end}} {{if .Tags}}
+          <div class="left-sidebar-item">
+            <h5 class="left-sidebar-item-title">Tags</h5>
+            <div class="left-sidebar-item-content">
+              <nav class="tags-nav">
+                <ul>
+                  {{range .Tags}}
+                  <li><a href="/tag/{{.Slug}}/">#{{.Name}}</a></li>
+                  {{end}}
+                </ul>
+              </nav>
             </div>
           </div>
           {{end}}
-        </div>
-        {{else}}
-        <p>No blog posts found yet.</p>
-        {{end}}
-      </main>
+        </aside>
+
+        <main>
+          {{if .Posts}}
+          <div class="post-grid">
+            {{range .Posts}}
+            <div class="post-card">
+              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+              <div class="post-card-meta">
+                {{range .Tags}}
+                <a href="/tag/{{.Slug}}/" class="tag-link">
+                  <span class="tag">{{.Name}}</span>
+                </a>
+                {{end}} {{if .Author}}
+                <span class="author">{{.Author}}</span>
+                {{end}}
+                <span class="post-date"
+                  >{{.Date.Format "January 2, 2006"}}</span
+                >
+              </div>
+            </div>
+            {{end}}
+          </div>
+          {{else}}
+          <p>No blog posts found yet.</p>
+          {{end}}
+        </main>
+      </div>
 
       <footer>
         <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
       </footer>
     </div>
     <script src="/js/previews.js"></script>
+    <script src="/js/folder-nav.js"></script>
   </body>
 </html>

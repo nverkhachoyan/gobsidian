@@ -1,10 +1,6 @@
-# Markdown syntax guide
-
-  
+## Markdown syntax guide
 
 ## Headers
-
-  
 
 # This is a Heading h1
 
@@ -12,54 +8,37 @@
 
 ###### This is a Heading h6
 
-  
-
 ## Emphasis
 
-  
-
-*This text will be italic*
+_This text will be italic_
 
 _This will also be italic_
 
-  
-
 **This text will be bold**
 
-__This will also be bold__
-
-  
+**This will also be bold**
 
 _You **can** combine them_
 
-  
 [[Welcome to my blog]]
 
 ## Lists
 
-  
-
 ### Unordered
 
-  
+- Item 1
 
-* Item 1
+- Item 2
 
-* Item 2
+- Item 2a
 
-* Item 2a
+- Item 2b
 
-* Item 2b
+- Item 3a
 
-* Item 3a
-
-* Item 3b
-
-  
+- Item 3b
 
 ### Ordered
-
-  
 
 1. Item 1
 
@@ -71,39 +50,23 @@ _You **can** combine them_
 
 5. Item 3b
 
-  
-
 ## Images
-
-  
 
 ![This is an alt text.](/image/sample.webp "This is a sample image.")
 
-  
-
 ## Links
-
-  
 
 You may be using [Markdown Live Preview](https://markdownlivepreview.com/).
 
-  
-
 ## Blockquotes
-
-  
 
 > Markdown is a lightweight markup language with plain-text-formatting syntax, created in 2004 by John Gruber with Aaron Swartz.
 
 >
 
->> Markdown is often used to format readme files, for writing messages in online discussion forums, and to create rich text using a plain text editor.
-
-  
+> > Markdown is often used to format readme files, for writing messages in online discussion forums, and to create rich text using a plain text editor.
 
 ## Tables
-
-  
 
 | Left columns | Right columns |
 
@@ -115,11 +78,7 @@ You may be using [Markdown Live Preview](https://markdownlivepreview.com/).
 
 | left baz | right baz |
 
-  
-
 ## Blocks of code
-
-  
 
 ```
 
@@ -129,10 +88,6 @@ alert(message);
 
 ```
 
-  
-
 ## Inline code
-
-  
 
 This web site is using `markedjs/marked`.

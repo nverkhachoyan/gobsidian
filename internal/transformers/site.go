@@ -33,6 +33,7 @@ type SiteTransformer struct {
 	IndexExecutor    *executors.IndexExecutor
 	TagExecutor      *executors.TagExecutor
 	PreviewExecutor  *executors.PreviewExecutor
+	FolderExecutor   *executors.FolderExecutor
 }
 
 func NewSiteTransformer(c config.Config,
@@ -43,6 +44,7 @@ func NewSiteTransformer(c config.Config,
 	ie *executors.IndexExecutor,
 	te *executors.TagExecutor,
 	preve *executors.PreviewExecutor,
+	fe *executors.FolderExecutor,
 ) (*SiteTransformer, error) {
 	templates, err := template.ParseGlob("templates/*.html")
 	if err != nil {
@@ -58,6 +60,7 @@ func NewSiteTransformer(c config.Config,
 		IndexExecutor:    ie,
 		TagExecutor:      te,
 		PreviewExecutor:  preve,
+		FolderExecutor:   fe,
 	}, nil
 }
 
@@ -86,13 +89,26 @@ func (g *SiteTransformer) GenerateSite() error {
 		(*post).HTMLContent = template.HTML(markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer))
 	}
 
-	// --- Step 4: Execute the templates ---
-	numberOfTags, err := g.executeTemplates(posts)
+	// --- Step 4: Create subdirectories ---
+	fileTree, err := g.buildFolderTreeAndCreateDirs(posts)
+	if err != nil {
+		return fmt.Errorf("failed to create subdirectories: %w", err)
+	}
+
+	for _, child := range fileTree.Children {
+		fmt.Printf("Child: %s\n", child.Name)
+		for _, post := range child.Posts {
+			fmt.Printf("Post: %s\n", post.Title)
+		}
+	}
+
+	// --- Step 5: Execute the templates ---
+	numberOfTags, err := g.executeTemplates(posts, fileTree)
 	if err != nil {
 		return err
 	}
 
-	// --- Step 5: Copy Assets ---
+	// --- Step 6: Copy Assets ---
 	if err := g.copyAssets(posts); err != nil {
 		g.Logger.Warn("Failed to copy some images", "error", err)
 	}
@@ -114,6 +130,69 @@ func (g *SiteTransformer) replaceObsidianImageLinks(body string) string {
 		}
 		return match
 	})
+}
+
+func (g *SiteTransformer) buildFolderTreeAndCreateDirs(posts []*models.BlogPost) (*models.Folder, error) {
+	root := &models.Folder{
+		Name:     "Home",
+		Path:     "",
+		Posts:    []*models.BlogPost{},
+		Children: make(map[string]*models.Folder),
+	}
+
+	for _, post := range posts {
+		if post.RelativePath == "" || post.RelativePath == "." {
+			root.Posts = append(root.Posts, post)
+			continue
+		}
+
+		parts := strings.Split(post.RelativePath, string(filepath.Separator))
+		currentNode := root
+
+		for _, part := range parts {
+			if part == "" {
+				continue
+			}
+
+			if _, ok := currentNode.Children[part]; !ok {
+				childPath := filepath.ToSlash(filepath.Join(currentNode.Path, part))
+
+				postDir := filepath.Join(g.Config.OutputDirectory, childPath)
+				if err := os.MkdirAll(postDir, 0755); err != nil {
+					return nil, fmt.Errorf("failed to create post subdirectory %s: %w", postDir, err)
+				}
+				previewDir := filepath.Join(g.Config.OutputDirectory, "previews", childPath)
+				if err := os.MkdirAll(previewDir, 0755); err != nil {
+					return nil, fmt.Errorf("failed to create preview subdirectory %s: %w", previewDir, err)
+				}
+
+				currentNode.Children[part] = &models.Folder{
+					Name:     part,
+					Path:     childPath,
+					Posts:    []*models.BlogPost{},
+					Children: make(map[string]*models.Folder),
+				}
+			}
+			currentNode = currentNode.Children[part]
+		}
+
+		currentNode.Posts = append(currentNode.Posts, post)
+	}
+
+	sortFolderTree(root)
+	return root, nil
+}
+
+func sortFolderTree(folder *models.Folder) {
+	// Sort posts in the current folder alphabetically by title
+	sort.Slice(folder.Posts, func(i, j int) bool {
+		return folder.Posts[i].Title < folder.Posts[j].Title
+	})
+
+	// Recurse into children
+	for _, child := range folder.Children {
+		sortFolderTree(child)
+	}
 }
 
 func (g *SiteTransformer) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, titleToPost map[string]*models.BlogPost) string {
@@ -156,7 +235,7 @@ func (g *SiteTransformer) enrichHashtagsWithLinks(body string) string {
 	})
 }
 
-func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost) (int, error) {
+func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost, fileTree *models.Folder) (int, error) {
 	tagsMap := make(map[string]*models.Tag)
 	for _, pd := range blogPosts {
 		for _, tag := range pd.Tags {
@@ -197,11 +276,29 @@ func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost) (int, e
 		}
 	}
 
-	if err := g.IndexExecutor.ExecuteIndexPage(blogPosts, tags); err != nil {
+	// This is new: recursively generate folder pages
+	if err := g.executeFolderTemplates(fileTree, tags); err != nil {
+		g.Logger.Error("Error generating folder pages", "error", err)
+	}
+
+	if err := g.IndexExecutor.ExecuteIndexPage(blogPosts, tags, fileTree); err != nil {
 		return 0, err
 	}
 
 	return len(tags), nil
+}
+
+func (g *SiteTransformer) executeFolderTemplates(folder *models.Folder, allTags []models.Tag) error {
+	if err := g.FolderExecutor.ExecuteFolderPage(folder, allTags); err != nil {
+		return err
+	}
+
+	for _, child := range folder.Children {
+		if err := g.executeFolderTemplates(child, allTags); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (g *SiteTransformer) createOutputDirectories() error {
@@ -227,7 +324,8 @@ func (g *SiteTransformer) discoverAndParsePosts() ([]*models.BlogPost, map[strin
 				return nil
 			}
 
-			post.URL = "/" + post.FileName
+			post.URL = post.RelativePath + "/" + post.FileName
+
 			post.Images = images
 			post.FilePath = path
 			post.LinkedTitles = linkedTitles

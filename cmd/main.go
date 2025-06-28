@@ -51,6 +51,11 @@ func main() {
 		logger.Error("Failed to initialize preview executor", "error", err)
 		os.Exit(1)
 	}
+	folderExecutor, err := executors.NewFolderExecutor(cfg)
+	if err != nil {
+		logger.Error("Failed to initialize folder executor", "error", err)
+		os.Exit(1)
+	}
 
 	markdownRenderer := utils.NewMarkdownRenderer()
 	parser := parsers.NewMarkdownParser(cfg)
@@ -64,6 +69,7 @@ func main() {
 		indexExecutor,
 		tagExecutor,
 		previewExecutor,
+		folderExecutor,
 	)
 	if err != nil {
 		logger.Error("Failed to initialize generator", "error", err)

@@ -34,7 +34,7 @@ func (pe *PostExecutor) ExecutePostPage(p models.BlogPost) error {
 		CurrentYear:  time.Now().Year(),
 	}
 
-	filePath := filepath.Join(outputDir, p.FileName)
+	filePath := filepath.Join(outputDir, p.RelativePath, p.FileName)
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", filePath, err)

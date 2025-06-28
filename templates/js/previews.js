@@ -4,14 +4,17 @@ document.addEventListener("DOMContentLoaded", () => {
   let showTimeout;
   let hideTimeout;
 
-  const hidePreview = () => {
+  const hidePreview = (useTimeout = true) => {
     clearTimeout(showTimeout);
-    hideTimeout = setTimeout(() => {
-      if (previewCard) {
-        previewCard.remove();
-        previewCard = null;
-      }
-    }, 300);
+    hideTimeout = setTimeout(
+      () => {
+        if (previewCard) {
+          previewCard.remove();
+          previewCard = null;
+        }
+      },
+      useTimeout ? 300 : 0
+    );
   };
 
   const showPreview = (e, link) => {
@@ -49,13 +52,18 @@ document.addEventListener("DOMContentLoaded", () => {
           if (previewCard) {
             previewCard.innerHTML = content;
             updateCardPosition(e);
+
+            const closeBtn = previewCard.querySelector(".close-preview-btn");
+            if (closeBtn) {
+              closeBtn.addEventListener("click", () => hidePreview(false));
+            }
           }
         })
         .catch((err) => {
           console.error("Failed to load preview", err);
           if (previewCard) previewCard.remove();
         });
-    }, 500); // 500ms delay before showing
+    }, 500);
   };
 
   internalLinks.forEach((link) => {
@@ -75,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateCardPosition(e) {
     if (!previewCard) return;
 
-    const cardWidth = 300; // a fixed width
+    const cardWidth = 300;
     previewCard.style.width = `${cardWidth}px`;
     previewCard.style.position = "absolute";
     previewCard.style.top = `${e.pageY + 15}px`;

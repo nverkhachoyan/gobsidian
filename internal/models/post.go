@@ -24,6 +24,7 @@ type BlogPost struct {
 	Images       []string
 	FilePath     string
 	Tags         []Tag
+	RelativePath string
 	LinkedFrom   []Link
 	LinkedTitles []string
 }
@@ -36,4 +37,11 @@ type Link struct {
 type Tag struct {
 	Name string
 	Slug string
+}
+
+type Folder struct {
+	Name     string
+	Path     string
+	Posts    []*BlogPost
+	Children map[string]*Folder
 }

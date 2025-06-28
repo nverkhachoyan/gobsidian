@@ -68,14 +68,21 @@ func (p *MarkdownParser) ParseBlogPost(filePath string) (models.BlogPost, []stri
 		htmlFileName = "post-" + time.Now().Format("20060102150405") + ".html"
 	}
 
+	inputDir := strings.TrimPrefix(p.Config.InputDirectory, "./")
+	relativePath := strings.TrimPrefix(filePath, inputDir)
+
+	relativePathWithoutName := strings.TrimRight(relativePath, processedFrontmatter.title+".md")
+	relativePathWithoutName = strings.TrimRight(relativePathWithoutName, "/")
+
 	return models.BlogPost{
-		Title:     processedFrontmatter.title,
-		FileName:  htmlFileName,
-		RawBody:   bodyWithoutFrontmatter,
-		Date:      processedFrontmatter.date,
-		Author:    frontmatter.Author,
-		UpdatedAt: processedFrontmatter.updatedAt,
-		Tags:      tags,
+		Title:        processedFrontmatter.title,
+		FileName:     htmlFileName,
+		RawBody:      bodyWithoutFrontmatter,
+		Date:         processedFrontmatter.date,
+		Author:       frontmatter.Author,
+		UpdatedAt:    processedFrontmatter.updatedAt,
+		Tags:         tags,
+		RelativePath: relativePathWithoutName,
 	}, images, linkedPosts, nil
 }
 

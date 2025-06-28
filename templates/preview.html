@@ -1,1 +1,16 @@
-<div class="preview-card">{{ .HTMLContent }}</div>
+<div class="preview-card">
+  <div class="preview-controls">
+    <button class="preview-control-btn close-preview-btn" title="Close preview">
+      <i class="fa-solid fa-times"></i>
+    </button>
+    <a
+      href="{{.URL}}"
+      class="preview-control-btn maximize-btn"
+      title="Go to post"
+      ><i class="fa-solid fa-arrow-up-right-from-square"></i
+    ></a>
+  </div>
+  <a class="preview-card-title" href="{{.URL}}">{{.Title}}</a>
+
+  {{ .HTMLContent }}
+</div>

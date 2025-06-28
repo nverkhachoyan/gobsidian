@@ -18,7 +18,7 @@ func NewIndexExecutor(c config.Config) (*IndexExecutor, error) {
 	return &IndexExecutor{Config: c}, nil
 }
 
-func (ie *IndexExecutor) ExecuteIndexPage(posts []*models.BlogPost, tags []models.Tag) error {
+func (ie *IndexExecutor) ExecuteIndexPage(posts []*models.BlogPost, tags []models.Tag, fileTree *models.Folder) error {
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].Date.After(posts[j].Date)
 	})
@@ -29,12 +29,14 @@ func (ie *IndexExecutor) ExecuteIndexPage(posts []*models.BlogPost, tags []model
 		Posts        []*models.BlogPost
 		Tags         []models.Tag
 		CurrentYear  int
+		FileTree     *models.Folder
 	}{
 		SiteTitle:    ie.Config.SiteTitle,
 		SiteSubtitle: ie.Config.SiteSubtitle,
 		Posts:        posts,
 		Tags:         tags,
 		CurrentYear:  time.Now().Year(),
+		FileTree:     fileTree,
 	}
 
 	filePath := filepath.Join(ie.Config.OutputDirectory, "index.html")

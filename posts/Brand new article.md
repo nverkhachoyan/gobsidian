@@ -1,3 +1,9 @@
+---
+title: Brand new article
+date: 2025-06-27
+updatedAt: 2025-06-28
+author: Nver Khachoyan
+---
 Yee
 
 #new
