@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Title}} - {{.SiteTitle}}</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <a href="{{.BaseURL}}"> Home </a>
+        <h1>{{.Title}}</h1>
+        <div class="post-meta">
+          {{range .Tags}}
+          <a href="/tag/{{.Slug}}/" class="tag-link"
+            ><span class="tag">{{.Name}}</span></a
+          >
+          {{end}} {{if .Author}}
+          <span class="author">By {{.Author}}</span>
+          {{end}}
+          <span class="post-date"
+            >Published on {{.Date.Format "January 2, 2006"}}</span
+          >
+          {{if .UpdatedAt}}
+          <span class="post-date updated"
+            >Updated on {{.UpdatedAt.Format "January 2, 2006"}}</span
+          >
+          {{end}}
+        </div>
+      </header>
+      <main class="prose">{{.HTMLContent}}</main>
+
+      {{if .LinkedFrom}}
+      <div class="backlinks">
+        <h3>Linked From</h3>
+        <ul>
+          {{range .LinkedFrom}}
+          <li><a href="{{.URL}}">{{.Title}}</a></li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
+
+      <footer>
+        <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+        <p><a href="{{.BaseURL}}">Back to Home</a></p>
+      </footer>
+    </div>
+    <script src="/js/previews.js"></script>
+  </body>
+</html>

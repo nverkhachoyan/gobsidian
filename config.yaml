@@ -1,0 +1,5 @@
+InputDirectory: ./posts
+OutputDirectory: ./public
+SiteTitle: Nver Khachoyan's Blog
+SiteSubtitle: Random ramblings
+BaseURL: /

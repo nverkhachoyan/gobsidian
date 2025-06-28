@@ -1,0 +1,36 @@
+package executors
+
+import (
+	"fmt"
+	"gobsidian/internal/config"
+	"gobsidian/internal/models"
+	"os"
+	"path/filepath"
+)
+
+type PreviewExecutor struct {
+	Config config.Config
+}
+
+func NewPreviewExecutor(c config.Config) (*PreviewExecutor, error) {
+	return &PreviewExecutor{Config: c}, nil
+}
+
+func (pe *PreviewExecutor) ExecutePreviewPage(p models.BlogPost) error {
+	outputDir := pe.Config.OutputDirectory
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create previews directory: %w", err)
+	}
+
+	filePath := filepath.Join(outputDir, "previews", p.FileName)
+	outFile, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file %s: %w", filePath, err)
+	}
+	defer outFile.Close()
+
+	if err := pe.Config.Templates.ExecuteTemplate(outFile, "preview.html", p); err != nil {
+		return fmt.Errorf("failed to execute preview template: %w", err)
+	}
+	return nil
+}

@@ -1,0 +1,194 @@
+{
+  "main": {
+    "id": "dfeb3c2b7eca9e47",
+    "type": "split",
+    "children": [
+      {
+        "id": "cac25fb7c66d4dff",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f3bab2a2d3a8c097",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Let's see what markdown can do.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Let's see what markdown can do"
+            }
+          },
+          {
+            "id": "be8edc1372dd2888",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "09eb64b9deb6067c",
+    "type": "split",
+    "children": [
+      {
+        "id": "4c2c0be4772ab59b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b887c241b5331f8a",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "7fadedb45a4a7948",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "tag:#new",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "956132b733723065",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "666819f41c1dbb54",
+    "type": "split",
+    "children": [
+      {
+        "id": "d4fa6c907e78f006",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "50b08cdba78b1f21",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Brand new article.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Brand new article"
+            }
+          },
+          {
+            "id": "23c234fb2bbf2fa9",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Brand new article.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Brand new article"
+            }
+          },
+          {
+            "id": "674442d1cce5d2d1",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "2b7a32425f4f9284",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Brand new article.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Brand new article"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "f3bab2a2d3a8c097",
+  "lastOpenFiles": [
+    "Brand new article.md",
+    "Let's see what markdown can do.md",
+    "cigar-denver.png",
+    "Welcome to my blog.md",
+    "What are threads anyway?.md",
+    "Untitled.canvas",
+    "My new article.md",
+    "Science/Science stuff btw.md",
+    "Science",
+    "2020-08-21.md"
+  ]
+}

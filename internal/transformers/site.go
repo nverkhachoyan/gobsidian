@@ -1,0 +1,295 @@
+package transformers
+
+import (
+	"fmt"
+	"html/template"
+	"sync"
+
+	"github.com/charmbracelet/log"
+
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"gobsidian/internal/config"
+	"gobsidian/internal/executors"
+	"gobsidian/internal/models"
+	"gobsidian/internal/parsers"
+	"gobsidian/internal/utils"
+
+	"github.com/gomarkdown/markdown/html"
+
+	"github.com/gomarkdown/markdown"
+)
+
+type SiteTransformer struct {
+	Config           config.Config
+	Logger           *log.Logger
+	Templates        *template.Template
+	Parser           parsers.Parser
+	MarkdownRenderer *html.Renderer
+	PostExecutor     *executors.PostExecutor
+	IndexExecutor    *executors.IndexExecutor
+	TagExecutor      *executors.TagExecutor
+	PreviewExecutor  *executors.PreviewExecutor
+}
+
+func NewSiteTransformer(c config.Config,
+	l *log.Logger,
+	p parsers.Parser,
+	markdownRenderer *html.Renderer,
+	pe *executors.PostExecutor,
+	ie *executors.IndexExecutor,
+	te *executors.TagExecutor,
+	preve *executors.PreviewExecutor,
+) (*SiteTransformer, error) {
+	templates, err := template.ParseGlob("templates/*.html")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse templates: %w", err)
+	}
+	return &SiteTransformer{
+		Config:           c,
+		Logger:           l,
+		Templates:        templates,
+		Parser:           p,
+		MarkdownRenderer: markdownRenderer,
+		PostExecutor:     pe,
+		IndexExecutor:    ie,
+		TagExecutor:      te,
+		PreviewExecutor:  preve,
+	}, nil
+}
+
+func (g *SiteTransformer) GenerateSite() error {
+	g.Logger.Info("Generating site...")
+
+	// --- Step 1: Create output dirs ---
+	if err := g.createOutputDirectories(); err != nil {
+		return fmt.Errorf("failed to create directories: %w", err)
+	}
+
+	// --- Step 2: Discover and parse posts ---
+	posts, titleToPost, err := g.discoverAndParsePosts()
+	if err != nil {
+		return fmt.Errorf("error during initial walk: %w", err)
+	}
+
+	// --- Step 3: Apply transformations ---
+	for _, post := range posts {
+		postBody := string((*post).RawBody)
+
+		contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
+		contentWithWikilinks := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, titleToPost)
+		hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
+
+		(*post).HTMLContent = template.HTML(markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer))
+	}
+
+	// --- Step 4: Execute the templates ---
+	numberOfTags, err := g.executeTemplates(posts)
+	if err != nil {
+		return err
+	}
+
+	// --- Step 5: Copy Assets ---
+	if err := g.copyAssets(posts); err != nil {
+		g.Logger.Warn("Failed to copy some images", "error", err)
+	}
+
+	g.Logger.Info("Site generation complete!",
+		"posts", len(posts),
+		"tags", numberOfTags,
+		"index_pages", 1,
+		"preview_pages", len(posts))
+	return nil
+}
+
+func (g *SiteTransformer) replaceObsidianImageLinks(body string) string {
+	return g.Config.RegexpConfig.ObsidianImageRegex.ReplaceAllStringFunc(string(body), func(match string) string {
+		parts := g.Config.RegexpConfig.ObsidianImageRegex.FindStringSubmatch(match)
+		if len(parts) > 1 {
+			imageName := parts[1]
+			return fmt.Sprintf(`<img src="/images/%s" alt="%s" height="200" />`, imageName, imageName)
+		}
+		return match
+	})
+}
+
+func (g *SiteTransformer) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, titleToPost map[string]*models.BlogPost) string {
+	return g.Config.RegexpConfig.WikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
+		parts := g.Config.RegexpConfig.WikilinkRegex.FindStringSubmatch(match)
+		linkTarget := strings.TrimSpace(parts[1])
+		linkText := linkTarget
+		if len(parts) > 2 && parts[2] != "" {
+			linkText = parts[2]
+		}
+
+		if linkedPd, ok := titleToPost[linkTarget]; ok {
+			// Add backlink to the target post
+			// Avoid duplicates
+			found := false
+			for _, l := range linkedPd.LinkedFrom {
+				if l.URL == pd.URL {
+					found = true
+					break
+				}
+			}
+			if !found {
+				linkedPd.LinkedFrom = append(linkedPd.LinkedFrom, models.Link{
+					Title: pd.Title,
+					URL:   pd.URL,
+				})
+			}
+			return fmt.Sprintf(`<a href="%s">%s</a>`, linkedPd.URL, linkText)
+		}
+		// If link target doesn't exist, return plain text
+		return linkText
+	})
+}
+
+func (g *SiteTransformer) enrichHashtagsWithLinks(body string) string {
+	return g.Config.RegexpConfig.HashtagRegex.ReplaceAllStringFunc(body, func(match string) string {
+		parts := g.Config.RegexpConfig.HashtagRegex.FindStringSubmatch(match)
+		tagName := parts[1]
+		return fmt.Sprintf(`<a class="tag" href="/tag/%s">#%s</a>`, tagName, tagName)
+	})
+}
+
+func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost) (int, error) {
+	tagsMap := make(map[string]*models.Tag)
+	for _, pd := range blogPosts {
+		for _, tag := range pd.Tags {
+			tagsMap[tag.Slug] = &tag
+		}
+	}
+
+	tags := make([]models.Tag, 0)
+	for _, tag := range tagsMap {
+		tags = append(tags, models.Tag{Name: tag.Name, Slug: tag.Slug})
+	}
+
+	sort.Slice(tags, func(i, j int) bool {
+		return tags[i].Name < tags[j].Name
+	})
+
+	for _, p := range blogPosts {
+		if err := g.PostExecutor.ExecutePostPage(*p); err != nil {
+			g.Logger.Error("Error generating post page", "title", p.Title, "error", err)
+		}
+		if err := g.PreviewExecutor.ExecutePreviewPage(*p); err != nil {
+			g.Logger.Error("Error generating preview page", "title", p.Title, "error", err)
+		}
+	}
+
+	postsByTag := make(map[string][]*models.BlogPost, len(tags))
+
+	for _, p := range blogPosts {
+		for _, tag := range p.Tags {
+			postsByTag[tag.Slug] = append(postsByTag[tag.Slug], p)
+		}
+	}
+
+	for _, tag := range tags {
+		if err := g.TagExecutor.ExecuteTagPage(tag, postsByTag[tag.Slug]); err != nil {
+			g.Logger.Error("Error generating tag page", "name", tag.Name, "error", err)
+
+		}
+	}
+
+	if err := g.IndexExecutor.ExecuteIndexPage(blogPosts, tags); err != nil {
+		return 0, err
+	}
+
+	return len(tags), nil
+}
+
+func (g *SiteTransformer) createOutputDirectories() error {
+	if err := os.MkdirAll(filepath.Join(g.Config.OutputDirectory, "images"), 0755); err != nil {
+		return fmt.Errorf("failed to create images directory %s: %w", filepath.Join(g.Config.OutputDirectory, "images"), err)
+	}
+	if err := os.MkdirAll(filepath.Join(g.Config.OutputDirectory, "previews"), 0755); err != nil {
+		return fmt.Errorf("failed to create previews directory %s: %w", filepath.Join(g.Config.OutputDirectory, "previews"), err)
+	}
+	return nil
+}
+
+func (g *SiteTransformer) discoverAndParsePosts() ([]*models.BlogPost, map[string]*models.BlogPost, error) {
+	var posts []*models.BlogPost
+	titleToPost := make(map[string]*models.BlogPost)
+
+	err := filepath.Walk(g.Config.InputDirectory, func(path string, info os.FileInfo, err error) error {
+
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
+			post, images, linkedTitles, err := g.Parser.ParseBlogPost(path)
+			if err != nil {
+				g.Logger.Warn("Skipping file during initial parse", "path", path, "error", err)
+				return nil
+			}
+
+			post.URL = "/" + post.FileName
+			post.Images = images
+			post.FilePath = path
+			post.LinkedTitles = linkedTitles
+
+			posts = append(posts, &post)
+			titleToPost[post.Title] = &post
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("error during initial walk: %w", err)
+	}
+
+	return posts, titleToPost, nil
+}
+
+func (g *SiteTransformer) copyAssets(posts []*models.BlogPost) error {
+	var wg sync.WaitGroup
+	errorChan := make(chan error, 100)
+
+	images := make(map[string]string)
+	for _, p := range posts {
+		for _, img := range p.Images {
+			imagePath := filepath.Join(filepath.Dir(p.FilePath), img)
+			images[img] = imagePath
+		}
+	}
+
+	g.Logger.Info("Copying post images", "count", len(images))
+	for name, path := range images {
+		wg.Add(1)
+		go func(name, path string) {
+			defer wg.Done()
+			destPath := filepath.Join(g.Config.OutputDirectory, "images", name)
+			if err := utils.CopyFile(path, destPath); err != nil {
+				errorChan <- fmt.Errorf("image %s: %w", name, err)
+			}
+		}(name, path)
+	}
+
+	for _, assetType := range []string{"js", "css"} {
+		wg.Add(1)
+		go func(assetType string) {
+			defer wg.Done()
+			g.Logger.Info("Copying static assets", "type", assetType)
+			if err := utils.CopyStaticDirectory(assetType, g.Config.OutputDirectory); err != nil {
+				errorChan <- fmt.Errorf("asset folder '%s': %w", assetType, err)
+			}
+		}(assetType)
+	}
+
+	wg.Wait()
+	close(errorChan)
+
+	var allErrors []string
+	for err := range errorChan {
+		allErrors = append(allErrors, err.Error())
+	}
+
+	if len(allErrors) > 0 {
+		return fmt.Errorf("failed to copy %d assets:\n- %s", len(allErrors), strings.Join(allErrors, "\n- "))
+	}
+
+	return nil
+}

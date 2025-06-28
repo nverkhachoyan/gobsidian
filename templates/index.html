@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.SiteTitle}}</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>{{.SiteTitle}}</h1>
+        <p class="subtitle">
+          My Personal Blog - Built with Go and Obsidian Notes
+        </p>
+      </header>
+
+      {{if .Tags}}
+      <nav class="tags-nav">
+        <h2>Tags</h2>
+        <ul>
+          {{range .Tags}}
+          <li><a href="/tag/{{.Slug}}/">{{.Name}}</a></li>
+          {{end}}
+        </ul>
+      </nav>
+      {{end}}
+
+      <main>
+        {{if .Posts}}
+        <div class="post-grid">
+          {{range .Posts}}
+          <div class="post-card">
+            <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+            <div class="post-card-meta">
+              {{range .Tags}}
+              <a href="/tag/{{.Slug}}/" class="tag-link">
+                <span class="tag">{{.Name}}</span>
+              </a>
+              {{end}} {{if .Author}}
+              <span class="author">{{.Author}}</span>
+              {{end}}
+              <span class="post-date">{{.Date.Format "January 2, 2006"}}</span>
+            </div>
+          </div>
+          {{end}}
+        </div>
+        {{else}}
+        <p>No blog posts found yet.</p>
+        {{end}}
+      </main>
+
+      <footer>
+        <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+      </footer>
+    </div>
+    <script src="/js/previews.js"></script>
+  </body>
+</html>
