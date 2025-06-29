@@ -9,16 +9,8 @@ import (
 	"time"
 )
 
-type PostExecutor struct {
-	Config config.Config
-}
-
-func NewPostExecutor(c config.Config) (*PostExecutor, error) {
-	return &PostExecutor{Config: c}, nil
-}
-
-func (pe *PostExecutor) ExecutePostPage(p models.BlogPost) error {
-	outputDir := pe.Config.OutputDirectory
+func ExecutePostPage(cfg config.Config, p models.BlogPost) error {
+	outputDir := cfg.OutputDirectory
 
 	data := struct {
 		models.BlogPost
@@ -28,9 +20,9 @@ func (pe *PostExecutor) ExecutePostPage(p models.BlogPost) error {
 		CurrentYear  int
 	}{
 		BlogPost:     p,
-		SiteTitle:    pe.Config.SiteTitle,
-		SiteSubtitle: pe.Config.SiteSubtitle,
-		BaseURL:      pe.Config.BaseURL,
+		SiteTitle:    cfg.SiteTitle,
+		SiteSubtitle: cfg.SiteSubtitle,
+		BaseURL:      cfg.BaseURL,
 		CurrentYear:  time.Now().Year(),
 	}
 
@@ -41,7 +33,7 @@ func (pe *PostExecutor) ExecutePostPage(p models.BlogPost) error {
 	}
 	defer outFile.Close()
 
-	if err := pe.Config.Templates.ExecuteTemplate(outFile, "post.html", data); err != nil {
+	if err := cfg.Templates.ExecuteTemplate(outFile, "post.html", data); err != nil {
 		return fmt.Errorf("failed to execute post template: %w", err)
 	}
 	return nil

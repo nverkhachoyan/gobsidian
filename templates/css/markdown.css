@@ -1,0 +1,108 @@
+/* Prose (Markdown Content Styling) */
+.prose {
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+  padding: 2rem 3rem;
+  color: var(--text-color);
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: "Lora", serif;
+  font-weight: 700;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  color: var(--text-color);
+}
+
+.prose p {
+  margin-bottom: 1.25em;
+}
+
+.prose a {
+  color: var(--primary-color);
+  text-decoration: none;
+  border-bottom: 1px solid var(--primary-color);
+  transition: background-color 0.2s ease;
+}
+
+.prose a:hover {
+  background-color: rgba(181, 137, 0, 0.1);
+}
+
+.prose pre {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  padding: 1.5em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+}
+
+.prose code {
+  font-family: "Menlo", "Consolas", monospace;
+}
+
+.prose code:not(pre > code) {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.prose ul,
+.prose ol {
+  margin-left: 1.5em;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--primary-color);
+  padding-left: 1.5em;
+  color: var(--subtle-text-color);
+  margin: 2em 0;
+  font-style: italic;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 2em 0;
+}
+
+/* Backlinks */
+.backlinks {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+.backlinks h3 {
+  font-family: "Lora", serif;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+.backlinks ul {
+  list-style-type: none;
+  padding: 0;
+}
+.backlinks li a {
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+.backlinks li a:hover {
+  text-decoration: underline;
+}
+
+.post-date {
+  font-size: 0.875rem; /* 14px */
+  color: var(--subtle-text-color);
+  margin-bottom: 1em;
+  display: block;
+}

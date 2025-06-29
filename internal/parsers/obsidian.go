@@ -16,15 +16,15 @@ import (
 )
 
 type Parser interface {
-	ParseBlogPost(filePath string) (models.BlogPost, []string, []string, error)
+	ParseNote(filePath string) (models.BlogPost, []string, []string, error)
 }
 
-type MarkdownParser struct {
+type ObsidianParser struct {
 	Config config.Config
 }
 
-func NewMarkdownParser(c config.Config) *MarkdownParser {
-	return &MarkdownParser{
+func NewObsidianParser(c config.Config) *ObsidianParser {
+	return &ObsidianParser{
 		Config: c,
 	}
 }
@@ -42,7 +42,7 @@ type processedFrontmatter struct {
 	updatedAt *time.Time
 }
 
-func (p *MarkdownParser) ParseBlogPost(filePath string) (models.BlogPost, []string, []string, error) {
+func (p *ObsidianParser) ParseNote(filePath string) (models.BlogPost, []string, []string, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
 		return models.BlogPost{}, nil, nil, err
@@ -86,7 +86,7 @@ func (p *MarkdownParser) ParseBlogPost(filePath string) (models.BlogPost, []stri
 	}, images, linkedPosts, nil
 }
 
-func (p *MarkdownParser) processFrontmatter(frontmatter Frontmatter, filePath string) (processedFrontmatter, error) {
+func (p *ObsidianParser) processFrontmatter(frontmatter Frontmatter, filePath string) (processedFrontmatter, error) {
 	title := frontmatter.Title
 	if title == "" {
 		title = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
@@ -133,7 +133,7 @@ func (p *MarkdownParser) processFrontmatter(frontmatter Frontmatter, filePath st
 	}, nil
 }
 
-func (p *MarkdownParser) splitFrontmatterAndBody(markdownInput []byte) (Frontmatter, []byte, error) {
+func (p *ObsidianParser) splitFrontmatterAndBody(markdownInput []byte) (Frontmatter, []byte, error) {
 	var frontmatter Frontmatter
 
 	frontmatterMatch := p.Config.RegexpConfig.FrontmatterRegex.FindSubmatch(markdownInput)
@@ -149,7 +149,7 @@ func (p *MarkdownParser) splitFrontmatterAndBody(markdownInput []byte) (Frontmat
 	return Frontmatter{}, markdownInput, nil
 }
 
-func (p *MarkdownParser) extractWikilinks(markdownInput []byte) []string {
+func (p *ObsidianParser) extractWikilinks(markdownInput []byte) []string {
 	var linkedPosts []string
 	wikilinkMatches := p.Config.RegexpConfig.WikilinkRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range wikilinkMatches {
@@ -159,7 +159,7 @@ func (p *MarkdownParser) extractWikilinks(markdownInput []byte) []string {
 	return linkedPosts
 }
 
-func (p *MarkdownParser) extractObsidianImages(markdownInput []byte) []string {
+func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []string {
 	var images []string
 	imageMatches := p.Config.RegexpConfig.ObsidianImageRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range imageMatches {
@@ -171,7 +171,7 @@ func (p *MarkdownParser) extractObsidianImages(markdownInput []byte) []string {
 	return images
 }
 
-func (p *MarkdownParser) extractTags(markdownInput []byte) []models.Tag {
+func (p *ObsidianParser) extractTags(markdownInput []byte) []models.Tag {
 	var tags []models.Tag
 	tagMatches := p.Config.RegexpConfig.HashtagRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range tagMatches {

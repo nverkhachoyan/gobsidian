@@ -10,15 +10,12 @@ import (
 	"time"
 )
 
-type IndexExecutor struct {
-	Config config.Config
-}
-
-func NewIndexExecutor(c config.Config) (*IndexExecutor, error) {
-	return &IndexExecutor{Config: c}, nil
-}
-
-func (ie *IndexExecutor) ExecuteIndexPage(posts []*models.BlogPost, tags []models.Tag, fileTree *models.Folder) error {
+func ExecuteIndexPage(
+	cfg config.Config,
+	posts []*models.BlogPost,
+	tags []models.Tag,
+	fileTree *models.Folder,
+) error {
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].Date.After(posts[j].Date)
 	})
@@ -31,22 +28,22 @@ func (ie *IndexExecutor) ExecuteIndexPage(posts []*models.BlogPost, tags []model
 		CurrentYear  int
 		FileTree     *models.Folder
 	}{
-		SiteTitle:    ie.Config.SiteTitle,
-		SiteSubtitle: ie.Config.SiteSubtitle,
+		SiteTitle:    cfg.SiteTitle,
+		SiteSubtitle: cfg.SiteSubtitle,
 		Posts:        posts,
 		Tags:         tags,
 		CurrentYear:  time.Now().Year(),
 		FileTree:     fileTree,
 	}
 
-	filePath := filepath.Join(ie.Config.OutputDirectory, "index.html")
+	filePath := filepath.Join(cfg.OutputDirectory, "index.html")
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create index file %s: %w", filePath, err)
 	}
 	defer outFile.Close()
 
-	if err := ie.Config.Templates.ExecuteTemplate(outFile, "index.html", data); err != nil {
+	if err := cfg.Templates.ExecuteTemplate(outFile, "index.html", data); err != nil {
 		return fmt.Errorf("failed to execute index template: %w", err)
 	}
 	return nil

@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Test1/Hey what are you doing.md",
+                "file": "One Folder/Hey what are you doing.md",
                 "mode": "source",
                 "source": false
               },
@@ -168,16 +168,16 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "275e3191b8a604f5",
+  "active": "b887c241b5331f8a",
   "lastOpenFiles": [
     "What are threads anyway?.md",
     "Welcome to my blog.md",
     "cigar-denver.png",
-    "Test1/Hey what are you doing.md",
-    "Test1/Test2/Final test guy.md",
+    "One Folder/Hey what are you doing.md",
+    "One Folder/Sub Folder/Final test guy.md",
     "Brand new article.md",
-    "Test1/Test2",
-    "Test1",
+    "One Folder/Sub Folder",
+    "One Folder",
     "My new article.md",
     "Tag vomit incoming.md",
     "2025-06-28.md",

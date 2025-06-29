@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gomarkdown/markdown v0.0.0-20250311123330-531bef5e742b
+	github.com/gorilla/websocket v1.5.3
 )
 
 require (

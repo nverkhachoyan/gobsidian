@@ -9,21 +9,17 @@ import (
 	"time"
 )
 
-type FolderExecutor struct {
-	Config config.Config
-}
-
-func NewFolderExecutor(c config.Config) (*FolderExecutor, error) {
-	return &FolderExecutor{Config: c}, nil
-}
-
-func (fe *FolderExecutor) ExecuteFolderPage(folder *models.Folder, allTags []models.Tag) error {
+func ExecuteFolderPage(
+	cfg config.Config,
+	folder *models.Folder,
+	allTags []models.Tag,
+) error {
 	// Don't create a page for the root folder, it's handled by index.html
 	if folder.Path == "" {
 		return nil
 	}
 
-	outputDir := filepath.Join(fe.Config.OutputDirectory, folder.Path)
+	outputDir := filepath.Join(cfg.OutputDirectory, folder.Path)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create folder directory %s: %w", outputDir, err)
 	}
@@ -34,7 +30,7 @@ func (fe *FolderExecutor) ExecuteFolderPage(folder *models.Folder, allTags []mod
 		AllTags     []models.Tag
 		CurrentYear int
 	}{
-		SiteTitle:   fe.Config.SiteTitle,
+		SiteTitle:   cfg.SiteTitle,
 		Folder:      folder,
 		AllTags:     allTags,
 		CurrentYear: time.Now().Year(),
@@ -47,7 +43,7 @@ func (fe *FolderExecutor) ExecuteFolderPage(folder *models.Folder, allTags []mod
 	}
 	defer outFile.Close()
 
-	if err := fe.Config.Templates.ExecuteTemplate(outFile, "folder.html", data); err != nil {
+	if err := cfg.Templates.ExecuteTemplate(outFile, "folder.html", data); err != nil {
 		return fmt.Errorf("failed to execute folder template for %s: %w", folder.Name, err)
 	}
 	return nil

@@ -1,0 +1,43 @@
+.theme-switcher {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.theme-switcher .moon {
+  display: none;
+}
+
+.theme-switcher .sun {
+  display: inline-block;
+}
+
+html.dark-mode .theme-switcher .moon {
+  display: inline-block;
+}
+
+html.dark-mode .theme-switcher .sun {
+  display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .theme-switcher {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    display: block;
+    position: inherit;
+    margin: 0 auto;
+    right: 0;
+    top: 10px;
+  }
+}

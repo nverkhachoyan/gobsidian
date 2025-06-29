@@ -8,16 +8,8 @@ import (
 	"path/filepath"
 )
 
-type PreviewExecutor struct {
-	Config config.Config
-}
-
-func NewPreviewExecutor(c config.Config) (*PreviewExecutor, error) {
-	return &PreviewExecutor{Config: c}, nil
-}
-
-func (pe *PreviewExecutor) ExecutePreviewPage(p models.BlogPost) error {
-	outputDir := pe.Config.OutputDirectory
+func ExecutePreviewPage(cfg config.Config, p models.BlogPost) error {
+	outputDir := cfg.OutputDirectory
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create previews directory: %w", err)
 	}
@@ -29,7 +21,7 @@ func (pe *PreviewExecutor) ExecutePreviewPage(p models.BlogPost) error {
 	}
 	defer outFile.Close()
 
-	if err := pe.Config.Templates.ExecuteTemplate(outFile, "preview.html", p); err != nil {
+	if err := cfg.Templates.ExecuteTemplate(outFile, "preview.html", p); err != nil {
 		return fmt.Errorf("failed to execute preview template: %w", err)
 	}
 	return nil

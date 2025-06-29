@@ -1,0 +1,21 @@
+{{define "folder_tree"}}
+<ul class="file-tree__list">
+  {{range .Children}}
+  <li class="file-tree__item file-tree__item--folder">
+    <div class="file-tree__folder-header">
+      <span class="file-tree__toggle">
+        <i class="fas fa-folder file-tree__icon file-tree__icon--closed"></i>
+        <i class="fas fa-folder-open file-tree__icon file-tree__icon--open"></i>
+      </span>
+      <a href="/{{.Path}}/" class="file-tree__link">{{.Name}}</a>
+    </div>
+    <div class="file-tree__children">{{template "folder_tree" .}}</div>
+  </li>
+  {{end}} {{range .Posts}}
+  <li class="file-tree__item file-tree__item--file">
+    <i class="far fa-file-alt file-tree__icon"></i>
+    <a href="{{.URL}}" class="file-tree__link">{{.Title}}</a>
+  </li>
+  {{end}}
+</ul>
+{{end}}

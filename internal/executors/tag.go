@@ -9,17 +9,9 @@ import (
 	"time"
 )
 
-type TagExecutor struct {
-	Config config.Config
-}
-
-func NewTagExecutor(c config.Config) (*TagExecutor, error) {
-	return &TagExecutor{Config: c}, nil
-}
-
-func (ce *TagExecutor) ExecuteTagPage(tag models.Tag, posts []*models.BlogPost) error {
+func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost) error {
 	// Create the tag directory for the tag page
-	outputDir := filepath.Join(ce.Config.OutputDirectory, "tag", tag.Slug)
+	outputDir := filepath.Join(cfg.OutputDirectory, "tag", tag.Slug)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create tag directory %s: %w", outputDir, err)
 	}
@@ -30,7 +22,7 @@ func (ce *TagExecutor) ExecuteTagPage(tag models.Tag, posts []*models.BlogPost) 
 		Posts       []*models.BlogPost
 		CurrentYear int
 	}{
-		SiteTitle:   ce.Config.SiteTitle,
+		SiteTitle:   cfg.SiteTitle,
 		Tag:         tag,
 		Posts:       posts,
 		CurrentYear: time.Now().Year(),
@@ -43,7 +35,7 @@ func (ce *TagExecutor) ExecuteTagPage(tag models.Tag, posts []*models.BlogPost) 
 	}
 	defer outFile.Close()
 
-	if err := ce.Config.Templates.ExecuteTemplate(outFile, "tag.html", data); err != nil {
+	if err := cfg.Templates.ExecuteTemplate(outFile, "tag.html", data); err != nil {
 		return fmt.Errorf("failed to execute tag template: %w", err)
 	}
 	return nil

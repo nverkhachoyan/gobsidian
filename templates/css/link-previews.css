@@ -1,0 +1,76 @@
+.link-preview {
+  position: absolute;
+  z-index: 1000;
+  width: 350px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.2s ease-in-out;
+  font-size: 0.9rem;
+  overflow: hidden;
+  max-height: 280px;
+}
+
+.preview-controls {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin: -1rem -1rem 1rem -1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--background-color);
+}
+
+.preview-control-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--subtle-text-color);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.preview-control-btn:hover {
+  color: var(--text-color);
+  transform: scale(1.1);
+}
+
+.link-preview .preview-card {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Style for the content inside the preview */
+.link-preview .preview-card h1,
+.link-preview .preview-card h2,
+.link-preview .preview-card h3 {
+  font-size: 1rem;
+  margin-top: 0;
+  color: var(--text-color);
+}
+
+.link-preview .preview-card p {
+  margin-bottom: 0.5rem;
+}
+
+.link-preview .preview-card a {
+  color: var(--primary-color);
+}
+
+.link-preview .preview-card .preview-card-title {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1.1rem;
+  border-bottom: 1px solid var(--primary-color);
+  transition: background-color 0.2s ease;
+}
+
+.link-preview .preview-card .preview-card-title:hover {
+  text-decoration: underline;
+}

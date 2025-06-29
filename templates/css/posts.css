@@ -1,0 +1,88 @@
+.post-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.post-card {
+  display: block;
+  background-color: var(--surface-color);
+  padding: 2rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.post-card h2 {
+  font-family: "Lora", serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.post-card h2 a {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+/* Post Card Meta */
+.post-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.post-card-meta .author {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-color);
+}
+
+.post-card-meta .tag {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary-color);
+  background-color: var(--chip-color);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.post-card-meta .post-date {
+  font-size: 0.875rem;
+  color: var(--subtle-text-color);
+  margin-bottom: 0;
+}
+
+/* Single Post Header Meta */
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--subtle-text-color);
+}
+
+.post-meta .author {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.post-meta .post-date.updated {
+  font-style: italic;
+}

@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/goccy/go-yaml"
@@ -32,7 +33,24 @@ type RegexpConfig struct {
 }
 
 func ReadConfig(filePath string) (Config, error) {
-	var templates, err = template.ParseGlob("templates/*.html")
+	var templates *template.Template
+
+	templateDir := "templates"
+	templates = template.New("main")
+
+	err := filepath.WalkDir(templateDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && filepath.Ext(path) == ".html" {
+			templates, err = templates.ParseFiles(path)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	if err != nil {
 		log.Fatalf("Failed to parse templates: %s", err)
 	}

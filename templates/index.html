@@ -4,11 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{.SiteTitle}}</title>
-    <link rel="stylesheet" href="/css/style.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    />
+    {{template "styles" .}}
   </head>
   <body>
     <div class="container">
@@ -17,6 +13,7 @@
         <p class="subtitle">
           My Personal Blog - Built with Go and Obsidian Notes
         </p>
+        {{template "theme_switcher" .}}
       </header>
 
       <div class="content-wrapper">
@@ -29,36 +26,12 @@
           </div>
 
           {{if .FileTree}}
-          <div class="left-sidebar-item folder-tree-container">
+          <div class="left-sidebar-item file-tree-container">
             <h5 class="left-sidebar-item-title">Folders</h5>
             <div class="left-sidebar-item-content">
-              <nav class="file-tree-nav">
-                {{template "folder_tree" .FileTree}}
-              </nav>
+              <nav class="file-tree">{{template "folder_tree" .FileTree}}</nav>
             </div>
           </div>
-          {{end}} {{define "folder_tree"}}
-          <ul class="folder-list">
-            {{range .Children}}
-            <li class="folder-item">
-              <div class="folder-item-header">
-                <span class="folder-toggle">
-                  <i class="fas fa-folder folder-icon-closed"></i>
-                  <i class="fas fa-folder-open folder-icon-open"></i>
-                </span>
-                <a href="/{{.Path}}/" class="folder-name">{{.Name}}</a>
-              </div>
-              <div class="folder-children-container">
-                {{template "folder_tree" .}}
-              </div>
-            </li>
-            {{end}} {{range .Posts}}
-            <li class="file-item">
-              <i class="far fa-file-alt"></i>
-              <a href="{{.URL}}">{{.Title}}</a>
-            </li>
-            {{end}}
-          </ul>
           {{end}} {{if .Tags}}
           <div class="left-sidebar-item">
             <h5 class="left-sidebar-item-title">Tags</h5>
@@ -106,7 +79,6 @@
         <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
       </footer>
     </div>
-    <script src="/js/previews.js"></script>
-    <script src="/js/folder-nav.js"></script>
+    {{template "scripts" .}}
   </body>
 </html>

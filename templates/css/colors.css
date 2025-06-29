@@ -1,0 +1,35 @@
+/* :root {
+  --background-color: #f8f7f4;
+  --surface-color: #ffffff;
+  --text-color: #3d3d3d;
+  --subtle-text-color: #8a8a8a;
+  --primary-color: #b58900;
+  --border-color: #eaeaea;
+  --shadow-color: rgba(0, 0, 0, 0.04);
+  --chip-color: rgba(181, 137, 0, 0.1);
+  --chip-color-hover: rgba(181, 137, 0, 0.2);
+} */
+
+:root {
+  --background-color: #f8f9fa;
+  --surface-color: #ffffff;
+  --text-color: #212529;
+  --subtle-text-color: #6c757d;
+  --primary-color: #0056b3;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --chip-color: rgba(0, 0, 0, 0.05);
+  --chip-color-hover: rgba(0, 0, 0, 0.1);
+}
+
+html.dark-mode {
+  --background-color: #121212;
+  --surface-color: #1e1e1e;
+  --text-color: #e0e0e0;
+  --subtle-text-color: #a0a0a0;
+  --primary-color: #bb86fc;
+  --border-color: #2c2c2c;
+  --shadow-color: rgba(255, 255, 255, 0.05);
+  --chip-color: rgba(255, 255, 255, 0.1);
+  --chip-color-hover: rgba(255, 255, 255, 0.2);
+}

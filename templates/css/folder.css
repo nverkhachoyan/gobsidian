@@ -1,0 +1,140 @@
+.file-tree {
+  text-align: left;
+  margin: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.file-tree-container {
+  background-color: var(--background-color);
+  border-left: 3px solid var(--primary-color);
+  padding-left: calc(1.5rem - 3px);
+}
+
+.file-tree__list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.file-tree__item {
+  margin-top: 0.5em;
+}
+
+.file-tree__link {
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  transition: color 0.2s ease-in-out, background-color 0.2s ease;
+  font-size: 1.1rem;
+  display: inline-block;
+}
+
+.file-tree__link:hover {
+  color: var(--text-color);
+  text-decoration: underline;
+}
+
+.file-tree__item--folder .file-tree__link {
+  font-weight: bold;
+}
+
+.file-tree__item--file,
+.file-tree__folder-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+  padding: 0.2rem 0;
+}
+
+.file-tree__item--file:hover,
+.file-tree__folder-header:hover {
+  background-color: var(--background-color);
+}
+
+.file-tree__icon {
+  color: var(--subtle-text-color);
+  width: 1.2em;
+  text-align: center;
+  transition: color 0.2s ease-in-out;
+}
+
+.file-tree__item--file:hover .file-tree__icon,
+.file-tree__folder-header:hover .file-tree__icon {
+  color: var(--text-color);
+}
+
+.file-tree__toggle {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Default state: show closed, hide open */
+.file-tree__item--folder > .file-tree__folder-header .file-tree__icon--open {
+  display: none;
+}
+
+.file-tree__item--folder > .file-tree__folder-header .file-tree__icon--closed {
+  display: inline-block;
+}
+
+/* Expanded state: hide closed, show open */
+.file-tree__item--folder.expanded
+  > .file-tree__folder-header
+  .file-tree__icon--open {
+  display: inline-block;
+}
+.file-tree__item--folder.expanded
+  > .file-tree__folder-header
+  .file-tree__icon--closed {
+  display: none;
+}
+
+.file-tree__children {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+  padding-left: 1em;
+  list-style: none;
+  margin-top: 0.5em;
+}
+
+.file-tree__item--folder.expanded > .file-tree__children {
+  max-height: 500px; /* Adjust as needed */
+}
+
+/* Styles for folder page content */
+.folder-subtitle {
+  font-family: "Lora", serif;
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.folder-list ul {
+  padding-left: 1em;
+  list-style-type: none;
+}
+
+.folder-list li {
+  margin-top: 0.5em;
+}
+
+.folder-list ul li a {
+  color: var(--primary-color);
+  transition: color 0.2s ease-in-out;
+  font-size: 1.1rem;
+}
+
+.folder-list ul li a:hover {
+  color: var(--text-color);
+  text-decoration: underline;
+}
