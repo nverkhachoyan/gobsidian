@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,9 +11,10 @@ import (
 	"time"
 
 	"gobsidian/internal/config"
+	"gobsidian/internal/generators"
 	"gobsidian/internal/parsers"
 	"gobsidian/internal/renderers"
-	"gobsidian/internal/transformers"
+	"gobsidian/internal/websockets"
 
 	"github.com/charmbracelet/log"
 	"github.com/fsnotify/fsnotify"
@@ -22,8 +24,8 @@ import (
 type App struct {
 	logger *log.Logger
 	cfg    config.Config
-	gen    *transformers.SiteTransformer
-	hub    *Hub
+	gen    *generators.StaticSiteGenerator
+	hub    *websockets.Hub
 	server *http.Server
 }
 
@@ -32,6 +34,7 @@ func NewApp() (*App, error) {
 		TimeFormat:      time.Kitchen,
 		ReportTimestamp: true,
 		Prefix:          "Cooking 🍪",
+		Level:           log.DebugLevel,
 	})
 
 	cfg, err := config.ReadConfig("config.yaml")
@@ -42,7 +45,7 @@ func NewApp() (*App, error) {
 	markdownRenderer := renderers.NewMarkdownRenderer()
 	parser := parsers.NewObsidianParser(cfg)
 
-	gen, err := transformers.NewSiteTransformer(
+	gen, err := generators.NewStaticSiteGenerator(
 		cfg,
 		logger,
 		parser,
@@ -52,8 +55,8 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	hub := newHub()
-	go hub.run()
+	hub := websockets.NewHub(logger)
+	go hub.Run()
 
 	return &App{
 		logger: logger,
@@ -76,20 +79,25 @@ func (a *App) Run(clear, watch, serve bool, port string) {
 		os.Exit(1)
 	}
 
-	if watch {
-		if serve {
-			a.logger.Print("Watching for changes and serving...", "port", port)
-			go a.serve(port)
-		} else {
-			a.logger.Print("Watching for changes...")
-		}
-		a.watch()
-	} else if serve {
-		a.logger.Print("Building complete. Serving website...", "port", port)
+	if serve {
+		a.logger.Print("Serving website...", "port", port)
 		a.serve(port)
-	} else {
-		a.logger.Print("Build complete. Use --watch for live reloading or --serve to host.")
 	}
+
+	// if watch {
+	// 	if serve {
+	// 		a.logger.Print("Watching for changes and serving...", "port", port)
+	// 		go a.serve(port)
+	// 	} else {
+	// 		a.logger.Print("Watching for changes...")
+	// 	}
+	// 	a.watch()
+	// } else if serve {
+	// 	a.logger.Print("Building complete. Serving website...", "port", port)
+	// 	a.serve(port)
+	// } else {
+	// 	a.logger.Print("Build complete. Use --watch for live reloading or --serve to host.")
+	// }
 }
 
 func (a *App) serve(port string) {
@@ -107,11 +115,23 @@ func (a *App) serve(port string) {
 	mux.Handle("/", a.fileServerHandler())
 
 	a.logger.Print("Serving static website", "url", "http://localhost:"+port)
-	err := a.server.ListenAndServe()
-	if err != nil {
-		a.logger.Error("Failed to start server", "error", err)
-		os.Exit(1)
-	}
+
+	go func() {
+		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			a.logger.Error("HTTP server failed to start or shut down unexpectedly", "error", err)
+			os.Exit(1)
+		}
+		a.logger.Debug("HTTP server stopped.")
+	}()
+
+	time.Sleep(1000 * time.Millisecond)
+	a.hub.Broadcast <- []byte("reload")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	a.logger.Info("Shutdown signal received, exiting gracefully.")
+	a.server.Shutdown(context.Background())
 }
 
 func (a *App) handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +139,7 @@ func (a *App) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-
+			// TODO: Add proper origin checking
 			return true
 		},
 	}
@@ -128,7 +148,7 @@ func (a *App) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		a.logger.Error("Failed to upgrade websocket connection", "error", err)
 		return
 	}
-	a.hub.register <- conn
+	a.hub.Register <- conn
 }
 
 func (a *App) fileServerHandler() http.HandlerFunc {
@@ -177,12 +197,18 @@ func (a *App) watch() {
 				if !ok {
 					return
 				}
-				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
+				a.logger.Debug("Watcher event", "event", event)
+
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove|fsnotify.Chmod) != 0 {
 					a.logger.Infof("Change detected in %s, regenerating site", event.Name)
+					if err := os.RemoveAll(a.cfg.OutputDirectory); err != nil {
+						a.logger.Error("Failed to clear output directory", "error", err)
+						os.Exit(1)
+					}
 					if err := a.gen.GenerateSite(); err != nil {
 						a.logger.Error("Error regenerating site", "error", err)
 					} else {
-						a.hub.broadcast <- []byte("reload")
+						a.hub.Broadcast <- []byte("reload")
 					}
 				}
 			case err, ok := <-watcher.Errors:
@@ -215,19 +241,19 @@ func (a *App) addRecursiveWatchDirs(watcher *fsnotify.Watcher, dirs ...string) e
 		a.logger.Info("Adding recursive watch for directory", "directory", dir)
 		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
 			if walkErr != nil {
-				return walkErr
+				return walkErr // Propagate walk errors
 			}
-			if d.IsDir() {
-				if err := watcher.Add(path); err != nil {
-					a.logger.Error("Failed to add directory to watcher", "directory", path, "error", err)
-				} else {
-					a.logger.Debug("Successfully added directory to watcher", "directory", path)
-				}
+			// Add both directories and files to the watcher
+			if err := watcher.Add(path); err != nil {
+				a.logger.Error("Failed to add path to watcher", "path", path, "error", err)
+				// Don't exit here, try to continue with other paths
+			} else {
+				a.logger.Debug("Successfully added path to watcher", "path", path)
 			}
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("error walking directory %s: %w", dir, err)
+			return fmt.Errorf("error walking directory %s: %w", dir, err) // Return error from walk
 		}
 	}
 	return nil

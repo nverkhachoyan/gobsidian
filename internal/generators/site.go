@@ -1,4 +1,4 @@
-package transformers
+package generators
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 	"github.com/gomarkdown/markdown"
 )
 
-type SiteTransformer struct {
+type StaticSiteGenerator struct {
 	Config           config.Config
 	Logger           *log.Logger
 	Templates        *template.Template
@@ -31,18 +31,18 @@ type SiteTransformer struct {
 	MarkdownRenderer *html.Renderer
 }
 
-func NewSiteTransformer(
+func NewStaticSiteGenerator(
 	config config.Config,
 	logger *log.Logger,
 	parser parsers.Parser,
 	markdownRenderer *html.Renderer,
 
-) (*SiteTransformer, error) {
+) (*StaticSiteGenerator, error) {
 	templates, err := template.ParseGlob("templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse templates: %w", err)
 	}
-	return &SiteTransformer{
+	return &StaticSiteGenerator{
 		Config:           config,
 		Logger:           logger,
 		Templates:        templates,
@@ -51,7 +51,7 @@ func NewSiteTransformer(
 	}, nil
 }
 
-func (g *SiteTransformer) GenerateSite() error {
+func (g *StaticSiteGenerator) GenerateSite() error {
 	g.Logger.Print("Generating site...")
 
 	// --- Step 1: Create output dirs ---
@@ -103,7 +103,7 @@ func (g *SiteTransformer) GenerateSite() error {
 	return nil
 }
 
-func (g *SiteTransformer) replaceObsidianImageLinks(body string) string {
+func (g *StaticSiteGenerator) replaceObsidianImageLinks(body string) string {
 	return g.Config.RegexpConfig.ObsidianImageRegex.ReplaceAllStringFunc(string(body), func(match string) string {
 		parts := g.Config.RegexpConfig.ObsidianImageRegex.FindStringSubmatch(match)
 		if len(parts) > 1 {
@@ -114,7 +114,7 @@ func (g *SiteTransformer) replaceObsidianImageLinks(body string) string {
 	})
 }
 
-func (g *SiteTransformer) buildFolderTreeAndCreateDirs(posts []*models.BlogPost) (*models.Folder, int, error) {
+func (g *StaticSiteGenerator) buildFolderTreeAndCreateDirs(posts []*models.BlogPost) (*models.Folder, int, error) {
 	root := &models.Folder{
 		Name:     "Home",
 		Path:     "",
@@ -179,7 +179,7 @@ func sortFolderTree(folder *models.Folder) {
 	}
 }
 
-func (g *SiteTransformer) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, titleToPost map[string]*models.BlogPost) string {
+func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, titleToPost map[string]*models.BlogPost) string {
 	return g.Config.RegexpConfig.WikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := g.Config.RegexpConfig.WikilinkRegex.FindStringSubmatch(match)
 		linkTarget := strings.TrimSpace(parts[1])
@@ -211,7 +211,7 @@ func (g *SiteTransformer) replaceWikilinksAndResolveBacklinks(body string, pd *m
 	})
 }
 
-func (g *SiteTransformer) enrichHashtagsWithLinks(body string) string {
+func (g *StaticSiteGenerator) enrichHashtagsWithLinks(body string) string {
 	return g.Config.RegexpConfig.HashtagRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := g.Config.RegexpConfig.HashtagRegex.FindStringSubmatch(match)
 		tagName := parts[1]
@@ -219,7 +219,7 @@ func (g *SiteTransformer) enrichHashtagsWithLinks(body string) string {
 	})
 }
 
-func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost, fileTree *models.Folder) (int, error) {
+func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fileTree *models.Folder) (int, error) {
 	tagsMap := make(map[string]*models.Tag)
 	for _, pd := range blogPosts {
 		for _, tag := range pd.Tags {
@@ -276,7 +276,7 @@ func (g *SiteTransformer) executeTemplates(blogPosts []*models.BlogPost, fileTre
 	return len(tags), nil
 }
 
-func (g *SiteTransformer) executeFolderTemplates(folder *models.Folder, allTags []models.Tag) error {
+func (g *StaticSiteGenerator) executeFolderTemplates(folder *models.Folder, allTags []models.Tag) error {
 	if err := executors.ExecuteFolderPage(g.Config, folder, allTags); err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func (g *SiteTransformer) executeFolderTemplates(folder *models.Folder, allTags 
 	return nil
 }
 
-func (g *SiteTransformer) createOutputDirectories() error {
+func (g *StaticSiteGenerator) createOutputDirectories() error {
 	if err := os.MkdirAll(filepath.Join(g.Config.OutputDirectory, "images"), 0755); err != nil {
 		return fmt.Errorf("failed to create images directory %s: %w", filepath.Join(g.Config.OutputDirectory, "images"), err)
 	}
@@ -299,7 +299,7 @@ func (g *SiteTransformer) createOutputDirectories() error {
 	return nil
 }
 
-func (g *SiteTransformer) discoverAndParseNotes() ([]*models.BlogPost, map[string]*models.BlogPost, error) {
+func (g *StaticSiteGenerator) discoverAndParseNotes() ([]*models.BlogPost, map[string]*models.BlogPost, error) {
 	var posts []*models.BlogPost
 	titleToPost := make(map[string]*models.BlogPost)
 
@@ -330,7 +330,7 @@ func (g *SiteTransformer) discoverAndParseNotes() ([]*models.BlogPost, map[strin
 	return posts, titleToPost, nil
 }
 
-func (g *SiteTransformer) copyAssets(posts []*models.BlogPost) error {
+func (g *StaticSiteGenerator) copyAssets(posts []*models.BlogPost) error {
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
 

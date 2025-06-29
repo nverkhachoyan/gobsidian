@@ -22,7 +22,7 @@
 }
 
 @media (max-width: 768px) {
-  aside {
+  .left-sidebar {
     position: static;
     top: auto;
   }

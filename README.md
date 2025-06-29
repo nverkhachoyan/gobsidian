@@ -8,6 +8,20 @@ The simplest static site generator for Obsidian notes written in Go.
 go run ./cmd
 ```
 
+### For Live Reload
+
+Install [air](https://github.com/air-verse/air)
+
+```bash
+go install github.com/air-verse/air@latest
+```
+
+And run it at the root directory.
+
+```bash
+air
+```
+
 ### Flags
 
 `--clear` removes the public directory before generating the site.

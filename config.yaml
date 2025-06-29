@@ -1,5 +1,5 @@
 InputDirectory: ./posts
 OutputDirectory: ./public
 SiteTitle: Nver Khachoyan's Blog
-SiteSubtitle: Random ramblings
+SiteSubtitle: My Personal Blog - Built with Go and Obsidian Notes
 BaseURL: /

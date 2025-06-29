@@ -10,43 +10,12 @@
     <div class="container">
       <header>
         <h1>{{.SiteTitle}}</h1>
-        <p class="subtitle">
-          My Personal Blog - Built with Go and Obsidian Notes
-        </p>
+        <p class="subtitle">{{.SiteSubtitle}}</p>
         {{template "theme_switcher" .}}
       </header>
 
       <div class="content-wrapper">
-        <aside>
-          <div class="left-sidebar-item">
-            <h5 class="left-sidebar-item-title">Who am I?</h5>
-            <div class="left-sidebar-item-content">
-              <p>Somebody that you used to know</p>
-            </div>
-          </div>
-
-          {{if .FileTree}}
-          <div class="left-sidebar-item file-tree-container">
-            <h5 class="left-sidebar-item-title">Folders</h5>
-            <div class="left-sidebar-item-content">
-              <nav class="file-tree">{{template "folder_tree" .FileTree}}</nav>
-            </div>
-          </div>
-          {{end}} {{if .Tags}}
-          <div class="left-sidebar-item">
-            <h5 class="left-sidebar-item-title">Tags</h5>
-            <div class="left-sidebar-item-content">
-              <nav class="tags-nav">
-                <ul>
-                  {{range .Tags}}
-                  <li><a href="/tag/{{.Slug}}/">#{{.Name}}</a></li>
-                  {{end}}
-                </ul>
-              </nav>
-            </div>
-          </div>
-          {{end}}
-        </aside>
+        {{template "left_sidebar" .}}
 
         <main>
           {{if .Posts}}
