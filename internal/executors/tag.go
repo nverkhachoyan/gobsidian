@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost) error {
+func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost, fileTree *models.Folder) error {
 	// Create the tag directory for the tag page
 	outputDir := filepath.Join(cfg.OutputDirectory, "tag", tag.Slug)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -21,11 +21,13 @@ func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost)
 		Tag         models.Tag
 		Posts       []*models.BlogPost
 		CurrentYear int
+		FileTree    *models.Folder
 	}{
 		SiteTitle:   cfg.SiteTitle,
 		Tag:         tag,
 		Posts:       posts,
 		CurrentYear: time.Now().Year(),
+		FileTree:    fileTree,
 	}
 
 	filePath := filepath.Join(outputDir, "index.html")

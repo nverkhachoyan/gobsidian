@@ -33,18 +33,23 @@
           {{end}}
         </div>
       </header>
-      <main class="prose">
-        {{.HTMLContent}} {{if .LinkedFrom}}
-        <div class="backlinks">
-          <h3>Linked From</h3>
-          <ul>
-            {{range .LinkedFrom}}
-            <li><a href="{{.URL}}">{{.Title}}</a></li>
-            {{end}}
-          </ul>
-        </div>
-        {{end}}
-      </main>
+
+      <div class="content-wrapper">
+        {{template "left_sidebar" .}}
+
+        <main class="prose">
+          {{.HTMLContent}} {{if .LinkedFrom}}
+          <div class="backlinks">
+            <h3>Linked From</h3>
+            <ul>
+              {{range .LinkedFrom}}
+              <li><a href="{{.URL}}">{{.Title}}</a></li>
+              {{end}}
+            </ul>
+          </div>
+          {{end}}
+        </main>
+      </div>
 
       <footer>
         <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func ExecutePostPage(cfg config.Config, p models.BlogPost) error {
+func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fileTree *models.Folder) error {
 	outputDir := cfg.OutputDirectory
 
 	data := struct {
@@ -18,12 +18,16 @@ func ExecutePostPage(cfg config.Config, p models.BlogPost) error {
 		SiteSubtitle string
 		BaseURL      string
 		CurrentYear  int
+		Tags         []models.Tag
+		FileTree     *models.Folder
 	}{
 		BlogPost:     p,
 		SiteTitle:    cfg.SiteTitle,
 		SiteSubtitle: cfg.SiteSubtitle,
 		BaseURL:      cfg.BaseURL,
 		CurrentYear:  time.Now().Year(),
+		Tags:         tags,
+		FileTree:     fileTree,
 	}
 
 	filePath := filepath.Join(outputDir, p.RelativePath, p.FileName)

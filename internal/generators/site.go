@@ -106,10 +106,22 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 func (g *StaticSiteGenerator) replaceObsidianImageLinks(body string) string {
 	return g.Config.RegexpConfig.ObsidianImageRegex.ReplaceAllStringFunc(string(body), func(match string) string {
 		parts := g.Config.RegexpConfig.ObsidianImageRegex.FindStringSubmatch(match)
+		if len(parts) > 3 {
+			imageName := parts[1]
+			width := parts[2]
+			height := parts[3]
+			return fmt.Sprintf(`<img src="/images/%s" alt="%s" width="%s" height="%s" />`, imageName, imageName, width, height)
+		}
+		if len(parts) > 2 {
+			imageName := parts[1]
+			width := parts[2]
+			return fmt.Sprintf(`<img src="/images/%s" alt="%s"  width="%s" />`, imageName, imageName, width)
+		}
 		if len(parts) > 1 {
 			imageName := parts[1]
-			return fmt.Sprintf(`<img src="/images/%s" alt="%s" height="200" />`, imageName, imageName)
+			return fmt.Sprintf(`<img src="/images/%s" alt="%s"  />`, imageName, imageName)
 		}
+
 		return match
 	})
 }
@@ -237,7 +249,7 @@ func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fil
 	})
 
 	for _, p := range blogPosts {
-		if err := executors.ExecutePostPage(g.Config, *p); err != nil {
+		if err := executors.ExecutePostPage(g.Config, *p, tags, fileTree); err != nil {
 			g.Logger.Error("Error generating post page", "title", p.Title, "error", err)
 		}
 		if err := executors.ExecutePreviewPage(g.Config, *p); err != nil {
@@ -254,14 +266,13 @@ func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fil
 	}
 
 	for _, tag := range tags {
-		if err := executors.ExecuteTagPage(g.Config, tag, postsByTag[tag.Slug]); err != nil {
+		if err := executors.ExecuteTagPage(g.Config, tag, postsByTag[tag.Slug], fileTree); err != nil {
 			g.Logger.Error("Error generating tag page", "name", tag.Name, "error", err)
 
 		}
 	}
 
-	// This is new: recursively generate folder pages
-	if err := g.executeFolderTemplates(fileTree, tags); err != nil {
+	if err := g.executeFolderTemplates(fileTree, tags, fileTree); err != nil {
 		g.Logger.Error("Error generating folder pages", "error", err)
 	}
 
@@ -276,13 +287,13 @@ func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fil
 	return len(tags), nil
 }
 
-func (g *StaticSiteGenerator) executeFolderTemplates(folder *models.Folder, allTags []models.Tag) error {
-	if err := executors.ExecuteFolderPage(g.Config, folder, allTags); err != nil {
+func (g *StaticSiteGenerator) executeFolderTemplates(folder *models.Folder, tags []models.Tag, fileTree *models.Folder) error {
+	if err := executors.ExecuteFolderPage(g.Config, folder, tags, fileTree); err != nil {
 		return err
 	}
 
 	for _, child := range folder.Children {
-		if err := g.executeFolderTemplates(child, allTags); err != nil {
+		if err := g.executeFolderTemplates(child, tags, fileTree); err != nil {
 			return err
 		}
 	}
@@ -334,16 +345,16 @@ func (g *StaticSiteGenerator) copyAssets(posts []*models.BlogPost) error {
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
 
-	images := make(map[string]string)
+	fullImagePaths := make(map[string]string)
 	for _, p := range posts {
 		for _, img := range p.Images {
-			imagePath := filepath.Join(filepath.Dir(p.FilePath), img)
-			images[img] = imagePath
+			fullPath := filepath.Join(filepath.Dir(p.FilePath), img.RelativePath)
+			fullImagePaths[img.RelativePath] = fullPath
 		}
 	}
 
-	g.Logger.Print("Copying images 🖼️ ", "type", "images", "count", len(images))
-	for name, path := range images {
+	g.Logger.Print("Copying images 🖼️ ", "type", "images", "count", len(fullImagePaths))
+	for name, path := range fullImagePaths {
 		wg.Add(1)
 		go func(name, path string) {
 			defer wg.Done()
@@ -354,15 +365,15 @@ func (g *StaticSiteGenerator) copyAssets(posts []*models.BlogPost) error {
 		}(name, path)
 	}
 
-	for _, assetType := range []string{"js", "css"} {
+	for _, dir := range []string{"js", "css", "assets"} {
 		wg.Add(1)
-		go func(assetType string) {
+		go func(dir string) {
 			defer wg.Done()
-			g.Logger.Print("Copying static assets 📦", "type", assetType)
-			if err := utils.CopyStaticDirectory(assetType, g.Config.OutputDirectory); err != nil {
-				errorChan <- fmt.Errorf("asset folder '%s': %w", assetType, err)
+			g.Logger.Print("Copying static assets 📦", "dir", dir)
+			if err := utils.CopyStaticDirectory(dir, g.Config.OutputDirectory); err != nil {
+				errorChan <- fmt.Errorf("asset folder '%s': %w", dir, err)
 			}
-		}(assetType)
+		}(dir)
 	}
 
 	wg.Wait()

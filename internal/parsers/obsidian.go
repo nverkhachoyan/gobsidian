@@ -16,7 +16,7 @@ import (
 )
 
 type Parser interface {
-	ParseNote(filePath string) (models.BlogPost, []string, []string, error)
+	ParseNote(filePath string) (models.BlogPost, []models.Image, []string, error)
 }
 
 type ObsidianParser struct {
@@ -42,7 +42,7 @@ type processedFrontmatter struct {
 	updatedAt *time.Time
 }
 
-func (p *ObsidianParser) ParseNote(filePath string) (models.BlogPost, []string, []string, error) {
+func (p *ObsidianParser) ParseNote(filePath string) (models.BlogPost, []models.Image, []string, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
 		return models.BlogPost{}, nil, nil, err
@@ -159,14 +159,24 @@ func (p *ObsidianParser) extractWikilinks(markdownInput []byte) []string {
 	return linkedPosts
 }
 
-func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []string {
-	var images []string
+func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []models.Image {
+	var images []models.Image
 	imageMatches := p.Config.RegexpConfig.ObsidianImageRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range imageMatches {
+		var image models.Image
 		if len(match) > 1 {
-			imageName := string(match[1])
-			images = append(images, imageName)
+			image.RelativePath = string(match[1])
+			image.Alt = string(match[2])
+
 		}
+		if len(match) > 2 {
+			image.Width = string(match[2])
+		}
+		if len(match) > 3 {
+			image.Height = string(match[3])
+		}
+
+		images = append(images, image)
 	}
 	return images
 }

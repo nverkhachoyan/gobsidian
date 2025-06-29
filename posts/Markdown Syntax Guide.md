@@ -1,5 +1,9 @@
-## Markdown syntax guide
-
+---
+title: Markdown Syntax Guide
+date: 2025-06-29
+author: Nver Khachoyan
+---
+This file is just a list of common markdown patterns for demo.
 ## Headers
 
 # This is a Heading h1
@@ -20,7 +24,7 @@ _This will also be italic_
 
 _You **can** combine them_
 
-[[Welcome to my blog]]
+[[Welcome to my blog aaa]]
 
 ## Lists
 
@@ -52,7 +56,7 @@ _You **can** combine them_
 
 ## Images
 
-![This is an alt text.](/image/sample.webp "This is a sample image.")
+![[cigar-denver.png|200]]
 
 ## Links
 

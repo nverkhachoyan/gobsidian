@@ -12,7 +12,8 @@ import (
 func ExecuteFolderPage(
 	cfg config.Config,
 	folder *models.Folder,
-	allTags []models.Tag,
+	tags []models.Tag,
+	fileTree *models.Folder,
 ) error {
 	// Don't create a page for the root folder, it's handled by index.html
 	if folder.Path == "" {
@@ -25,15 +26,19 @@ func ExecuteFolderPage(
 	}
 
 	data := struct {
-		SiteTitle   string
-		Folder      *models.Folder
-		AllTags     []models.Tag
-		CurrentYear int
+		SiteTitle    string
+		SiteSubtitle string
+		Folder       *models.Folder
+		Tags         []models.Tag
+		CurrentYear  int
+		FileTree     *models.Folder
 	}{
-		SiteTitle:   cfg.SiteTitle,
-		Folder:      folder,
-		AllTags:     allTags,
-		CurrentYear: time.Now().Year(),
+		SiteTitle:    cfg.SiteTitle,
+		SiteSubtitle: cfg.SiteSubtitle,
+		Folder:       folder,
+		Tags:         tags,
+		CurrentYear:  time.Now().Year(),
+		FileTree:     fileTree,
 	}
 
 	filePath := filepath.Join(outputDir, "index.html")

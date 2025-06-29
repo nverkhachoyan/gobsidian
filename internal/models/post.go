@@ -21,12 +21,19 @@ type BlogPost struct {
 	Author       string
 	UpdatedAt    *time.Time
 	URL          string
-	Images       []string
+	Images       []Image
 	FilePath     string
 	Tags         []Tag
 	RelativePath string
 	LinkedFrom   []Link
 	LinkedTitles []string
+}
+
+type Image struct {
+	RelativePath string
+	Alt          string
+	Width        string
+	Height       string
 }
 
 type Link struct {

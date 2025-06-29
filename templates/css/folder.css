@@ -17,18 +17,14 @@
   margin: 0;
 }
 
-.file-tree__item {
-  margin-top: 0.5em;
-}
-
 .file-tree__link {
   text-decoration: none;
   color: var(--primary-color);
   font-weight: 500;
-  padding: 0.4rem 0.8rem;
+  padding: 0.4rem 0.2rem;
   border-radius: 4px;
   transition: color 0.2s ease-in-out, background-color 0.2s ease;
-  font-size: 1.1rem;
+  font-size: 0.8rem;
   display: inline-block;
 }
 
@@ -39,6 +35,36 @@
 
 .file-tree__item--folder .file-tree__link {
   font-weight: bold;
+}
+
+.file-tree__file_name {
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: 500;
+  border-radius: 4px;
+  transition: color 0.2s ease-in-out, background-color 0.2s ease;
+  font-size: 0.8rem;
+  display: inline-block;
+}
+
+.file-tree__file_name:hover {
+  color: var(--text-color);
+  text-decoration: underline;
+}
+
+.file-tree__item--folder .file-tree__file_name {
+  font-weight: bold;
+}
+
+.file-tree__folder-icon {
+  opacity: 0;
+  font-size: 0.8em;
+  transition: opacity 0.2s ease-in-out;
+  padding-left: 0.5em;
+}
+
+.file-tree__item--folder:hover .file-tree__folder-icon {
+  opacity: 1;
 }
 
 .file-tree__item--file,

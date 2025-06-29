@@ -16,7 +16,6 @@
 .prose h6 {
   font-family: "Lora", serif;
   font-weight: 700;
-  margin-top: 2em;
   margin-bottom: 1em;
   color: var(--text-color);
 }
@@ -71,7 +70,6 @@
 
 .prose img {
   max-width: 100%;
-  height: auto;
   border-radius: 4px;
   margin: 2em 0;
 }
