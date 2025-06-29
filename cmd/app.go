@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,11 +24,7 @@ type App struct {
 	cfg    config.Config
 	gen    *transformers.SiteTransformer
 	hub    *Hub
-}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	server *http.Server
 }
 
 func NewApp() (*App, error) {
@@ -96,48 +93,75 @@ func (a *App) Run(clear, watch, serve bool, port string) {
 }
 
 func (a *App) serve(port string) {
-	fs := http.FileServer(http.Dir(a.cfg.OutputDirectory))
+	mux := http.NewServeMux()
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			a.logger.Error("Failed to upgrade websocket", "error", err)
-			return
-		}
-		a.hub.register <- conn
-	})
+	a.server = &http.Server{
+		Addr:         ":" + port,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestedPath := filepath.Join(a.cfg.OutputDirectory, r.URL.Path)
+	mux.HandleFunc("/ws", a.handleWebSocket)
+	mux.Handle("/", a.fileServerHandler())
 
-		stat, err := os.Stat(requestedPath)
-		if os.IsNotExist(err) {
-			w.WriteHeader(http.StatusNotFound)
-			http.ServeFile(w, r, filepath.Join(a.cfg.OutputDirectory, "404.html"))
-			return
-		}
-
-		if stat.IsDir() {
-			indexPath := filepath.Join(requestedPath, "index.html")
-			if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-				w.WriteHeader(http.StatusNotFound)
-				http.ServeFile(w, r, filepath.Join(a.cfg.OutputDirectory, "404.html"))
-				return
-			}
-		}
-		fs.ServeHTTP(w, r)
-	}))
-
-	addr := ":" + port
-	a.logger.Print("Serving static website", "url", "http://localhost"+addr)
-	err := http.ListenAndServe(addr, nil)
+	a.logger.Print("Serving static website", "url", "http://localhost:"+port)
+	err := a.server.ListenAndServe()
 	if err != nil {
 		a.logger.Error("Failed to start server", "error", err)
 		os.Exit(1)
 	}
 }
 
-// watch monitors the filesystem for changes and triggers a site rebuild.
+func (a *App) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+
+			return true
+		},
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		a.logger.Error("Failed to upgrade websocket connection", "error", err)
+		return
+	}
+	a.hub.register <- conn
+}
+
+func (a *App) fileServerHandler() http.HandlerFunc {
+	fs := http.FileServer(http.Dir(a.cfg.OutputDirectory))
+	return func(w http.ResponseWriter, r *http.Request) {
+		requestedPath := filepath.Join(a.cfg.OutputDirectory, r.URL.Path)
+
+		stat, err := os.Stat(requestedPath)
+		if os.IsNotExist(err) {
+			a.logger.Warn("File not found, serving 404", "path", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			http.ServeFile(w, r, filepath.Join(a.cfg.OutputDirectory, "404.html"))
+			return
+		}
+		if err != nil {
+			a.logger.Error("Error stating file", "path", r.URL.Path, "error", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if stat.IsDir() {
+			indexPath := filepath.Join(requestedPath, "index.html")
+			if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+				a.logger.Warn("Directory without index.html, serving 404", "path", r.URL.Path)
+				w.WriteHeader(http.StatusNotFound)
+				http.ServeFile(w, r, filepath.Join(a.cfg.OutputDirectory, "404.html"))
+				return
+			}
+		}
+		fs.ServeHTTP(w, r)
+	}
+}
+
 func (a *App) watch() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -158,7 +182,6 @@ func (a *App) watch() {
 					if err := a.gen.GenerateSite(); err != nil {
 						a.logger.Error("Error regenerating site", "error", err)
 					} else {
-						// On successful regeneration, notify clients to reload.
 						a.hub.broadcast <- []byte("reload")
 					}
 				}
@@ -171,46 +194,71 @@ func (a *App) watch() {
 		}
 	}()
 
-	// Add non-recursive paths first
-	otherPaths := []string{"templates", "config.yaml"}
-	for _, path := range otherPaths {
-		fi, err := os.Stat(path)
-		if err != nil {
-			a.logger.Warn("Could not stat path, skipping watch", "path", path, "error", err)
-			continue
-		}
-		if fi.IsDir() {
-			a.logger.Print("Watching for changes in directory", "path", path)
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to watch directory", "directory", path, "error", err)
-			}
-		} else {
-			a.logger.Print("Watching for changes in file", "path", path)
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to watch file", "file", path, "error", err)
-			}
-		}
+	watchPaths := []string{"config.yaml"}
+	if err := a.addWatchFiles(watcher, watchPaths...); err != nil {
+		a.logger.Error("Failed to watch files", "error", err)
 	}
 
-	// Recursively watch the input directory
-	err = filepath.WalkDir(a.cfg.InputDirectory, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to watch directory", "directory", path, "error", err)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		a.logger.Error("Error walking input directory", "error", err)
+	watchDirs := []string{a.cfg.InputDirectory, "templates"}
+	if err := a.addRecursiveWatchDirs(watcher, watchDirs...); err != nil {
+		a.logger.Error("Failed to watch directories", "error", err)
 	}
 
-	// Wait for a shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	a.logger.Info("Shutdown signal received, exiting gracefully.")
+}
+
+func (a *App) addRecursiveWatchDirs(watcher *fsnotify.Watcher, dirs ...string) error {
+	for _, dir := range dirs {
+		a.logger.Info("Adding recursive watch for directory", "directory", dir)
+		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if d.IsDir() {
+				if err := watcher.Add(path); err != nil {
+					a.logger.Error("Failed to add directory to watcher", "directory", path, "error", err)
+				} else {
+					a.logger.Debug("Successfully added directory to watcher", "directory", path)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("error walking directory %s: %w", dir, err)
+		}
+	}
+	return nil
+}
+
+func (a *App) addWatchFiles(watcher *fsnotify.Watcher, paths ...string) error {
+	for _, path := range paths {
+		a.logger.Info("Adding watch for path", "path", path)
+		fi, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				a.logger.Warn("Path does not exist, skipping watch", "path", path)
+			} else {
+				a.logger.Warn("Could not stat path, skipping watch", "path", path, "error", err)
+			}
+			continue
+		}
+
+		if fi.IsDir() {
+			if err := watcher.Add(path); err != nil {
+				a.logger.Error("Failed to add directory to watcher", "directory", path, "error", err)
+			} else {
+				a.logger.Debug("Successfully added directory to watcher", "directory", path)
+			}
+		} else {
+			if err := watcher.Add(path); err != nil {
+				a.logger.Error("Failed to add file to watcher", "file", path, "error", err)
+			} else {
+				a.logger.Debug("Successfully added file to watcher", "file", path)
+			}
+		}
+	}
+	return nil
 }
