@@ -10,6 +10,9 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
   color: inherit;
+  background-color: var(--background-color);
+  border-left: 3px solid var(--primary-color);
+  padding-left: calc(1.5rem - 3px);
 }
 
 .left-sidebar-item-title {
@@ -19,12 +22,14 @@
   margin: 0;
   margin-bottom: 1rem;
   color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {
   .left-sidebar {
     position: static;
     top: auto;
+    order: 2;
   }
 
   .file-tree-container .left-sidebar-item-content {
@@ -58,5 +63,18 @@
 
   .file-tree-container.expanded .left-sidebar-item-title::after {
     transform: rotate(90deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1150px) {
+  .left-sidebar {
+    margin-left: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-sidebar {
+    margin: 1rem 0rem;
   }
 }

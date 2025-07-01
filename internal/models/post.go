@@ -15,6 +15,7 @@ type Frontmatter struct {
 type BlogPost struct {
 	Title        string
 	FileName     string
+	RawFileName  string
 	RawBody      []byte
 	HTMLContent  template.HTML
 	Date         time.Time

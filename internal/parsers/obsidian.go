@@ -16,7 +16,7 @@ import (
 )
 
 type Parser interface {
-	ParseNote(filePath string) (models.BlogPost, []models.Image, []string, error)
+	ParseNote(filePath string, fileName string) (models.BlogPost, []models.Image, []string, error)
 }
 
 type ObsidianParser struct {
@@ -42,7 +42,7 @@ type processedFrontmatter struct {
 	updatedAt *time.Time
 }
 
-func (p *ObsidianParser) ParseNote(filePath string) (models.BlogPost, []models.Image, []string, error) {
+func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.BlogPost, []models.Image, []string, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
 		return models.BlogPost{}, nil, nil, err
@@ -62,21 +62,19 @@ func (p *ObsidianParser) ParseNote(filePath string) (models.BlogPost, []models.I
 	images := p.extractObsidianImages(bodyWithoutFrontmatter)
 	tags := p.extractTags(bodyWithoutFrontmatter)
 
-	// Generate a clean filename for the HTML output
-	htmlFileName := utils.Slugify(processedFrontmatter.title) + ".html"
-	if htmlFileName == ".html" { // Avoid empty file names if title is empty
-		htmlFileName = "post-" + time.Now().Format("20060102150405") + ".html"
-	}
+	htmlFileName := utils.Slugify(strings.TrimSuffix(fileName, ".md")) + ".html"
 
 	inputDir := strings.TrimPrefix(p.Config.InputDirectory, "./")
 	relativePath := strings.TrimPrefix(filePath, inputDir)
 
-	relativePathWithoutName := strings.TrimRight(relativePath, processedFrontmatter.title+".md")
+	relativePathWithoutName := strings.TrimRight(relativePath, fileName)
 	relativePathWithoutName = strings.TrimRight(relativePathWithoutName, "/")
+	relativePathWithoutName = utils.Slugify(relativePathWithoutName)
 
 	return models.BlogPost{
 		Title:        processedFrontmatter.title,
 		FileName:     htmlFileName,
+		RawFileName:  strings.TrimSuffix(fileName, ".md"),
 		RawBody:      bodyWithoutFrontmatter,
 		Date:         processedFrontmatter.date,
 		Author:       frontmatter.Author,

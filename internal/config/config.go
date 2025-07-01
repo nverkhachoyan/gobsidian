@@ -13,7 +13,7 @@ import (
 var frontmatterRegex = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---`)
 var ObsidianImageRegex = regexp.MustCompile(`!\[\[([^|\]]+\.(?:png|jpg|jpeg|gif|bmp|svg))(?:\|(\d+)(?:x(\d+))?)?\]\]`)
 var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
-var wikilinkRegex = regexp.MustCompile(`\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
+var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
 
 type Config struct {
 	InputDirectory  string

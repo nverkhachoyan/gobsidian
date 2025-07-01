@@ -34,10 +34,11 @@ html.dark-mode .theme-switcher .sun {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
-    display: block;
-    position: inherit;
-    margin: 0 auto;
-    right: 0;
-    top: 10px;
+
+    position: static;
+    align-self: flex-end;
+
+  
+ 
   }
 }

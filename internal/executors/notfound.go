@@ -17,7 +17,6 @@ func ExecuteNotFoundPage(cfg config.Config) error {
 		BaseURL      string
 		CurrentYear  int
 	}{
-
 		SiteTitle:    cfg.SiteTitle,
 		SiteSubtitle: cfg.SiteSubtitle,
 		BaseURL:      cfg.BaseURL,

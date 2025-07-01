@@ -94,3 +94,31 @@
 .post-meta .post-date.updated {
   font-style: italic;
 }
+
+/* Responsive Design */
+
+
+@media (max-width: 1150px) {
+  .post-card {
+    margin: 0 1rem;
+  }
+
+  .latest-posts {
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .post-card {
+    margin: 0;
+ 
+  }
+  .latest-posts {
+    margin: 1rem 0rem;
+  }
+
+  .post-grid{ 
+    gap: 1rem;
+  }
+
+}

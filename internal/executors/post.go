@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
+	"gobsidian/internal/utils"
 	"os"
 	"path/filepath"
 	"time"
@@ -30,7 +31,7 @@ func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fi
 		FileTree:     fileTree,
 	}
 
-	filePath := filepath.Join(outputDir, p.RelativePath, p.FileName)
+	filePath := filepath.Join(outputDir, utils.Slugify(p.RelativePath), p.FileName)
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", filePath, err)

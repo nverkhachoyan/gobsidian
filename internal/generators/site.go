@@ -1,6 +1,7 @@
 package generators
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"sync"
@@ -17,6 +18,9 @@ import (
 	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
 	"gobsidian/internal/utils"
+	"slices"
+
+	"github.com/google/uuid"
 
 	"github.com/gomarkdown/markdown/html"
 
@@ -24,11 +28,18 @@ import (
 )
 
 type StaticSiteGenerator struct {
-	Config           config.Config
-	Logger           *log.Logger
-	Templates        *template.Template
-	Parser           parsers.Parser
-	MarkdownRenderer *html.Renderer
+	Config              config.Config
+	Logger              *log.Logger
+	Templates           *template.Template
+	Parser              parsers.Parser
+	MarkdownRenderer    *html.Renderer
+	RenderedPostCache   map[string]template.HTML
+	RenderingInProgress map[string]bool
+}
+
+type EmbeddedPost struct {
+	ID      string
+	Content template.HTML
 }
 
 func NewStaticSiteGenerator(
@@ -36,18 +47,19 @@ func NewStaticSiteGenerator(
 	logger *log.Logger,
 	parser parsers.Parser,
 	markdownRenderer *html.Renderer,
-
 ) (*StaticSiteGenerator, error) {
 	templates, err := template.ParseGlob("templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse templates: %w", err)
 	}
 	return &StaticSiteGenerator{
-		Config:           config,
-		Logger:           logger,
-		Templates:        templates,
-		Parser:           parser,
-		MarkdownRenderer: markdownRenderer,
+		Config:              config,
+		Logger:              logger,
+		Templates:           templates,
+		Parser:              parser,
+		MarkdownRenderer:    markdownRenderer,
+		RenderedPostCache:   make(map[string]template.HTML),
+		RenderingInProgress: make(map[string]bool),
 	}, nil
 }
 
@@ -70,10 +82,17 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 		postBody := string((*post).RawBody)
 
 		contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
-		contentWithWikilinks := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, titleToPost)
+		contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, titleToPost)
 		hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
 
-		(*post).HTMLContent = template.HTML(markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer))
+		finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
+
+		for _, embeddedPost := range embeddedPosts {
+			finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
+		}
+
+		(*post).HTMLContent = template.HTML(finalHTMLBytes)
+
 	}
 
 	// --- Step 4: Create subdirectories ---
@@ -148,9 +167,10 @@ func (g *StaticSiteGenerator) buildFolderTreeAndCreateDirs(posts []*models.BlogP
 			if part == "" {
 				continue
 			}
+			lowercasePart := strings.ToLower(part)
 
-			if _, ok := currentNode.Children[part]; !ok {
-				childPath := filepath.ToSlash(filepath.Join(currentNode.Path, part))
+			if _, ok := currentNode.Children[lowercasePart]; !ok {
+				childPath := filepath.ToSlash(filepath.Join(currentNode.Path, lowercasePart))
 
 				postDir := filepath.Join(g.Config.OutputDirectory, childPath)
 				if err := os.MkdirAll(postDir, 0755); err != nil {
@@ -161,15 +181,15 @@ func (g *StaticSiteGenerator) buildFolderTreeAndCreateDirs(posts []*models.BlogP
 					return nil, 0, fmt.Errorf("failed to create preview subdirectory %s: %w", previewDir, err)
 				}
 
-				currentNode.Children[part] = &models.Folder{
-					Name:     part,
+				currentNode.Children[lowercasePart] = &models.Folder{
+					Name:     lowercasePart,
 					Path:     childPath,
 					Posts:    []*models.BlogPost{},
 					Children: make(map[string]*models.Folder),
 				}
 				numberOfFolders++
 			}
-			currentNode = currentNode.Children[part]
+			currentNode = currentNode.Children[lowercasePart]
 		}
 
 		currentNode.Posts = append(currentNode.Posts, post)
@@ -191,7 +211,39 @@ func sortFolderTree(folder *models.Folder) {
 	}
 }
 
-func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, titleToPost map[string]*models.BlogPost) string {
+func (g *StaticSiteGenerator) renderPostContent(post *models.BlogPost, posts []*models.BlogPost, titleToPost map[string]*models.BlogPost) template.HTML {
+
+	if renderedPost, ok := g.RenderedPostCache[post.URL]; ok {
+		return renderedPost
+	}
+
+	if g.RenderingInProgress[post.URL] {
+		g.Logger.Warn("Circular embed detected, returning placeholder/error for", "title", post.Title)
+		return template.HTML(fmt.Sprintf(`<div class="embedded-post-circular-error">Circular Embed: %s</div>`, post.Title))
+	}
+
+	g.RenderingInProgress[post.URL] = true
+
+	postBody := string((*post).RawBody)
+
+	contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
+	contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, titleToPost)
+	hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
+
+	finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
+
+	for _, embeddedPost := range embeddedPosts {
+		finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
+	}
+
+	g.RenderedPostCache[post.URL] = template.HTML(finalHTMLBytes)
+	g.RenderingInProgress[post.URL] = false
+
+	return template.HTML(finalHTMLBytes)
+}
+
+func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, posts []*models.BlogPost, titleToPost map[string]*models.BlogPost) (string, map[string]EmbeddedPost) {
+	embeddedPosts := make(map[string]EmbeddedPost)
 	return g.Config.RegexpConfig.WikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := g.Config.RegexpConfig.WikilinkRegex.FindStringSubmatch(match)
 		linkTarget := strings.TrimSpace(parts[1])
@@ -199,6 +251,8 @@ func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, p
 		if len(parts) > 2 && parts[2] != "" {
 			linkText = parts[2]
 		}
+
+		isEmbedded := strings.HasPrefix(match, "!")
 
 		if linkedPd, ok := titleToPost[linkTarget]; ok {
 			// Add backlink to the target post
@@ -216,11 +270,46 @@ func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, p
 					URL:   pd.URL,
 				})
 			}
+
+			if isEmbedded {
+				htmlContent := g.renderPostContent(linkedPd, posts, titleToPost)
+				uniqueID := uuid.New().String()
+				embeddedPosts[uniqueID] = EmbeddedPost{
+					ID:      uniqueID,
+					Content: htmlContent,
+				}
+				return fmt.Sprintf(`<div class="embedded-post">
+				<div class="embedded-post-header">
+				<a href="%s"><h2>%s</h2></a>
+				</div>
+				%s</div>`, linkedPd.URL, linkedPd.Title, uniqueID)
+			}
 			return fmt.Sprintf(`<a href="%s">%s</a>`, linkedPd.URL, linkText)
 		}
-		// If link target doesn't exist, return plain text
-		return linkText
-	})
+
+		if isEmbedded {
+			embeddedPostIndex := slices.IndexFunc(posts, func(p *models.BlogPost) bool {
+				return p.RawFileName == linkText
+			})
+			if embeddedPostIndex == -1 {
+				g.Logger.Warn("Embedded post not found", "title", linkTarget)
+				return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(linkText)+".html", linkText)
+			}
+
+			htmlContent := g.renderPostContent(posts[embeddedPostIndex], posts, titleToPost)
+			uniqueID := uuid.New().String()
+			embeddedPosts[uniqueID] = EmbeddedPost{
+				ID:      uniqueID,
+				Content: htmlContent,
+			}
+			return fmt.Sprintf(`<div class="embedded-post">
+			<div class="embedded-post-header">
+			<a href="%s"><h2>%s</h2></a>
+			</div>
+			%s</div>`, posts[embeddedPostIndex].URL, posts[embeddedPostIndex].Title, uniqueID)
+		}
+		return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(linkTarget)+".html", linkText)
+	}), embeddedPosts
 }
 
 func (g *StaticSiteGenerator) enrichHashtagsWithLinks(body string) string {
@@ -317,13 +406,17 @@ func (g *StaticSiteGenerator) discoverAndParseNotes() ([]*models.BlogPost, map[s
 	err := filepath.Walk(g.Config.InputDirectory, func(path string, info os.FileInfo, err error) error {
 
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
-			post, images, linkedTitles, err := g.Parser.ParseNote(path)
+			post, images, linkedTitles, err := g.Parser.ParseNote(path, info.Name())
 			if err != nil {
 				g.Logger.Warn("Skipping file during initial parse", "path", path, "error", err)
 				return nil
 			}
 
-			post.URL = post.RelativePath + "/" + post.FileName
+			if post.RelativePath == "" {
+				post.URL = "/" + post.FileName
+			} else {
+				post.URL = "/" + post.RelativePath + "/" + post.FileName
+			}
 
 			post.Images = images
 			post.FilePath = path

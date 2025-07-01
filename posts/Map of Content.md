@@ -11,7 +11,8 @@ This note serves as a starting point to navigate my digital garden.
 
   - [[Programming/Exploring Go]]
   - [[Markdown Syntax Guide]]
-
+  - [[What are threads anyway?]]
+ 
 - **Personal Growth:** Thoughts on learning, habits, and life.
   - [[Personal/Reading Habits]]
 
@@ -20,3 +21,8 @@ This note serves as a starting point to navigate my digital garden.
 - [[Welcome to My Digital Garden]]
 
 This is an ever-evolving map that will grow as I add more to this space.
+
+
+Here's an example of an embed
+
+![[Welcome to My Digital Garden]]

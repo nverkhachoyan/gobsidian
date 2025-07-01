@@ -1,5 +1,5 @@
 ---
-title: Markdown Syntax Guide
+title: Markdown Syntax Guide bruv
 date: 2025-06-29
 author: Nver Khachoyan
 ---

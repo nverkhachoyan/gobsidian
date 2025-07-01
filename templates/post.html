@@ -9,8 +9,10 @@
   <body>
     <div class="container">
       <header>
-        <a href="/" class="back-link">← Back to Home</a>
-        {{template "theme_switcher" .}}
+        <a href="/" class="back-link">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Home
+        </a>
         <h1>{{.Title}}</h1>
         <div class="post-meta">
           {{if .Author}}
@@ -32,6 +34,7 @@
           >
           {{end}}
         </div>
+        {{template "theme_switcher" .}}
       </header>
 
       <div class="content-wrapper">

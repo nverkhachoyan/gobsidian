@@ -1,0 +1,14 @@
+{{define "tags_item"}}
+<div class="left-sidebar-item">
+  <h5 class="left-sidebar-item-title">Tags</h5>
+  <div class="left-sidebar-item-content">
+    <nav class="tags-nav">
+      <ul>
+        {{range .}}
+        <li><a href="/tag/{{.Slug}}/">#{{.Name}}</a></li>
+        {{end}}
+      </ul>
+    </nav>
+  </div>
+</div>
+{{end}}

@@ -10,13 +10,17 @@
   font-size: 0.9rem;
   overflow: hidden;
   max-height: 280px;
+  padding-top: 1.8rem;
 }
 
 .preview-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: flex-start;
   gap: 0.5rem;
-  margin: -1rem -1rem 1rem -1rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--background-color);

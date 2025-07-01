@@ -1,0 +1,23 @@
+{{define "left_sidebar"}}
+<aside class="left-sidebar">
+  <div class="left-sidebar-item">
+    <h5 class="left-sidebar-item-title">Who am I?</h5>
+    <div class="left-sidebar-item-content">
+      <p>Somebody that you used to know :P</p>
+      <p>
+        Jokes aside, the content here is just placeholder for now. More like a
+        lorem ipsum dolor sit amet.
+      </p>
+    </div>
+  </div>
+
+  {{if .FileTree}}
+    {{template "folders_item" .FileTree}} 
+  {{end}} 
+  
+  {{if .Tags}} 
+    {{template "tags_item" .Tags}} 
+  {{end}}
+
+</aside>
+{{end}}

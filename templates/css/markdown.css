@@ -104,3 +104,110 @@
   margin-bottom: 1em;
   display: block;
 }
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .prose {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+  }
+
+}
+
+.embedded-post {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  border-left: 4px solid var(--primary-color);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 4px var(--shadow-color);
+  padding: 1.5rem;
+  margin: 1.5rem 0 1.5rem 1rem;
+  color: var(--text-color);
+  position: relative;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.embedded-post::before {
+  content: "📎";
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  background-color: var(--primary-color);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.embedded-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.embedded-post-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.embedded-post-header a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+  font-size: 0.9em;
+}
+
+.embedded-post-header a:after {
+  content: "\f35d";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 0.8em;
+  margin-left: 0.5em;
+  text-decoration: none;
+}
+
+.embedded-post-header a:hover {
+  opacity: 1;
+  color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.embedded-post p,
+.embedded-post ul,
+.embedded-post ol {
+  margin-bottom: 0.8em;
+}
+
+.embedded-post p:last-child,
+.embedded-post ul:last-child,
+.embedded-post ol:last-child {
+  margin-bottom: 0;
+}
+
+/* Nested embedded posts should be more subtle */
+.embedded-post .embedded-post {
+  margin-left: 0.5rem;
+  border-left-width: 2px;
+  font-size: 0.9em;
+  background-color: rgba(var(--border-color), 0.3);
+}
+
+.embedded-post .embedded-post::before {
+  display: none;
+}

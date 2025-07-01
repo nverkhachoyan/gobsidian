@@ -9,7 +9,9 @@
   <body>
     <div class="container">
       <header>
-        <a href="/" class="back-link">← Back to Home</a>
+        <a href="/" class="back-link">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Home</a>
         <h1>{{.SiteTitle}}</h1>
         <p class="subtitle">{{.SiteSubtitle}}</p>
         {{template "theme_switcher" .}}
