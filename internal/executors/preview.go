@@ -15,7 +15,7 @@ func ExecutePreviewPage(cfg config.Config, p models.BlogPost) error {
 		return fmt.Errorf("failed to create previews directory: %w", err)
 	}
 
-	filePath := filepath.Join(outputDir, "previews", utils.Slugify(p.RelativePath), p.FileName)
+	filePath := filepath.Join(outputDir, "previews", utils.Slugify(p.RelativePathWithoutName), p.FileName)
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", filePath, err)

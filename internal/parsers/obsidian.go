@@ -12,6 +12,8 @@ import (
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 
+	"sync/atomic"
+
 	"github.com/goccy/go-yaml"
 )
 
@@ -42,6 +44,12 @@ type processedFrontmatter struct {
 	updatedAt *time.Time
 }
 
+var atomicIDcounter int64
+
+func getNextID() int64 {
+	return atomic.AddInt64(&atomicIDcounter, 1)
+}
+
 func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.BlogPost, []models.Image, []string, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
@@ -58,7 +66,7 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.Blo
 		return models.BlogPost{}, nil, nil, fmt.Errorf("failed to process frontendmatter from %s: %w", filePath, err)
 	}
 
-	linkedPosts := p.extractWikilinks(bodyWithoutFrontmatter)
+	linkedRelativePaths := p.extractWikilinks(bodyWithoutFrontmatter)
 	images := p.extractObsidianImages(bodyWithoutFrontmatter)
 	tags := p.extractTags(bodyWithoutFrontmatter)
 
@@ -66,22 +74,25 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.Blo
 
 	inputDir := strings.TrimPrefix(p.Config.InputDirectory, "./")
 	relativePath := strings.TrimPrefix(filePath, inputDir)
+	relativePathWithoutExtension := strings.TrimPrefix(strings.TrimSuffix(relativePath, ".md"), "/")
 
 	relativePathWithoutName := strings.TrimRight(relativePath, fileName)
 	relativePathWithoutName = strings.TrimRight(relativePathWithoutName, "/")
 	relativePathWithoutName = utils.Slugify(relativePathWithoutName)
 
 	return models.BlogPost{
-		Title:        processedFrontmatter.title,
-		FileName:     htmlFileName,
-		RawFileName:  strings.TrimSuffix(fileName, ".md"),
-		RawBody:      bodyWithoutFrontmatter,
-		Date:         processedFrontmatter.date,
-		Author:       frontmatter.Author,
-		UpdatedAt:    processedFrontmatter.updatedAt,
-		Tags:         tags,
-		RelativePath: relativePathWithoutName,
-	}, images, linkedPosts, nil
+		ID:                      getNextID(),
+		Title:                   processedFrontmatter.title,
+		FileName:                htmlFileName,
+		RawFileName:             strings.TrimSuffix(fileName, ".md"),
+		RawBody:                 bodyWithoutFrontmatter,
+		Date:                    processedFrontmatter.date,
+		Author:                  frontmatter.Author,
+		UpdatedAt:               processedFrontmatter.updatedAt,
+		Tags:                    tags,
+		RelativePath:            relativePathWithoutExtension,
+		RelativePathWithoutName: relativePathWithoutName,
+	}, images, linkedRelativePaths, nil
 }
 
 func (p *ObsidianParser) processFrontmatter(frontmatter Frontmatter, filePath string) (processedFrontmatter, error) {
@@ -148,13 +159,13 @@ func (p *ObsidianParser) splitFrontmatterAndBody(markdownInput []byte) (Frontmat
 }
 
 func (p *ObsidianParser) extractWikilinks(markdownInput []byte) []string {
-	var linkedPosts []string
+	var linkedRelativePaths []string
 	wikilinkMatches := p.Config.RegexpConfig.WikilinkRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range wikilinkMatches {
-		linkedPosts = append(linkedPosts, string(match[1]))
+		linkedRelativePaths = append(linkedRelativePaths, string(match[1]))
 	}
 
-	return linkedPosts
+	return linkedRelativePaths
 }
 
 func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []models.Image {

@@ -5,12 +5,13 @@ import (
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
+	"html/template"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fileTree *models.Folder) error {
+func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fileTree *models.Folder, graph []byte) error {
 	outputDir := cfg.OutputDirectory
 
 	data := struct {
@@ -21,6 +22,7 @@ func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fi
 		CurrentYear  int
 		Tags         []models.Tag
 		FileTree     *models.Folder
+		Graph        template.JS
 	}{
 		BlogPost:     p,
 		SiteTitle:    cfg.SiteTitle,
@@ -29,9 +31,10 @@ func ExecutePostPage(cfg config.Config, p models.BlogPost, tags []models.Tag, fi
 		CurrentYear:  time.Now().Year(),
 		Tags:         tags,
 		FileTree:     fileTree,
+		Graph:        template.JS(graph),
 	}
 
-	filePath := filepath.Join(outputDir, utils.Slugify(p.RelativePath), p.FileName)
+	filePath := filepath.Join(outputDir, utils.Slugify(p.RelativePathWithoutName), p.FileName)
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", filePath, err)

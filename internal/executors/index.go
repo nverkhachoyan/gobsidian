@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
+	"html/template"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +16,7 @@ func ExecuteIndexPage(
 	posts []*models.BlogPost,
 	tags []models.Tag,
 	fileTree *models.Folder,
+	graph []byte,
 ) error {
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].Date.After(posts[j].Date)
@@ -27,6 +29,7 @@ func ExecuteIndexPage(
 		Tags         []models.Tag
 		CurrentYear  int
 		FileTree     *models.Folder
+		Graph        template.JS
 	}{
 		SiteTitle:    cfg.SiteTitle,
 		SiteSubtitle: cfg.SiteSubtitle,
@@ -34,6 +37,7 @@ func ExecuteIndexPage(
 		Tags:         tags,
 		CurrentYear:  time.Now().Year(),
 		FileTree:     fileTree,
+		Graph:        template.JS(graph),
 	}
 
 	filePath := filepath.Join(cfg.OutputDirectory, "index.html")

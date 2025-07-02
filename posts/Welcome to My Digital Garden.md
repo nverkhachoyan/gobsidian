@@ -13,9 +13,9 @@ Feel free to explore the connections between notes using the [[wikilinks]]. You 
 
 I'm excited to share this journey with you.
 
-![[Exploring Go]]
+![[Programming/Exploring Go]]
 
 
 Here is another embedded post
 
-![[Reading Habits]]
+![[Personal/Reading Habits]]

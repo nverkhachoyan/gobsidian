@@ -3,12 +3,13 @@ package executors
 import (
 	"fmt"
 	"gobsidian/internal/config"
+	"html/template"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-func ExecuteNotFoundPage(cfg config.Config) error {
+func ExecuteNotFoundPage(cfg config.Config, graph []byte) error {
 	outputDir := cfg.OutputDirectory
 
 	data := struct {
@@ -16,11 +17,13 @@ func ExecuteNotFoundPage(cfg config.Config) error {
 		SiteSubtitle string
 		BaseURL      string
 		CurrentYear  int
+		Graph        template.JS
 	}{
 		SiteTitle:    cfg.SiteTitle,
 		SiteSubtitle: cfg.SiteSubtitle,
 		BaseURL:      cfg.BaseURL,
 		CurrentYear:  time.Now().Year(),
+		Graph:        template.JS(graph),
 	}
 
 	outFile, err := os.Create(filepath.Join(outputDir, "404.html"))

@@ -21,8 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(hideTimeout); // Cancel any pending hide requests
 
     const href = link.getAttribute("href");
-    // Don't show preview for the link to the current page
-    if (window.location.pathname === href) return;
 
     showTimeout = setTimeout(() => {
       if (previewCard) {

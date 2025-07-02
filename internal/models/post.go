@@ -13,21 +13,24 @@ type Frontmatter struct {
 }
 
 type BlogPost struct {
-	Title        string
-	FileName     string
-	RawFileName  string
-	RawBody      []byte
-	HTMLContent  template.HTML
-	Date         time.Time
-	Author       string
-	UpdatedAt    *time.Time
-	URL          string
-	Images       []Image
-	FilePath     string
-	Tags         []Tag
-	RelativePath string
-	LinkedFrom   []Link
-	LinkedTitles []string
+	ID                      int64
+	Title                   string
+	FileName                string
+	RawFileName             string
+	RawBody                 []byte
+	HTMLContent             template.HTML
+	Date                    time.Time
+	Author                  string
+	UpdatedAt               *time.Time
+	URL                     string
+	Images                  []Image
+	FilePath                string
+	Tags                    []Tag
+	RelativePath            string
+	RelativePathWithoutName string
+	LinkedFrom              []Link
+	LinkedTitlesStrings     []string
+	LinkedTitles            []*BlogPost
 }
 
 type Image struct {
@@ -38,8 +41,10 @@ type Image struct {
 }
 
 type Link struct {
-	Title string
-	URL   string
+	Title       string
+	URL         string
+	RawFileName string
+	PseudoName  string
 }
 
 type Tag struct {
@@ -48,6 +53,7 @@ type Tag struct {
 }
 
 type Folder struct {
+	ID       int64
 	Name     string
 	Path     string
 	Posts    []*BlogPost

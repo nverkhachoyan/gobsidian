@@ -72,7 +72,7 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 	}
 
 	// --- Step 2: Discover and parse notes ---
-	posts, titleToPost, err := g.discoverAndParseNotes()
+	posts, relativePathToPost, idToPost, err := g.discoverAndParseNotes()
 	if err != nil {
 		return fmt.Errorf("error during initial walk: %w", err)
 	}
@@ -82,7 +82,7 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 		postBody := string((*post).RawBody)
 
 		contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
-		contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, titleToPost)
+		contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, relativePathToPost)
 		hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
 
 		finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
@@ -101,8 +101,13 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 		return fmt.Errorf("failed to create subdirectories: %w", err)
 	}
 
+	graphGenerator := GraphGenerator{
+		Config: &g.Config,
+	}
+	graph := graphGenerator.Generate(posts, relativePathToPost, idToPost)
+
 	// --- Step 5: Execute the templates ---
-	numberOfTags, err := g.executeTemplates(posts, fileTree)
+	numberOfTags, err := g.executeTemplates(posts, fileTree, graph)
 	if err != nil {
 		return err
 	}
@@ -147,6 +152,7 @@ func (g *StaticSiteGenerator) replaceObsidianImageLinks(body string) string {
 
 func (g *StaticSiteGenerator) buildFolderTreeAndCreateDirs(posts []*models.BlogPost) (*models.Folder, int, error) {
 	root := &models.Folder{
+
 		Name:     "Home",
 		Path:     "",
 		Posts:    []*models.BlogPost{},
@@ -155,12 +161,12 @@ func (g *StaticSiteGenerator) buildFolderTreeAndCreateDirs(posts []*models.BlogP
 	numberOfFolders := 0
 
 	for _, post := range posts {
-		if post.RelativePath == "" || post.RelativePath == "." {
+		if post.RelativePathWithoutName == "" || post.RelativePathWithoutName == "." {
 			root.Posts = append(root.Posts, post)
 			continue
 		}
 
-		parts := strings.Split(post.RelativePath, string(filepath.Separator))
+		parts := strings.Split(post.RelativePathWithoutName, string(filepath.Separator))
 		currentNode := root
 
 		for _, part := range parts {
@@ -211,7 +217,11 @@ func sortFolderTree(folder *models.Folder) {
 	}
 }
 
-func (g *StaticSiteGenerator) renderPostContent(post *models.BlogPost, posts []*models.BlogPost, titleToPost map[string]*models.BlogPost) template.HTML {
+func (g *StaticSiteGenerator) renderPostContent(
+	post *models.BlogPost,
+	posts []*models.BlogPost,
+	relativePathToPost map[string]*models.BlogPost,
+) template.HTML {
 
 	if renderedPost, ok := g.RenderedPostCache[post.URL]; ok {
 		return renderedPost
@@ -227,7 +237,7 @@ func (g *StaticSiteGenerator) renderPostContent(post *models.BlogPost, posts []*
 	postBody := string((*post).RawBody)
 
 	contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
-	contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, titleToPost)
+	contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(contentWithImagesReplaced, post, posts, relativePathToPost)
 	hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
 
 	finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
@@ -242,19 +252,26 @@ func (g *StaticSiteGenerator) renderPostContent(post *models.BlogPost, posts []*
 	return template.HTML(finalHTMLBytes)
 }
 
-func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, pd *models.BlogPost, posts []*models.BlogPost, titleToPost map[string]*models.BlogPost) (string, map[string]EmbeddedPost) {
+func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(
+	body string,
+	pd *models.BlogPost,
+	posts []*models.BlogPost,
+	relativePathToPost map[string]*models.BlogPost,
+) (string, map[string]EmbeddedPost) {
 	embeddedPosts := make(map[string]EmbeddedPost)
 	return g.Config.RegexpConfig.WikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := g.Config.RegexpConfig.WikilinkRegex.FindStringSubmatch(match)
-		linkTarget := strings.TrimSpace(parts[1])
-		linkText := linkTarget
+		matchedLinkText := parts[1]
+		pseudoName := matchedLinkText
+
 		if len(parts) > 2 && parts[2] != "" {
-			linkText = parts[2]
+			pseudoName = parts[2]
 		}
 
 		isEmbedded := strings.HasPrefix(match, "!")
 
-		if linkedPd, ok := titleToPost[linkTarget]; ok {
+		// Checking if matchedLinkText is a relative link to a post
+		if linkedPd, ok := relativePathToPost[matchedLinkText]; ok {
 			// Add backlink to the target post
 			// Avoid duplicates
 			found := false
@@ -266,50 +283,67 @@ func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(body string, p
 			}
 			if !found {
 				linkedPd.LinkedFrom = append(linkedPd.LinkedFrom, models.Link{
-					Title: pd.Title,
-					URL:   pd.URL,
+					Title:       pd.Title,
+					URL:         pd.URL,
+					RawFileName: pd.RawFileName,
+					PseudoName:  pseudoName,
 				})
 			}
 
 			if isEmbedded {
-				htmlContent := g.renderPostContent(linkedPd, posts, titleToPost)
-				uniqueID := uuid.New().String()
-				embeddedPosts[uniqueID] = EmbeddedPost{
-					ID:      uniqueID,
-					Content: htmlContent,
+				return g.handleEmbeddedPost(posts, relativePathToPost, embeddedPosts, linkedPd)
+			}
+			return fmt.Sprintf(`<a href="%s">%s</a>`, linkedPd.URL, pseudoName)
+		}
+
+		// If the link is not a relative link to a post, check if it may exist in a folder structure
+		// Obsidian allows to link to a post by its name if the post title is unique across the vault
+		var lastPossibleMatch string
+		for relativePath := range relativePathToPost {
+			splitPath := strings.Split(relativePath, "/")
+			if len(splitPath) > 0 {
+				lastPossibleMatch = splitPath[len(splitPath)-1]
+
+				if lastPossibleMatch == matchedLinkText {
+					postFromMap, ok := relativePathToPost[relativePath]
+					if ok {
+						if isEmbedded {
+							embeddedPostIndex := slices.IndexFunc(posts, func(p *models.BlogPost) bool {
+								return p.RawFileName == matchedLinkText
+							})
+							if embeddedPostIndex == -1 {
+								g.Logger.Warn("Embedded post not found", "title", matchedLinkText)
+								return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(matchedLinkText)+".html", matchedLinkText)
+							}
+							foundPost := posts[embeddedPostIndex]
+							return g.handleEmbeddedPost(posts, relativePathToPost, embeddedPosts, foundPost)
+						}
+
+						return fmt.Sprintf(`<a href="%s">%s</a>`, postFromMap.URL, pseudoName)
+					}
 				}
-				return fmt.Sprintf(`<div class="embedded-post">
-				<div class="embedded-post-header">
-				<a href="%s"><h2>%s</h2></a>
-				</div>
-				%s</div>`, linkedPd.URL, linkedPd.Title, uniqueID)
+
 			}
-			return fmt.Sprintf(`<a href="%s">%s</a>`, linkedPd.URL, linkText)
 		}
 
-		if isEmbedded {
-			embeddedPostIndex := slices.IndexFunc(posts, func(p *models.BlogPost) bool {
-				return p.RawFileName == linkText
-			})
-			if embeddedPostIndex == -1 {
-				g.Logger.Warn("Embedded post not found", "title", linkTarget)
-				return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(linkText)+".html", linkText)
-			}
-
-			htmlContent := g.renderPostContent(posts[embeddedPostIndex], posts, titleToPost)
-			uniqueID := uuid.New().String()
-			embeddedPosts[uniqueID] = EmbeddedPost{
-				ID:      uniqueID,
-				Content: htmlContent,
-			}
-			return fmt.Sprintf(`<div class="embedded-post">
-			<div class="embedded-post-header">
-			<a href="%s"><h2>%s</h2></a>
-			</div>
-			%s</div>`, posts[embeddedPostIndex].URL, posts[embeddedPostIndex].Title, uniqueID)
-		}
-		return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(linkTarget)+".html", linkText)
+		return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(matchedLinkText)+".html", pseudoName)
 	}), embeddedPosts
+}
+
+func (g *StaticSiteGenerator) handleEmbeddedPost(posts []*models.BlogPost, relativePathToPost map[string]*models.BlogPost, embeddedPosts map[string]EmbeddedPost, embeddedPost *models.BlogPost) string {
+	var uniqueID string
+
+	htmlContent := g.renderPostContent(embeddedPost, posts, relativePathToPost)
+	uniqueID = uuid.New().String()
+	embeddedPosts[uniqueID] = EmbeddedPost{
+		ID:      uniqueID,
+		Content: htmlContent,
+	}
+	return fmt.Sprintf(`<div class="embedded-post">
+		<div class="embedded-post-header">
+		<a href="%s"><h2>%s</h2></a>
+		</div>
+		%s</div>`, embeddedPost.URL, embeddedPost.Title, uniqueID)
 }
 
 func (g *StaticSiteGenerator) enrichHashtagsWithLinks(body string) string {
@@ -320,7 +354,7 @@ func (g *StaticSiteGenerator) enrichHashtagsWithLinks(body string) string {
 	})
 }
 
-func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fileTree *models.Folder) (int, error) {
+func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fileTree *models.Folder, graph []byte) (int, error) {
 	tagsMap := make(map[string]*models.Tag)
 	for _, pd := range blogPosts {
 		for _, tag := range pd.Tags {
@@ -338,7 +372,7 @@ func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fil
 	})
 
 	for _, p := range blogPosts {
-		if err := executors.ExecutePostPage(g.Config, *p, tags, fileTree); err != nil {
+		if err := executors.ExecutePostPage(g.Config, *p, tags, fileTree, graph); err != nil {
 			g.Logger.Error("Error generating post page", "title", p.Title, "error", err)
 		}
 		if err := executors.ExecutePreviewPage(g.Config, *p); err != nil {
@@ -355,34 +389,34 @@ func (g *StaticSiteGenerator) executeTemplates(blogPosts []*models.BlogPost, fil
 	}
 
 	for _, tag := range tags {
-		if err := executors.ExecuteTagPage(g.Config, tag, postsByTag[tag.Slug], fileTree); err != nil {
+		if err := executors.ExecuteTagPage(g.Config, tag, postsByTag[tag.Slug], fileTree, graph); err != nil {
 			g.Logger.Error("Error generating tag page", "name", tag.Name, "error", err)
 
 		}
 	}
 
-	if err := g.executeFolderTemplates(fileTree, tags, fileTree); err != nil {
+	if err := g.executeFolderTemplates(fileTree, tags, fileTree, graph); err != nil {
 		g.Logger.Error("Error generating folder pages", "error", err)
 	}
 
-	if err := executors.ExecuteIndexPage(g.Config, blogPosts, tags, fileTree); err != nil {
+	if err := executors.ExecuteIndexPage(g.Config, blogPosts, tags, fileTree, graph); err != nil {
 		return 0, err
 	}
 
-	if err := executors.ExecuteNotFoundPage(g.Config); err != nil {
+	if err := executors.ExecuteNotFoundPage(g.Config, graph); err != nil {
 		g.Logger.Error("Error generating not found page", "error", err)
 	}
 
 	return len(tags), nil
 }
 
-func (g *StaticSiteGenerator) executeFolderTemplates(folder *models.Folder, tags []models.Tag, fileTree *models.Folder) error {
-	if err := executors.ExecuteFolderPage(g.Config, folder, tags, fileTree); err != nil {
+func (g *StaticSiteGenerator) executeFolderTemplates(folder *models.Folder, tags []models.Tag, fileTree *models.Folder, graph []byte) error {
+	if err := executors.ExecuteFolderPage(g.Config, folder, tags, fileTree, graph); err != nil {
 		return err
 	}
 
 	for _, child := range folder.Children {
-		if err := g.executeFolderTemplates(child, tags, fileTree); err != nil {
+		if err := g.executeFolderTemplates(child, tags, fileTree, graph); err != nil {
 			return err
 		}
 	}
@@ -399,39 +433,41 @@ func (g *StaticSiteGenerator) createOutputDirectories() error {
 	return nil
 }
 
-func (g *StaticSiteGenerator) discoverAndParseNotes() ([]*models.BlogPost, map[string]*models.BlogPost, error) {
+func (g *StaticSiteGenerator) discoverAndParseNotes() ([]*models.BlogPost, map[string]*models.BlogPost, map[int64]*models.BlogPost, error) {
 	var posts []*models.BlogPost
-	titleToPost := make(map[string]*models.BlogPost)
+	relativePathToPost := make(map[string]*models.BlogPost)
+	idToPost := make(map[int64]*models.BlogPost)
 
 	err := filepath.Walk(g.Config.InputDirectory, func(path string, info os.FileInfo, err error) error {
 
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
-			post, images, linkedTitles, err := g.Parser.ParseNote(path, info.Name())
+			post, images, linkedRelativePaths, err := g.Parser.ParseNote(path, info.Name())
 			if err != nil {
 				g.Logger.Warn("Skipping file during initial parse", "path", path, "error", err)
 				return nil
 			}
 
-			if post.RelativePath == "" {
+			if post.RelativePathWithoutName == "" {
 				post.URL = "/" + post.FileName
 			} else {
-				post.URL = "/" + post.RelativePath + "/" + post.FileName
+				post.URL = "/" + post.RelativePathWithoutName + "/" + post.FileName
 			}
 
 			post.Images = images
 			post.FilePath = path
-			post.LinkedTitles = linkedTitles
+			post.LinkedTitlesStrings = linkedRelativePaths
 
 			posts = append(posts, &post)
-			titleToPost[post.Title] = &post
+			relativePathToPost[post.RelativePath] = &post
+			idToPost[post.ID] = &post
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error during initial walk: %w", err)
+		return nil, nil, nil, fmt.Errorf("error during initial walk: %w", err)
 	}
 
-	return posts, titleToPost, nil
+	return posts, relativePathToPost, idToPost, nil
 }
 
 func (g *StaticSiteGenerator) copyAssets(posts []*models.BlogPost) error {

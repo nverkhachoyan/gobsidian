@@ -1,0 +1,1 @@
+{"nodes":[{"id":1,"label":"Map of Content"},{"id":2,"label":"Markdown Syntax Guide bruv"},{"id":3,"label":"On the Joy of Reading"},{"id":4,"label":"What are threads anyway?"},{"id":5,"label":"Exploring Go: My First Impressions"},{"id":6,"label":"Welcome to My Digital Garden"}],"edges":[{"from":4,"to":1},{"from":6,"to":1}]}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
+	"html/template"
 	"os"
 	"path/filepath"
 	"time"
@@ -14,6 +15,7 @@ func ExecuteFolderPage(
 	folder *models.Folder,
 	tags []models.Tag,
 	fileTree *models.Folder,
+	graph []byte,
 ) error {
 	// Don't create a page for the root folder, it's handled by index.html
 	if folder.Path == "" {
@@ -32,6 +34,7 @@ func ExecuteFolderPage(
 		Tags         []models.Tag
 		CurrentYear  int
 		FileTree     *models.Folder
+		Graph        template.JS
 	}{
 		SiteTitle:    cfg.SiteTitle,
 		SiteSubtitle: cfg.SiteSubtitle,
@@ -39,6 +42,7 @@ func ExecuteFolderPage(
 		Tags:         tags,
 		CurrentYear:  time.Now().Year(),
 		FileTree:     fileTree,
+		Graph:        template.JS(graph),
 	}
 
 	filePath := filepath.Join(outputDir, "index.html")

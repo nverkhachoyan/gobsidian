@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
+	"html/template"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost, fileTree *models.Folder) error {
+func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost, fileTree *models.Folder, graph []byte) error {
 	// Create the tag directory for the tag page
 	outputDir := filepath.Join(cfg.OutputDirectory, "tag", tag.Slug)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
@@ -22,12 +23,14 @@ func ExecuteTagPage(cfg config.Config, tag models.Tag, posts []*models.BlogPost,
 		Posts       []*models.BlogPost
 		CurrentYear int
 		FileTree    *models.Folder
+		Graph       template.JS
 	}{
 		SiteTitle:   cfg.SiteTitle,
 		Tag:         tag,
 		Posts:       posts,
 		CurrentYear: time.Now().Year(),
 		FileTree:    fileTree,
+		Graph:       template.JS(graph),
 	}
 
 	filePath := filepath.Join(outputDir, "index.html")
