@@ -17,12 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   };
 
-  const showPreview = (e, link) => {
-    clearTimeout(hideTimeout); // Cancel any pending hide requests
+  const showPreview = async (e, link) => {
+    clearTimeout(hideTimeout);
 
     const href = link.getAttribute("href");
 
-    showTimeout = setTimeout(() => {
+    showTimeout = setTimeout(async () => {
       if (previewCard) {
         previewCard.remove();
       }
@@ -44,23 +44,37 @@ document.addEventListener("DOMContentLoaded", () => {
       previewCard.innerHTML = "Loading...";
       updateCardPosition(e);
 
-      fetch(previewUrl)
-        .then((response) => response.text())
-        .then((content) => {
-          if (previewCard) {
-            previewCard.innerHTML = content;
-            updateCardPosition(e);
+      try {
+        const response = await fetch(previewUrl);
+        if (!response.ok) {
+          previewCard.innerHTML = "";
+          previewCard.classList.add("broken-link");
 
-            const closeBtn = previewCard.querySelector(".close-preview-btn");
-            if (closeBtn) {
-              closeBtn.addEventListener("click", () => hidePreview(false));
-            }
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load preview", err);
-          if (previewCard) previewCard.remove();
-        });
+          const newChildElement = document.createElement("p");
+          newChildElement.textContent = "Oh no! This link is broken.";
+          newChildElement.classList.add("broken-link-text");
+          previewCard.appendChild(newChildElement);
+          updateCardPosition(e);
+          return;
+        }
+        const content = await response.text();
+        previewCard.innerHTML = content;
+        updateCardPosition(e);
+        const closeBtn = previewCard.querySelector(".close-preview-btn");
+        if (closeBtn) {
+          closeBtn.addEventListener("click", () => hidePreview(false));
+        }
+      } catch (err) {
+        console.error("Failed to load preview", err);
+        previewCard.innerHTML = "";
+        previewCard.classList.add("broken-link");
+
+        const newChildElement = document.createElement("p");
+        newChildElement.textContent = "Oh no! This link is broken.";
+        newChildElement.classList.add("broken-link-text");
+        previewCard.appendChild(newChildElement);
+        updateCardPosition(e);
+      }
     }, 500);
   };
 

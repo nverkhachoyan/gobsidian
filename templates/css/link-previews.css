@@ -46,7 +46,8 @@
 .link-preview .preview-card {
   max-height: 250px;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 1rem; 
+  overflow-x: hidden; /* Standard property */
 }
 
 /* Style for the content inside the preview */
@@ -77,4 +78,32 @@
 
 .link-preview .preview-card .preview-card-title:hover {
   text-decoration: underline;
+}
+
+.broken-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 0;
+}
+
+.broken-link .preview-card {
+  display: flex;
+}
+
+.broken-link-text {
+  color: var(--subtle-text-color);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.broken-link-text:after {
+  content: "\f06a";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: var(--subtle-text-color);
+  margin-left: 0.5rem;
 }

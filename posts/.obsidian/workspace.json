@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Jira.md",
+                "file": "Bugs.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Jira"
+              "title": "Bugs"
             }
           },
           {
@@ -184,8 +184,8 @@
   },
   "active": "314ebccc3b854d9b",
   "lastOpenFiles": [
+    "Bugs.md",
     "Personal/Tomfoolery And Stuff/What are threads anyway?.md",
-    "Jira.md",
     "Map of Content.md",
     "Exploring Go.md",
     "Personal/Reading Habits.md",

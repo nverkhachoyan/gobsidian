@@ -138,6 +138,13 @@ footer a:hover {
   width: 100%;
 }
 
+#graph-network-modal {
+  height: 90%;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
 /* Modal Styles */
 .graph-modal-container {
   display: none; /* Hidden by default */
@@ -180,7 +187,7 @@ footer a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 1rem 2rem;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--surface-color);
   border-radius: 12px 12px 0 0;
@@ -189,7 +196,7 @@ footer a:hover {
 .graph-modal-header h2 {
   margin: 0;
   font-family: "Lora", serif;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   color: var(--text-color);
 }
 
@@ -216,16 +223,9 @@ footer a:hover {
 }
 
 .graph-modal-body {
-  height: calc(100% - 80px); /* Subtract header height */
+  height: 100%;
   padding: 1rem;
   position: relative;
-}
-
-#graph-network-modal {
-  height: 100%;
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
 }
 
 .zoom-graph-button {

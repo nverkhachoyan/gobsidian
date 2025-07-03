@@ -12,30 +12,63 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const nodeBgColor = '#aaaab3'
   const nodeBorderColor = getCssVariable('--border-color');
-  const nodeFontColor = getCssVariable('--text-color');
+  const nodeFontColor = isDarkMode ? "#e0e0e0" : "#212529";
   const edgeColor = getCssVariable('--subtle-text-color');
-  const edgeHighlightColor = isDarkMode ? '#8a5cf5' : '#8a5cf5'; 
+  const nodeHighlightColor = '#8a5cf5'; 
+  const edgeHighlightColor = '#8153ec'; 
   const edgeHoverColor = isDarkMode ? '#a0a0a0' : '#8a5cf5';
 
  
-  var rawData = window.graphData;
+  const rawData = window.graphData;
   console.log(rawData);
  
-  var nodes = new vis.DataSet(rawData.nodes);
-  var edges = new vis.DataSet(rawData.edges);
-  var container = document.getElementById('graph-network');
-  var data = {
+  // Calculate degree (number of connections) for each node
+  const degreeMap = {};
+  rawData.nodes.forEach(node => {
+    degreeMap[node.id] = 0;
+  });
+  
+  rawData.edges.forEach(edge => {
+    if (degreeMap[edge.from] !== undefined) degreeMap[edge.from]++;
+    if (degreeMap[edge.to] !== undefined) degreeMap[edge.to]++;
+  });
+  
+  // Find min and max degrees for scaling
+  const degrees = Object.values(degreeMap);
+  const minDegree = Math.min(...degrees);
+  const maxDegree = Math.max(...degrees);
+  
+  // Set node sizes based on degree
+  const nodesWithSize = rawData.nodes.map(node => {
+    const degree = degreeMap[node.id];
+    // Scale size between 8 and 25 based on degree
+    const minSize = 8;
+    const maxSize = 25;
+    const size = maxDegree > minDegree 
+      ? minSize + (degree - minDegree) * (maxSize - minSize) / (maxDegree - minDegree)
+      : minSize;
+    
+    return {
+      ...node,
+      size: Math.max(size, minSize), // Ensure minimum size
+      title: node.title ? `${node.title}<br/>Connections: ${degree}` : `Connections: ${degree}` // Add degree to tooltip
+    };
+  });
+ 
+  const nodes = new vis.DataSet(nodesWithSize);
+  const edges = new vis.DataSet(rawData.edges);
+  const container = document.getElementById('graph-network');
+  const data = {
       nodes: nodes,
       edges: edges
   };
   
-  var options = {
+  const options = {
     height: '100%',
     width: '100%',
     autoResize: true,
     nodes: {
       shape: 'dot',
-      size: 10,
       font: {
         size: 14,
         color: nodeFontColor, 
@@ -51,11 +84,11 @@ document.addEventListener('DOMContentLoaded', function() {
         background: nodeBgColor, 
         border: nodeBorderColor,     
         highlight: {
-          background: isDarkMode ? '#3a3a3a' : '#e0e0e0',
+          background: nodeHighlightColor,
           border: isDarkMode ? '#5a5a5a' : '#c0c0c0',
         },
         hover: {
-          background: isDarkMode ? '#2a2a2a' : '#f0f0f0',
+          background: nodeHighlightColor,
           border: isDarkMode ? '#4a4a4a' : '#d0d0d0'
         }
       },
@@ -127,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   var network = new vis.Network(container, data, options);
   
-  // Add hover cursor functionality for main graph
+
   network.on("hoverNode", function (params) {
     container.style.cursor = 'pointer';
   });
@@ -136,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
     container.style.cursor = 'default';
   });
 
-  // Add click functionality for main graph
+
   network.on("click", function (params) {
     if (params.nodes.length > 0) {
       const nodeId = params.nodes[0];
@@ -150,24 +183,23 @@ document.addEventListener('DOMContentLoaded', function() {
   
   var modalNetwork = null;
 
-  // Function to open modal
+
   function openModal() {
     modal.style.display = 'block';
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    document.body.style.overflow = 'hidden'; 
     
-    // Create modal graph instance if it doesn't exist
+
     if (!modalNetwork) {
       const modalContainer = document.getElementById('graph-network-modal');
       
-      // Enhanced options for modal graph (larger, more interactive)
+
       const modalOptions = {
         ...options,
         nodes: {
           ...options.nodes,
-          size: 15, // Larger nodes in modal
           font: {
             ...options.nodes.font,
-            size: 16 // Larger font in modal
+            size: 16 
           }
         },
         physics: {
@@ -182,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       modalNetwork = new vis.Network(modalContainer, data, modalOptions);
       
-      // Add hover cursor functionality for modal graph
+
       modalNetwork.on("hoverNode", function (params) {
         modalContainer.style.cursor = 'pointer';
       });
@@ -191,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modalContainer.style.cursor = 'default';
       });
 
-      // Add click functionality for modal graph
+
       modalNetwork.on("click", function (params) {
         if (params.nodes.length > 0) {
           const nodeId = params.nodes[0];
@@ -202,7 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       
-      // Fit the modal graph after a short delay to ensure proper rendering
       setTimeout(() => {
         modalNetwork.fit({
           animation: true,
@@ -211,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }, 100);
     } else {
-      // If network already exists, just fit it
+ 
       setTimeout(() => {
         modalNetwork.redraw();
         modalNetwork.fit({
@@ -223,13 +254,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Function to close modal
   function closeModal() {
     modal.style.display = 'none';
-    document.body.style.overflow = 'auto'; // Restore background scrolling
+    document.body.style.overflow = 'auto';  
   }
 
-  // Event listeners
   if (zoomGraphButton) {
     zoomGraphButton.addEventListener('click', function() {
       openModal();
@@ -242,7 +271,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Close modal when clicking outside the modal content
   if (modal) {
     modal.addEventListener('click', function(event) {
       if (event.target === modal) {
@@ -251,14 +279,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Close modal with Escape key
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape' && modal && modal.style.display === 'block') {
       closeModal();
     }
   });
 
-  // Handle window resize for modal
   window.addEventListener('resize', function() {
     if (modalNetwork && modal && modal.style.display === 'block') {
       modalNetwork.redraw();
