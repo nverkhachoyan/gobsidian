@@ -1,2 +1,0 @@
-> [!example]+ Magic Item
-> Text

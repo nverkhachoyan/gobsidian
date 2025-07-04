@@ -1,2 +1,0 @@
-> [!note]+ Call Out
-> Text

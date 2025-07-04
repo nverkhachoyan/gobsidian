@@ -1,1 +1,0 @@
-`encounter: 4: Kobold` 
