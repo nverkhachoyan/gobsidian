@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,12 +11,12 @@ import (
 
 	"gobsidian/internal/config"
 	"gobsidian/internal/generators"
+	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
 	"gobsidian/internal/renderers"
 	"gobsidian/internal/websockets"
 
 	"github.com/charmbracelet/log"
-	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 )
 
@@ -43,14 +42,34 @@ func NewApp() (*App, error) {
 	}
 
 	markdownRenderer := renderers.NewMarkdownRenderer()
-	parser := parsers.NewObsidianParser(cfg)
 
-	gen, err := generators.NewStaticSiteGenerator(
-		cfg,
-		logger,
-		parser,
-		markdownRenderer,
-	)
+	parser := parsers.NewObsidianParser(&parsers.ObsidianParser{
+		InputDirectory: cfg.InputDirectory,
+		Regexes: &models.ParserRegexes{
+			FrontmatterRegex:   cfg.RegexpConfig.FrontmatterRegex,
+			WikilinkRegex:      cfg.RegexpConfig.WikilinkRegex,
+			ObsidianImageRegex: cfg.RegexpConfig.ObsidianImageRegex,
+			HashtagRegex:       cfg.RegexpConfig.HashtagRegex,
+		},
+	})
+
+	gen, err := generators.NewStaticSiteGenerator(&generators.StaticSiteGenerator{
+		InputDirectory:  cfg.InputDirectory,
+		OutputDirectory: cfg.OutputDirectory,
+		SiteTitle:       cfg.SiteTitle,
+		SiteSubtitle:    cfg.SiteSubtitle,
+		BaseURL:         cfg.BaseURL,
+		Templates:       cfg.Templates,
+		Regexes: &models.ParserRegexes{
+			FrontmatterRegex:   cfg.RegexpConfig.FrontmatterRegex,
+			WikilinkRegex:      cfg.RegexpConfig.WikilinkRegex,
+			ObsidianImageRegex: cfg.RegexpConfig.ObsidianImageRegex,
+			HashtagRegex:       cfg.RegexpConfig.HashtagRegex,
+		},
+		Logger:           logger,
+		Parser:           parser,
+		MarkdownRenderer: markdownRenderer,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -84,20 +103,6 @@ func (a *App) Run(clear, watch, serve bool, port string) {
 		a.serve(port)
 	}
 
-	// if watch {
-	// 	if serve {
-	// 		a.logger.Print("Watching for changes and serving...", "port", port)
-	// 		go a.serve(port)
-	// 	} else {
-	// 		a.logger.Print("Watching for changes...")
-	// 	}
-	// 	a.watch()
-	// } else if serve {
-	// 	a.logger.Print("Building complete. Serving website...", "port", port)
-	// 	a.serve(port)
-	// } else {
-	// 	a.logger.Print("Build complete. Use --watch for live reloading or --serve to host.")
-	// }
 }
 
 func (a *App) serve(port string) {
@@ -180,111 +185,4 @@ func (a *App) fileServerHandler() http.HandlerFunc {
 		}
 		fs.ServeHTTP(w, r)
 	}
-}
-
-func (a *App) watch() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		a.logger.Error("Failed to create file watcher", "error", err)
-		os.Exit(1)
-	}
-	defer watcher.Close()
-
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				a.logger.Debug("Watcher event", "event", event)
-
-				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove|fsnotify.Chmod) != 0 {
-					a.logger.Infof("Change detected in %s, regenerating site", event.Name)
-					if err := os.RemoveAll(a.cfg.OutputDirectory); err != nil {
-						a.logger.Error("Failed to clear output directory", "error", err)
-						os.Exit(1)
-					}
-					if err := a.gen.GenerateSite(); err != nil {
-						a.logger.Error("Error regenerating site", "error", err)
-					} else {
-						a.hub.Broadcast <- []byte("reload")
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				a.logger.Error("Watcher error", "error", err)
-			}
-		}
-	}()
-
-	watchPaths := []string{"config.yaml"}
-	if err := a.addWatchFiles(watcher, watchPaths...); err != nil {
-		a.logger.Error("Failed to watch files", "error", err)
-	}
-
-	watchDirs := []string{a.cfg.InputDirectory, "templates"}
-	if err := a.addRecursiveWatchDirs(watcher, watchDirs...); err != nil {
-		a.logger.Error("Failed to watch directories", "error", err)
-	}
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	a.logger.Info("Shutdown signal received, exiting gracefully.")
-}
-
-func (a *App) addRecursiveWatchDirs(watcher *fsnotify.Watcher, dirs ...string) error {
-	for _, dir := range dirs {
-		a.logger.Info("Adding recursive watch for directory", "directory", dir)
-		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr // Propagate walk errors
-			}
-			// Add both directories and files to the watcher
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to add path to watcher", "path", path, "error", err)
-				// Don't exit here, try to continue with other paths
-			} else {
-				a.logger.Debug("Successfully added path to watcher", "path", path)
-			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("error walking directory %s: %w", dir, err) // Return error from walk
-		}
-	}
-	return nil
-}
-
-func (a *App) addWatchFiles(watcher *fsnotify.Watcher, paths ...string) error {
-	for _, path := range paths {
-		a.logger.Info("Adding watch for path", "path", path)
-		fi, err := os.Stat(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				a.logger.Warn("Path does not exist, skipping watch", "path", path)
-			} else {
-				a.logger.Warn("Could not stat path, skipping watch", "path", path, "error", err)
-			}
-			continue
-		}
-
-		if fi.IsDir() {
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to add directory to watcher", "directory", path, "error", err)
-			} else {
-				a.logger.Debug("Successfully added directory to watcher", "directory", path)
-			}
-		} else {
-			if err := watcher.Add(path); err != nil {
-				a.logger.Error("Failed to add file to watcher", "file", path, "error", err)
-			} else {
-				a.logger.Debug("Successfully added file to watcher", "file", path)
-			}
-		}
-	}
-	return nil
 }

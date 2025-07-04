@@ -4,163 +4,101 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"gobsidian/internal/config"
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
-
-	"sync/atomic"
 
 	"github.com/goccy/go-yaml"
 )
 
 type Parser interface {
-	ParseNote(filePath string, fileName string) (models.BlogPost, []models.Image, []string, error)
+	ParseNote(filePath string, fileName string) (ParsedNote, error)
 }
 
 type ObsidianParser struct {
-	Config config.Config
+	InputDirectory string
+	Regexes        *models.ParserRegexes
 }
 
-func NewObsidianParser(c config.Config) *ObsidianParser {
+func NewObsidianParser(c *ObsidianParser) *ObsidianParser {
 	return &ObsidianParser{
-		Config: c,
+		InputDirectory: c.InputDirectory,
+		Regexes:        c.Regexes,
 	}
 }
 
-type Frontmatter struct {
+type YamlFrontmatter struct {
 	Title     string `yaml:"title"`
 	Date      string `yaml:"date"`
 	Author    string `yaml:"author"`
 	UpdatedAt string `yaml:"updatedAt"`
 }
 
-type processedFrontmatter struct {
+type Frontmatter struct {
 	title     string
+	author    string
 	date      time.Time
 	updatedAt *time.Time
 }
 
-var atomicIDcounter int64
-
-func getNextID() int64 {
-	return atomic.AddInt64(&atomicIDcounter, 1)
+type ParsedNote struct {
+	Title     string
+	Author    string
+	RawBody   []byte
+	Date      time.Time
+	UpdatedAt *time.Time
+	Images    []models.Image
+	Tags      []models.Tag
+	Wikilinks []string
 }
 
-func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.BlogPost, []models.Image, []string, error) {
+func (p *ObsidianParser) ParseNote(filePath string, fileName string) (ParsedNote, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
-		return models.BlogPost{}, nil, nil, err
+		return ParsedNote{}, err
 	}
 
-	frontmatter, bodyWithoutFrontmatter, err := p.splitFrontmatterAndBody(markdownInput)
+	frontmatterBytes, bodyBytes, err := p.splitFrontmatterAndBody(markdownInput)
 	if err != nil {
-		return models.BlogPost{}, nil, nil, fmt.Errorf("failed to extract content from %s: %w", filePath, err)
+		return ParsedNote{}, fmt.Errorf("failed to extract content from %s: %w", filePath, err)
 	}
 
-	processedFrontmatter, err := p.processFrontmatter(frontmatter, filePath)
+	frontmatter, err := p.parseFrontmatter(frontmatterBytes, filePath, fileName)
 	if err != nil {
-		return models.BlogPost{}, nil, nil, fmt.Errorf("failed to process frontendmatter from %s: %w", filePath, err)
+		return ParsedNote{}, fmt.Errorf("failed to parse frontmatter from %s: %w", filePath, err)
 	}
 
-	linkedRelativePaths := p.extractWikilinks(bodyWithoutFrontmatter)
-	images := p.extractObsidianImages(bodyWithoutFrontmatter)
-	tags := p.extractTags(bodyWithoutFrontmatter)
+	wikilinks := p.extractWikilinks(bodyBytes)
+	images := p.extractObsidianImages(bodyBytes)
+	tags := p.extractTags(bodyBytes)
 
-	htmlFileName := utils.Slugify(strings.TrimSuffix(fileName, ".md")) + ".html"
-
-	inputDir := strings.TrimPrefix(p.Config.InputDirectory, "./")
-	relativePath := strings.TrimPrefix(filePath, inputDir)
-	relativePathWithoutExtension := strings.TrimPrefix(strings.TrimSuffix(relativePath, ".md"), "/")
-
-	relativePathWithoutName := strings.TrimRight(relativePath, fileName)
-	relativePathWithoutName = strings.TrimRight(relativePathWithoutName, "/")
-	relativePathWithoutName = utils.Slugify(relativePathWithoutName)
-
-	return models.BlogPost{
-		ID:                      getNextID(),
-		Title:                   processedFrontmatter.title,
-		FileName:                htmlFileName,
-		RawFileName:             strings.TrimSuffix(fileName, ".md"),
-		RawBody:                 bodyWithoutFrontmatter,
-		Date:                    processedFrontmatter.date,
-		Author:                  frontmatter.Author,
-		UpdatedAt:               processedFrontmatter.updatedAt,
-		Tags:                    tags,
-		RelativePath:            relativePathWithoutExtension,
-		RelativePathWithoutName: relativePathWithoutName,
-	}, images, linkedRelativePaths, nil
-}
-
-func (p *ObsidianParser) processFrontmatter(frontmatter Frontmatter, filePath string) (processedFrontmatter, error) {
-	title := frontmatter.Title
-	if title == "" {
-		title = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-		title = strings.ReplaceAll(title, "-", " ")
-	}
-
-	var postDate time.Time
-	if frontmatter.Date != "" {
-		layouts := []string{"2006-01-02", time.RFC3339}
-		for _, layout := range layouts {
-			t, err := time.Parse(layout, frontmatter.Date)
-			if err == nil {
-				postDate = t
-				break
-			}
-		}
-	}
-
-	// Fallback to file mod time if parsing fails or date is not set
-	if postDate.IsZero() {
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
-			return processedFrontmatter{}, fmt.Errorf("failed to get file info %s: %w", filePath, err)
-		}
-		postDate = fileInfo.ModTime()
-	}
-
-	var updatedAt *time.Time
-	if frontmatter.UpdatedAt != "" {
-		layouts := []string{"2006-01-02", time.RFC3339}
-		for _, layout := range layouts {
-			t, err := time.Parse(layout, frontmatter.UpdatedAt)
-			if err == nil {
-				updatedAt = &t
-				break
-			}
-		}
-	}
-
-	return processedFrontmatter{
-		title:     title,
-		date:      postDate,
-		updatedAt: updatedAt,
+	return ParsedNote{
+		Title:     frontmatter.title,
+		Author:    frontmatter.author,
+		RawBody:   bodyBytes,
+		Date:      frontmatter.date,
+		UpdatedAt: frontmatter.updatedAt,
+		Images:    images,
+		Tags:      tags,
+		Wikilinks: wikilinks,
 	}, nil
 }
 
-func (p *ObsidianParser) splitFrontmatterAndBody(markdownInput []byte) (Frontmatter, []byte, error) {
-	var frontmatter Frontmatter
+func (p *ObsidianParser) splitFrontmatterAndBody(markdownInput []byte) ([]byte, []byte, error) {
+	frontmatterMatch := p.Regexes.FrontmatterRegex.FindSubmatch(markdownInput)
 
-	frontmatterMatch := p.Config.RegexpConfig.FrontmatterRegex.FindSubmatch(markdownInput)
 	if len(frontmatterMatch) > 1 {
-		if err := yaml.Unmarshal(frontmatterMatch[1], &frontmatter); err == nil {
-			markdownInput = bytes.ReplaceAll(markdownInput, frontmatterMatch[0], []byte(""))
-			markdownInput = []byte(strings.TrimSpace(string(markdownInput)))
-
-			return frontmatter, markdownInput, nil
-		}
+		markdownInput = bytes.ReplaceAll(markdownInput, frontmatterMatch[0], []byte(""))
+		return frontmatterMatch[1], markdownInput, nil
 	}
 
-	return Frontmatter{}, markdownInput, nil
+	return nil, markdownInput, nil
 }
 
 func (p *ObsidianParser) extractWikilinks(markdownInput []byte) []string {
 	var linkedRelativePaths []string
-	wikilinkMatches := p.Config.RegexpConfig.WikilinkRegex.FindAllSubmatch(markdownInput, -1)
+	wikilinkMatches := p.Regexes.WikilinkRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range wikilinkMatches {
 		linkedRelativePaths = append(linkedRelativePaths, string(match[1]))
 	}
@@ -170,7 +108,7 @@ func (p *ObsidianParser) extractWikilinks(markdownInput []byte) []string {
 
 func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []models.Image {
 	var images []models.Image
-	imageMatches := p.Config.RegexpConfig.ObsidianImageRegex.FindAllSubmatch(markdownInput, -1)
+	imageMatches := p.Regexes.ObsidianImageRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range imageMatches {
 		var image models.Image
 		if len(match) > 1 {
@@ -192,7 +130,7 @@ func (p *ObsidianParser) extractObsidianImages(markdownInput []byte) []models.Im
 
 func (p *ObsidianParser) extractTags(markdownInput []byte) []models.Tag {
 	var tags []models.Tag
-	tagMatches := p.Config.RegexpConfig.HashtagRegex.FindAllSubmatch(markdownInput, -1)
+	tagMatches := p.Regexes.HashtagRegex.FindAllSubmatch(markdownInput, -1)
 	for _, match := range tagMatches {
 		tagName := string(match[1])
 		tags = append(tags, models.Tag{
@@ -202,4 +140,57 @@ func (p *ObsidianParser) extractTags(markdownInput []byte) []models.Tag {
 	}
 
 	return tags
+}
+
+func (p *ObsidianParser) parseFrontmatter(frontmatterBytes []byte, filePath string, fileName string) (Frontmatter, error) {
+	var frontmatter YamlFrontmatter
+
+	if err := yaml.Unmarshal(frontmatterBytes, &frontmatter); err != nil {
+		return Frontmatter{}, fmt.Errorf("failed to unmarshal frontmatter: %w", err)
+	}
+
+	title := frontmatter.Title
+	if title == "" {
+		title = fileName
+	}
+
+	var postDate time.Time
+	if frontmatter.Date != "" {
+		layouts := []string{"2006-01-02", time.RFC3339}
+		for _, layout := range layouts {
+			t, err := time.Parse(layout, frontmatter.Date)
+			if err == nil {
+				postDate = t
+				break
+			}
+		}
+	}
+
+	// Fallback to file mod time if parsing fails or date is not set
+	if postDate.IsZero() {
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			return Frontmatter{}, fmt.Errorf("failed to get file info %s: %w", filePath, err)
+		}
+		postDate = fileInfo.ModTime()
+	}
+
+	var updatedAt *time.Time
+	if frontmatter.UpdatedAt != "" {
+		layouts := []string{"2006-01-02", time.RFC3339}
+		for _, layout := range layouts {
+			t, err := time.Parse(layout, frontmatter.UpdatedAt)
+			if err == nil {
+				updatedAt = &t
+				break
+			}
+		}
+	}
+
+	return Frontmatter{
+		author:    frontmatter.Author,
+		title:     title,
+		date:      postDate,
+		updatedAt: updatedAt,
+	}, nil
 }

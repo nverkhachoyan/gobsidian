@@ -1,0 +1,20 @@
+---
+obsidianUIMode: preview
+cssclasses: json5e-note
+tags:
+- compendium/src/5e/phb
+aliases: ["Metamagic"]
+---
+# Metamagic
+*Source: Player's Handbook. Available in the SRD.* 
+
+- [Careful Spell](/3-Mechanics/CLI/optional-features/careful-spell.md)
+- [Distant Spell](/3-Mechanics/CLI/optional-features/distant-spell.md)
+- [Empowered Spell](/3-Mechanics/CLI/optional-features/empowered-spell.md)
+- [Extended Spell](/3-Mechanics/CLI/optional-features/extended-spell.md)
+- [Heightened Spell](/3-Mechanics/CLI/optional-features/heightened-spell.md)
+- [Quickened Spell](/3-Mechanics/CLI/optional-features/quickened-spell.md)
+- [Seeking Spell](/3-Mechanics/CLI/optional-features/seeking-spell-tce.md)
+- [Subtle Spell](/3-Mechanics/CLI/optional-features/subtle-spell.md)
+- [Transmuted Spell](/3-Mechanics/CLI/optional-features/transmuted-spell-tce.md)
+- [Twinned Spell](/3-Mechanics/CLI/optional-features/twinned-spell.md)

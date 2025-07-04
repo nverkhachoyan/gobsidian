@@ -2,14 +2,15 @@ package generators
 
 import (
 	"encoding/json"
-	"gobsidian/internal/config"
+
 	"gobsidian/internal/models"
-	"log"
+
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 type GraphGenerator struct {
-	Config *config.Config
 	Logger *log.Logger
 }
 
@@ -29,20 +30,28 @@ type Graph struct {
 	Edges []*Edge `json:"edges"`
 }
 
-func (g *GraphGenerator) Generate(posts []*models.BlogPost, relativePathToPost map[string]*models.BlogPost, idToPost map[int64]*models.BlogPost) []byte {
+func NewGraphGenerator(cfg *GraphGenerator) *GraphGenerator {
+	return &GraphGenerator{
+		Logger: cfg.Logger,
+	}
+}
+
+func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, wikilinkResolver *WikilinkResolver) []byte {
+	notesByPath := wikilinkResolver.GetAllByPath()
+
 	nodes := make([]*Node, 0)
 	edges := make([]*Edge, 0)
 
-	for _, post := range posts {
-		nodes = append(nodes, &Node{ID: post.ID, Label: post.Title, URL: post.URL})
+	for _, note := range notes {
+		nodes = append(nodes, &Node{ID: note.ID, Label: note.Title, URL: note.URL})
 
-		for _, linkedPost := range post.LinkedTitlesStrings {
-			if _, ok := relativePathToPost[linkedPost]; ok {
-				edges = append(edges, &Edge{From: (*relativePathToPost[linkedPost]).ID, To: post.ID})
+		for _, linkedPost := range note.Wikilinks {
+			if _, ok := notesByPath[linkedPost]; ok {
+				edges = append(edges, &Edge{From: (*notesByPath[linkedPost]).ID, To: note.ID})
 			} else {
-				postID := g.handleLinksInsideFolders(linkedPost, relativePathToPost)
+				postID := g.handleLinksInsideFolders(linkedPost, notesByPath)
 				if postID != 0 {
-					edges = append(edges, &Edge{From: postID, To: post.ID})
+					edges = append(edges, &Edge{From: postID, To: note.ID})
 				}
 			}
 		}
@@ -62,15 +71,15 @@ func (g *GraphGenerator) Generate(posts []*models.BlogPost, relativePathToPost m
 	return json
 }
 
-func (g *GraphGenerator) handleLinksInsideFolders(relativePathText string, relativePathToPost map[string]*models.BlogPost) int64 {
+func (g *GraphGenerator) handleLinksInsideFolders(relativePathText string, notesByPath map[string]*models.ParsedNote) int64 {
 	var lastPossibleMatch string
-	for relativePath := range relativePathToPost {
+	for relativePath := range notesByPath {
 		splitPath := strings.Split(relativePath, "/")
 		if len(splitPath) > 0 {
 			lastPossibleMatch = splitPath[len(splitPath)-1]
 
 			if lastPossibleMatch == relativePathText {
-				postFromMap, ok := relativePathToPost[relativePath]
+				postFromMap, ok := notesByPath[relativePath]
 				if ok {
 					return postFromMap.ID
 				}
