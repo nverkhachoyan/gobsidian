@@ -2,8 +2,10 @@ package generators
 
 import (
 	"encoding/json"
+	"time"
 
 	"gobsidian/internal/models"
+	"gobsidian/internal/repository"
 
 	"strings"
 
@@ -30,14 +32,15 @@ type Graph struct {
 	Edges []*Edge `json:"edges"`
 }
 
-func NewGraphGenerator(cfg *GraphGenerator) *GraphGenerator {
+func NewGraphGenerator(logger *log.Logger) *GraphGenerator {
 	return &GraphGenerator{
-		Logger: cfg.Logger,
+		Logger: logger,
 	}
 }
 
-func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, wikilinkResolver *WikilinkResolver) []byte {
-	notesByPath := wikilinkResolver.GetAllByPath()
+func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, notesRepository *repository.NoteRepository) []byte {
+	start := time.Now()
+	notesByPath := notesRepository.GetAllByPath()
 
 	nodes := make([]*Node, 0)
 	edges := make([]*Edge, 0)
@@ -63,6 +66,7 @@ func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, wikilinkR
 		Edges: edges,
 	})
 
+	g.Logger.Printf("Graph generation took %s", time.Since(start))
 	if err != nil {
 		g.Logger.Print("Failed to generate JSON", "error", err)
 		return nil

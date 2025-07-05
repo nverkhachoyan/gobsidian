@@ -84,7 +84,7 @@ You may be using [Markdown Live Preview](https://markdownlivepreview.com/).
 
 ## Blocks of code
 
-```
+```js
 
 let message = 'Hello world';
 

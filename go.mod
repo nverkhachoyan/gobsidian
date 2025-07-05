@@ -3,6 +3,7 @@ module gobsidian
 go 1.23.5
 
 require (
+	github.com/alecthomas/chroma/v2 v2.19.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gomarkdown/markdown v0.0.0-20250311123330-531bef5e742b
@@ -17,6 +18,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

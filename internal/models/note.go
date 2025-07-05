@@ -12,7 +12,7 @@ type Frontmatter struct {
 	UpdatedAt string `yaml:"updatedAt"`
 }
 
-type ShallowNote struct {
+type ScannedNote struct {
 	ID             int64
 	FileName       string
 	RelativePath   string
@@ -21,7 +21,7 @@ type ShallowNote struct {
 }
 
 type ParsedNote struct {
-	*ShallowNote
+	*ScannedNote
 
 	// Parsed content
 	Title       string
