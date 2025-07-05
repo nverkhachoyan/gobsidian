@@ -10,7 +10,6 @@ import (
 
 	"github.com/charmbracelet/log"
 
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -18,9 +17,9 @@ import (
 	"gobsidian/internal/executors"
 	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
+	"gobsidian/internal/repository"
+	"gobsidian/internal/transformers"
 	"gobsidian/internal/utils"
-
-	"github.com/google/uuid"
 
 	"github.com/gomarkdown/markdown/html"
 
@@ -28,19 +27,16 @@ import (
 )
 
 type StaticSiteGenerator struct {
-	InputDirectory      string
-	OutputDirectory     string
-	SiteTitle           string
-	SiteSubtitle        string
-	BaseURL             string
-	Regexes             *models.ParserRegexes
-	Logger              *log.Logger
-	Templates           *template.Template
-	Parser              parsers.Parser
-	MarkdownRenderer    *html.Renderer
-	RenderedPostCache   map[string]template.HTML
-	RenderingInProgress map[string]bool
-	cacheMu             sync.RWMutex
+	InputDirectory   string
+	OutputDirectory  string
+	SiteTitle        string
+	SiteSubtitle     string
+	BaseURL          string
+	Regexes          *models.ParserRegexes
+	Logger           *log.Logger
+	Templates        *template.Template
+	Parser           parsers.Parser
+	MarkdownRenderer *html.Renderer
 }
 
 type BaseTemplateData struct {
@@ -55,78 +51,63 @@ type BaseTemplateData struct {
 
 func NewStaticSiteGenerator(cfg *StaticSiteGenerator) (*StaticSiteGenerator, error) {
 	return &StaticSiteGenerator{
-		InputDirectory:      cfg.InputDirectory,
-		OutputDirectory:     cfg.OutputDirectory,
-		SiteTitle:           cfg.SiteTitle,
-		SiteSubtitle:        cfg.SiteSubtitle,
-		BaseURL:             cfg.BaseURL,
-		Regexes:             cfg.Regexes,
-		Logger:              cfg.Logger,
-		Templates:           cfg.Templates,
-		Parser:              cfg.Parser,
-		MarkdownRenderer:    cfg.MarkdownRenderer,
-		RenderedPostCache:   make(map[string]template.HTML),
-		RenderingInProgress: make(map[string]bool),
+		InputDirectory:   cfg.InputDirectory,
+		OutputDirectory:  cfg.OutputDirectory,
+		SiteTitle:        cfg.SiteTitle,
+		SiteSubtitle:     cfg.SiteSubtitle,
+		BaseURL:          cfg.BaseURL,
+		Regexes:          cfg.Regexes,
+		Logger:           cfg.Logger,
+		Templates:        cfg.Templates,
+		Parser:           cfg.Parser,
+		MarkdownRenderer: cfg.MarkdownRenderer,
 	}, nil
 }
 
 func (g *StaticSiteGenerator) GenerateSite() error {
 	start := time.Now()
-	g.Logger.Print("Generating site...")
+	g.Logger.Print("Generating...")
 
-	discoveryStart := time.Now()
-	noteScanner, err := g.walkAndScanNotes()
-	if err != nil {
-		return fmt.Errorf("failed to build note registry %w", err)
-	}
-	g.Logger.Printf("Note discovery took %s", time.Since(discoveryStart))
-
-	if err := g.createOutputDirectories(); err != nil {
-		return fmt.Errorf("failed to create directories: %w", err)
-	}
-
-	wikilinkStart := time.Now()
-	wikilinkResolver, err := g.parseNotes(noteScanner)
-	if err != nil {
-		return fmt.Errorf("error during initial walk: %w", err)
-	}
-	g.Logger.Printf("Wikilink parsing took %s", time.Since(wikilinkStart))
-
-	notesByPath := wikilinkResolver.GetAllByPath()
-
-	transformationStart := time.Now()
-	g.applyTransformationsConcurrently(notesByPath, wikilinkResolver)
-	g.Logger.Printf("Transformation took %s", time.Since(transformationStart))
-
-	buildDirs := time.Now()
-	fileTree, numberOfFolders, err := g.buildFolderTree(notesByPath)
-	if err != nil {
-		return fmt.Errorf("failed to create subdirectories: %w", err)
-	}
-	g.Logger.Printf("Directory creation took %s", time.Since(buildDirs))
-
-	graphStart := time.Now()
-	graphGenerator := NewGraphGenerator(&GraphGenerator{
-		Logger: g.Logger,
-	})
-	graph := graphGenerator.Generate(notesByPath, wikilinkResolver)
-	g.Logger.Printf("Graph generation took %s", time.Since(graphStart))
-
-	notes := make([]*models.ParsedNote, 0, len(notesByPath))
-	for _, note := range notesByPath {
-		notes = append(notes, note)
-	}
-
-	templateStart := time.Now()
-	numberOfTags, err := g.executeTemplatesBatch(notes, fileTree, graph)
+	noteScanner := NewNoteScanner(g.Logger, g.InputDirectory)
+	err := noteScanner.ScanAllNotes()
 	if err != nil {
 		return err
 	}
-	g.Logger.Printf("Template execution took %s", time.Since(templateStart))
+	scannedNotes := noteScanner.GetAllNotes()
 
-	assetCopyStart := time.Now()
+	notesRepository := repository.NewNoteRepository()
+	graphGenerator := NewGraphGenerator(g.Logger)
+
+	transformCtx := transformers.NewTransformContext(g.BaseURL, g.OutputDirectory, notesRepository)
+
+	pipeline := transformers.NewPipeline(
+		transformers.NewSyntaxHighlighter(true),
+		transformers.NewImageProcessor(g.Regexes.ObsidianImageRegex),
+		transformers.NewHashtagEnricher(g.Regexes.HashtagRegex),
+		transformers.NewWikilinkTransformer(
+			g.Regexes.WikilinkRegex,
+			g.Regexes.ObsidianImageRegex,
+			g.Regexes.HashtagRegex,
+			g.Logger,
+			g.MarkdownRenderer,
+		),
+	)
+
+	g.parseNotes(scannedNotes, notesRepository)
+	notesByPath := notesRepository.GetAllByPath()
+	notesSlice := notesRepository.GetAllNotesSlice()
+
+	g.applyTransformationsConcurrently(pipeline, transformCtx, notesSlice)
+
+	fileTree, numberOfFolders := g.buildFolderTree(notesByPath)
+	graph := graphGenerator.Generate(notesByPath, notesRepository)
+
+	numberOfTags, err := g.executeTemplatesBatch(notesSlice, fileTree, graph)
+	if err != nil {
+		return err
+	}
+
 	g.copyAssets(notesByPath)
-	g.Logger.Printf("Asset copy took %s", time.Since(assetCopyStart))
 
 	g.Logger.Print("Site generation complete!",
 		"duration", time.Since(start),
@@ -141,38 +122,8 @@ func (g *StaticSiteGenerator) GenerateSite() error {
 	return nil
 }
 
-func (g *StaticSiteGenerator) walkAndScanNotes() (
-	*NoteScanner,
-	error,
-) {
-	registry := NewNoteScanner(g.InputDirectory)
-	err := filepath.WalkDir(g.InputDirectory, func(path string, info os.DirEntry, err error) error {
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
-			notePath := strings.TrimPrefix(path, g.InputDirectory+"/")
-			isInsideFolder := strings.Contains(notePath, "/")
-			note := &models.ShallowNote{
-				FileName:       info.Name(),
-				FullPath:       path,
-				RelativePath:   notePath,
-				IsInsideFolder: isInsideFolder,
-			}
-			registry.AddNote(note)
-
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error during initial walk: %w", err)
-	}
-
-	return registry, nil
-}
-
-func (g *StaticSiteGenerator) applyTransformationsConcurrently(notesByPath map[string]*models.ParsedNote, wikilinkResolver *WikilinkResolver) error {
-	notes := make([]*models.ParsedNote, 0, len(notesByPath))
-	for _, note := range notesByPath {
-		notes = append(notes, note)
-	}
+func (g *StaticSiteGenerator) applyTransformationsConcurrently(pipeline *transformers.Pipeline, ctx *transformers.TransformContext, notes []*models.ParsedNote) error {
+	start := time.Now()
 
 	numWorkers := min(runtime.NumCPU(), len(notes))
 	notesChan := make(chan *models.ParsedNote, len(notes))
@@ -184,9 +135,25 @@ func (g *StaticSiteGenerator) applyTransformationsConcurrently(notesByPath map[s
 		go func() {
 			defer wg.Done()
 			for note := range notesChan {
-				if err := g.applyTransformations(note, wikilinkResolver); err != nil {
+
+				postBody := string(note.RawBody)
+
+				transformedContent, err := pipeline.Transform(postBody, note, ctx)
+				if err != nil {
+					g.Logger.Warnf("failure to transform: %v", err)
+				}
+
+				finalHTMLBytes := markdown.ToHTML([]byte(transformedContent), nil, g.MarkdownRenderer)
+
+				for _, embeddedPost := range ctx.EmbeddedPosts {
+					finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
+				}
+
+				note.HTMLContent = template.HTML(finalHTMLBytes)
+				if err != nil {
 					errorsChan <- err
 				}
+
 			}
 		}()
 	}
@@ -211,54 +178,12 @@ func (g *StaticSiteGenerator) applyTransformationsConcurrently(notesByPath map[s
 		}
 	}
 
+	g.Logger.Printf("Transformation took %s", time.Since(start))
 	return nil
 }
 
-func (g *StaticSiteGenerator) applyTransformations(note *models.ParsedNote, wikilinkResolver *WikilinkResolver) error {
-	postBody := string(note.RawBody)
-	contentWithImagesReplaced := g.replaceObsidianImageLinks(postBody)
-
-	contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(
-		contentWithImagesReplaced,
-		note,
-		wikilinkResolver,
-	)
-	hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
-
-	finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
-
-	for _, embeddedPost := range embeddedPosts {
-		finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
-	}
-
-	note.HTMLContent = template.HTML(finalHTMLBytes)
-	return nil
-}
-
-func (g *StaticSiteGenerator) replaceObsidianImageLinks(body string) string {
-	return g.Regexes.ObsidianImageRegex.ReplaceAllStringFunc(string(body), func(match string) string {
-		parts := g.Regexes.ObsidianImageRegex.FindStringSubmatch(match)
-		if len(parts) > 3 {
-			imageName := parts[1]
-			width := parts[2]
-			height := parts[3]
-			return fmt.Sprintf(`<img src="/images/%s" alt="%s" width="%s" height="%s" />`, imageName, imageName, width, height)
-		}
-		if len(parts) > 2 {
-			imageName := parts[1]
-			width := parts[2]
-			return fmt.Sprintf(`<img src="/images/%s" alt="%s"  width="%s" />`, imageName, imageName, width)
-		}
-		if len(parts) > 1 {
-			imageName := parts[1]
-			return fmt.Sprintf(`<img src="/images/%s" alt="%s"  />`, imageName, imageName)
-		}
-
-		return match
-	})
-}
-
-func (g *StaticSiteGenerator) buildFolderTree(notes map[string]*models.ParsedNote) (*models.Folder, int, error) {
+func (g *StaticSiteGenerator) buildFolderTree(notes map[string]*models.ParsedNote) (*models.Folder, int) {
+	start := time.Now()
 	root := &models.Folder{
 		Name:     "Home",
 		Path:     "",
@@ -302,7 +227,8 @@ func (g *StaticSiteGenerator) buildFolderTree(notes map[string]*models.ParsedNot
 	}
 
 	sortFolderTree(root)
-	return root, numberOfFolders, nil
+	g.Logger.Printf("Directory creation took %s", time.Since(start))
+	return root, numberOfFolders
 }
 
 func sortFolderTree(folder *models.Folder) {
@@ -317,101 +243,8 @@ func sortFolderTree(folder *models.Folder) {
 	}
 }
 
-func (g *StaticSiteGenerator) renderPostContent(
-	post *models.ParsedNote,
-	wikilinkResolver *WikilinkResolver,
-) template.HTML {
-	if renderedPost, ok := g.getCachedPost(post.URL); ok {
-		return renderedPost
-	}
-
-	if g.isRenderingInProgress(post.URL) {
-		g.Logger.Warn("Circular embed detected, returning placeholder/error for", "title", post.Title)
-		return template.HTML(fmt.Sprintf(`<div class="embedded-post-circular-error">Circular Embed: %s</div>`, post.Title))
-	}
-
-	g.setRenderingInProgress(post.URL, true)
-
-	contentWithImagesReplaced := g.replaceObsidianImageLinks(string((*post).RawBody))
-	contentWithWikilinks, embeddedPosts := g.replaceWikilinksAndResolveBacklinks(
-		contentWithImagesReplaced,
-		post,
-		wikilinkResolver,
-	)
-	hashtagAsLinks := g.enrichHashtagsWithLinks(contentWithWikilinks)
-
-	finalHTMLBytes := markdown.ToHTML([]byte(hashtagAsLinks), nil, g.MarkdownRenderer)
-
-	for _, embeddedPost := range embeddedPosts {
-		finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
-	}
-
-	g.setCachedPost(post.URL, template.HTML(finalHTMLBytes))
-	g.setRenderingInProgress(post.URL, false)
-
-	return template.HTML(finalHTMLBytes)
-}
-
-func (g *StaticSiteGenerator) replaceWikilinksAndResolveBacklinks(
-	body string,
-	pd *models.ParsedNote,
-	wikilinkResolver *WikilinkResolver,
-) (string, map[string]models.EmbeddedPost) {
-	embeddedPosts := make(map[string]models.EmbeddedPost)
-
-	return g.Regexes.WikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
-		parts := g.Regexes.WikilinkRegex.FindStringSubmatch(match)
-		matchedLinkText := parts[1]
-		pseudoName := matchedLinkText
-
-		if len(parts) > 2 && parts[2] != "" {
-			pseudoName = parts[2]
-		}
-
-		isEmbedded := strings.HasPrefix(match, "!")
-
-		if targetNote, found := wikilinkResolver.ResolveWikilink(matchedLinkText); found {
-			wikilinkResolver.AddBacklink(targetNote, pd, pseudoName)
-
-			if isEmbedded {
-				return g.handleEmbeddedPost(wikilinkResolver, embeddedPosts, targetNote)
-			}
-			return fmt.Sprintf(`<a href="%s">%s</a>`, targetNote.URL, pseudoName)
-		}
-
-		return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(matchedLinkText)+".html", pseudoName)
-	}), embeddedPosts
-}
-
-func (g *StaticSiteGenerator) handleEmbeddedPost(
-	wikilinkResolver *WikilinkResolver,
-	embeddedPosts map[string]models.EmbeddedPost,
-	embeddedPost *models.ParsedNote,
-) string {
-	var uniqueID string
-
-	htmlContent := g.renderPostContent(embeddedPost, wikilinkResolver)
-	uniqueID = uuid.New().String()
-	embeddedPosts[uniqueID] = models.EmbeddedPost{
-		ID:      uniqueID,
-		Content: htmlContent,
-	}
-	return fmt.Sprintf(`<div class="embedded-post">
-		<div class="embedded-post-header">
-		<a href="%s"><h2>%s</h2></a>
-		</div>
-		%s</div>`, embeddedPost.URL, embeddedPost.Title, uniqueID)
-}
-
-func (g *StaticSiteGenerator) enrichHashtagsWithLinks(body string) string {
-	return g.Regexes.HashtagRegex.ReplaceAllStringFunc(body, func(match string) string {
-		parts := g.Regexes.HashtagRegex.FindStringSubmatch(match)
-		tagName := parts[1]
-		return fmt.Sprintf(`<a class="tag" href="/tag/%s">#%s</a>`, tagName, tagName)
-	})
-}
-
 func (g *StaticSiteGenerator) executeTemplatesBatch(notes []*models.ParsedNote, fileTree *models.Folder, graph []byte) (int, error) {
+	start := time.Now()
 	batchWriter := executors.NewBatchWriter(g.OutputDirectory, g.Logger, g.Templates)
 
 	tags, postsByTag := g.computeTags(notes)
@@ -486,7 +319,7 @@ func (g *StaticSiteGenerator) executeTemplatesBatch(notes []*models.ParsedNote, 
 		return 0, fmt.Errorf("failed to write template files: %w", err)
 	}
 
-	g.Logger.Debug("Finished writing template files")
+	g.Logger.Printf("Finished writing template files in %s", time.Since(start))
 	return len(tags), nil
 }
 
@@ -568,26 +401,15 @@ func (g *StaticSiteGenerator) computeTags(notes []*models.ParsedNote) ([]models.
 	return tags, postsByTag
 }
 
-func (g *StaticSiteGenerator) createOutputDirectories() error {
-	if err := os.MkdirAll(filepath.Join(g.OutputDirectory, "images"), 0755); err != nil {
-		return fmt.Errorf("failed to create images directory %s: %w", filepath.Join(g.OutputDirectory, "images"), err)
-	}
-	return nil
-}
-
 type parseResult struct {
 	note *models.ParsedNote
 	err  error
 }
 
-func (g *StaticSiteGenerator) parseNotes(noteScanner *NoteScanner) (
-	*WikilinkResolver,
-	error,
-) {
-	shallowNotes := noteScanner.GetAllNotes()
-
+func (g *StaticSiteGenerator) parseNotes(shallowNotes []*models.ScannedNote, notesRepository *repository.NoteRepository) {
+	start := time.Now()
 	numWorkers := min(runtime.NumCPU(), len(shallowNotes))
-	notesChan := make(chan *models.ShallowNote, len(shallowNotes))
+	notesChan := make(chan *models.ScannedNote, len(shallowNotes))
 	resultsChan := make(chan parseResult, len(shallowNotes))
 
 	var wg sync.WaitGroup
@@ -610,21 +432,19 @@ func (g *StaticSiteGenerator) parseNotes(noteScanner *NoteScanner) (
 	wg.Wait()
 	close(resultsChan)
 
-	wikilinkResolver := NewWikilinkResolver()
-
 	for result := range resultsChan {
 		if result.err != nil {
 			g.Logger.Warn("failed to parse note", "error", result.err)
 			continue
 		}
 
-		wikilinkResolver.AddNote(result.note)
+		notesRepository.AddNote(result.note)
 	}
 
-	return wikilinkResolver, nil
+	g.Logger.Printf("Wikilink parsing took %s", time.Since(start))
 }
 
-func (g *StaticSiteGenerator) parseNoteWorker(shallowNote *models.ShallowNote) parseResult {
+func (g *StaticSiteGenerator) parseNoteWorker(shallowNote *models.ScannedNote) parseResult {
 	if shallowNote == nil {
 		return parseResult{
 			note: nil,
@@ -636,7 +456,7 @@ func (g *StaticSiteGenerator) parseNoteWorker(shallowNote *models.ShallowNote) p
 
 	// passing as pointer is safe since each parseNoteWorker gets a different note
 	parsedNote := &models.ParsedNote{
-		ShallowNote: shallowNote,
+		ScannedNote: shallowNote,
 	}
 
 	if err != nil {
@@ -648,8 +468,8 @@ func (g *StaticSiteGenerator) parseNoteWorker(shallowNote *models.ShallowNote) p
 	}
 
 	URL := strings.TrimPrefix(shallowNote.FullPath, g.InputDirectory)
-	URL = strings.TrimPrefix(URL, "/")   // Remove leading slash
-	URL = strings.TrimSuffix(URL, ".md") // Remove .md extension
+	URL = strings.TrimPrefix(URL, "/")
+	URL = strings.TrimSuffix(URL, ".md")
 
 	slugifiedURL := "/" + utils.Slugify(URL) + ".html"
 	parsedNote.URL = slugifiedURL
@@ -670,6 +490,7 @@ func (g *StaticSiteGenerator) parseNoteWorker(shallowNote *models.ShallowNote) p
 }
 
 func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote) {
+	start := time.Now()
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
 
@@ -715,29 +536,6 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 	if len(allErrors) > 0 {
 		g.Logger.Errorf("failed to copy %d assets:\n- %s", len(allErrors), strings.Join(allErrors, "\n- "))
 	}
-}
 
-func (g *StaticSiteGenerator) getCachedPost(url string) (template.HTML, bool) {
-	g.cacheMu.RLock()
-	defer g.cacheMu.RUnlock()
-	post, ok := g.RenderedPostCache[url]
-	return post, ok
-}
-
-func (g *StaticSiteGenerator) setCachedPost(url string, content template.HTML) {
-	g.cacheMu.Lock()
-	defer g.cacheMu.Unlock()
-	g.RenderedPostCache[url] = content
-}
-
-func (g *StaticSiteGenerator) isRenderingInProgress(url string) bool {
-	g.cacheMu.RLock()
-	defer g.cacheMu.RUnlock()
-	return g.RenderingInProgress[url]
-}
-
-func (g *StaticSiteGenerator) setRenderingInProgress(url string, inProgress bool) {
-	g.cacheMu.Lock()
-	defer g.cacheMu.Unlock()
-	g.RenderingInProgress[url] = inProgress
+	g.Logger.Printf("Asset copy took %s", time.Since(start))
 }
