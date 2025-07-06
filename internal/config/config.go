@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/goccy/go-yaml"
+	"github.com/pelletier/go-toml/v2"
 )
 
 var frontmatterRegex = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---`)
@@ -16,13 +16,13 @@ var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
 
 type Config struct {
-	InputDirectory  string `yaml:"InputDirectory"`
-	OutputDirectory string `yaml:"OutputDirectory"`
-	Env             string `yaml:"Env"`
-	SiteTitle       string `yaml:"SiteTitle"`
-	SiteSubtitle    string `yaml:"SiteSubtitle"`
-	BaseURL         string `yaml:"BaseURL"`
-	NotesPerPage    int    `yaml:"NotesPerPage"`
+	InputDirectory  string `toml:"input_directory"`
+	OutputDirectory string `toml:"output_directory"`
+	Env             string `toml:"env"`
+	SiteTitle       string `toml:"site_title"`
+	SiteSubtitle    string `toml:"site_subtitle"`
+	BaseURL         string `toml:"base_url"`
+	NotesPerPage    int    `toml:"notes_per_page"`
 	RegexpConfig    RegexpConfig
 	Templates       *template.Template
 }
@@ -78,7 +78,7 @@ func ReadConfig(filePath string) (Config, error) {
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal(yamlContent, &cfg); err != nil {
+	if err := toml.Unmarshal(yamlContent, &cfg); err != nil {
 		return Config{}, err
 	}
 

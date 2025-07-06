@@ -23,7 +23,7 @@ func main() {
 	vaultHealthFlag := flag.Bool("vhealth", false, "Check the health of the vault")
 	flag.Parse()
 
-	cfg, err := config.ReadConfig("config.yaml")
+	cfg, err := config.ReadConfig(".config.toml")
 	if err != nil {
 		log.Fatal(err)
 	}

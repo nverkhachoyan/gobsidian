@@ -1,0 +1,7 @@
+input_directory = "posts"
+output_directory = "public"
+site_title = "Nver Khachoyan's Blog"
+site_subtitle = "My Personal Blog - Built with Go and Obsidian Notes"
+notes_per_page = 5
+base_url = "/"
+env = "production"
