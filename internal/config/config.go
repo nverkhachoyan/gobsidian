@@ -16,11 +16,13 @@ var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
 
 type Config struct {
-	InputDirectory  string
-	OutputDirectory string
-	SiteTitle       string
-	SiteSubtitle    string
-	BaseURL         string
+	InputDirectory  string `yaml:"InputDirectory"`
+	OutputDirectory string `yaml:"OutputDirectory"`
+	Env             string `yaml:"Env"`
+	SiteTitle       string `yaml:"SiteTitle"`
+	SiteSubtitle    string `yaml:"SiteSubtitle"`
+	BaseURL         string `yaml:"BaseURL"`
+	NotesPerPage    int    `yaml:"NotesPerPage"`
 	RegexpConfig    RegexpConfig
 	Templates       *template.Template
 }
@@ -75,26 +77,9 @@ func ReadConfig(filePath string) (Config, error) {
 		}, nil
 	}
 
-	var configYaml yaml.MapSlice
-	if err := yaml.Unmarshal(yamlContent, &configYaml); err != nil {
+	var cfg Config
+	if err := yaml.Unmarshal(yamlContent, &cfg); err != nil {
 		return Config{}, err
-	}
-
-	cfg := Config{}
-
-	for _, v := range configYaml {
-		switch v.Key {
-		case "InputDirectory":
-			cfg.InputDirectory = v.Value.(string)
-		case "OutputDirectory":
-			cfg.OutputDirectory = v.Value.(string)
-		case "SiteTitle":
-			cfg.SiteTitle = v.Value.(string)
-		case "SiteSubtitle":
-			cfg.SiteSubtitle = v.Value.(string)
-		case "BaseURL":
-			cfg.BaseURL = v.Value.(string)
-		}
 	}
 
 	cfg.RegexpConfig = RegexpConfig{

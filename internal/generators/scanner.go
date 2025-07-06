@@ -52,9 +52,13 @@ func (ns *NoteScanner) GetAllNotes() []*models.ScannedNote {
 	return notes
 }
 
-func (ns *NoteScanner) ScanAllNotes() error {
+func (ns *NoteScanner) ScanAllNotes() (time.Duration, error) {
 	start := time.Now()
 	err := filepath.WalkDir(ns.inputDirectory, func(path string, info os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
 			notePath := strings.TrimPrefix(path, ns.inputDirectory+"/")
 			isInsideFolder := strings.Contains(notePath, "/")
@@ -69,10 +73,12 @@ func (ns *NoteScanner) ScanAllNotes() error {
 		}
 		return nil
 	})
-	ns.logger.Printf("Note discovery took %s", time.Since(start))
+
+	endTime := time.Since(start)
+
 	if err != nil {
-		return fmt.Errorf("error during initial walk: %w", err)
+		return endTime, fmt.Errorf("error during initial walk: %w", err)
 	}
 
-	return nil
+	return endTime, nil
 }

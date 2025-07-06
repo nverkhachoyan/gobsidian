@@ -49,7 +49,7 @@ BaseURL: /
 ### Current state
 
 1. [x] Backlinks
-2. [_] Backlink embeds
+2. [x] Backlink embeds
 3. [x] Obsidian style images
 4. [x] Frontmatter parsing (yaml)
 5. [x] Folders and Subfolders
@@ -59,5 +59,3 @@ BaseURL: /
 Supported frontmatter fields are `title`, `date`, `author`, and `updatedAt`.
 
 You can demo it at [blog.nverk.me](https://blog.nverk.me/).
-
-![demo](demo.png)

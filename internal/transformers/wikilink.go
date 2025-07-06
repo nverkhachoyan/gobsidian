@@ -49,23 +49,20 @@ func (wt *WikilinkTransformer) Transform(
 	note *models.ParsedNote,
 	ctx *TransformContext,
 ) (string, error) {
-
 	return wt.wikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := wt.wikilinkRegex.FindStringSubmatch(match)
 		matchedLinkText := parts[1]
 		pseudoName := matchedLinkText
+		isEmbedded := strings.HasPrefix(match, "!")
 
 		if len(parts) > 2 && parts[2] != "" {
 			pseudoName = parts[2]
 		}
 
-		isEmbedded := strings.HasPrefix(match, "!")
-
 		if targetNote, found := ctx.notesRepository.ResolveWikilink(matchedLinkText); found {
 			ctx.notesRepository.AddBacklink(targetNote, note, pseudoName)
-
 			if isEmbedded {
-				return wt.handleEmbeddedPost(ctx.EmbeddedPosts, targetNote, ctx)
+				return wt.handleEmbeddedPost(targetNote, ctx)
 			}
 			return fmt.Sprintf(`<a href="%s">%s</a>`, targetNote.URL, pseudoName)
 		}
@@ -75,15 +72,14 @@ func (wt *WikilinkTransformer) Transform(
 }
 
 func (wt *WikilinkTransformer) handleEmbeddedPost(
-	embeddedPosts map[string]models.EmbeddedPost,
 	embeddedPost *models.ParsedNote,
 	ctx *TransformContext,
 ) string {
 	var uniqueID string
 
-	htmlContent := wt.renderPostContent(embeddedPost, ctx)
+	htmlContent := wt.renderPostContent(embeddedPost, ctx.EmbeddedPosts, ctx)
 	uniqueID = uuid.New().String()
-	embeddedPosts[uniqueID] = models.EmbeddedPost{
+	ctx.EmbeddedPosts[uniqueID] = models.EmbeddedPost{
 		ID:      uniqueID,
 		Content: htmlContent,
 	}
@@ -96,26 +92,28 @@ func (wt *WikilinkTransformer) handleEmbeddedPost(
 
 func (wt *WikilinkTransformer) renderPostContent(
 	post *models.ParsedNote,
-	ctx *TransformContext,
+	embeddedPosts map[string]models.EmbeddedPost,
+	parentCtx *TransformContext,
 ) template.HTML {
-	if renderedPost, ok := ctx.getCachedPost(post.URL); ok {
+	if renderedPost, ok := parentCtx.getCachedPost(post.URL); ok {
 		return renderedPost
 	}
 
-	if ctx.isRenderingInProgress(post.URL) {
+	if parentCtx.isRenderingInProgress(post.URL) {
 		wt.logger.Warn("Circular embed detected, returning placeholder/error for", "title", post.Title)
 		return template.HTML(fmt.Sprintf(`<div class="embedded-post-circular-error">Circular Embed: %s</div>`, post.Title))
 	}
 
-	ctx.setRenderingInProgress(post.URL, true)
+	parentCtx.setRenderingInProgress(post.URL, true)
 
 	pipeline := NewPipeline(
+		NewSyntaxHighlighter(true),
 		NewImageProcessor(wt.imageLinkRegex),
-		NewWikilinkTransformer(wt.wikilinkRegex, wt.imageLinkRegex, wt.hashtagRegex, wt.logger, wt.markdownRenderer),
 		NewHashtagEnricher(wt.hashtagRegex),
+		NewWikilinkTransformer(wt.wikilinkRegex, wt.imageLinkRegex, wt.hashtagRegex, wt.logger, wt.markdownRenderer),
 	)
 
-	result, err := pipeline.Transform(string(post.RawBody), post, ctx)
+	result, err := pipeline.Transform(string(post.RawBody), post, parentCtx)
 	if err != nil {
 		wt.logger.Error("pipeline transform failed", "error", err)
 		return template.HTML(fmt.Sprintf(`<div class="error">Failed to render: %s</div>`, post.Title))
@@ -123,12 +121,12 @@ func (wt *WikilinkTransformer) renderPostContent(
 
 	finalHTMLBytes := markdown.ToHTML([]byte(result), nil, wt.markdownRenderer)
 
-	for _, embeddedPost := range ctx.EmbeddedPosts {
-		finalHTMLBytes = bytes.Replace(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content), 1)
+	for _, embeddedPost := range embeddedPosts {
+		finalHTMLBytes = bytes.ReplaceAll(finalHTMLBytes, []byte(embeddedPost.ID), []byte(embeddedPost.Content))
 	}
 
-	ctx.setCachedPost(post.URL, template.HTML(finalHTMLBytes))
-	ctx.setRenderingInProgress(post.URL, false)
+	parentCtx.setCachedPost(post.URL, template.HTML(finalHTMLBytes))
+	parentCtx.setRenderingInProgress(post.URL, false)
 
 	return template.HTML(finalHTMLBytes)
 }

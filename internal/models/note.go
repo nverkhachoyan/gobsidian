@@ -1,7 +1,9 @@
 package models
 
 import (
+	"fmt"
 	"html/template"
+	"strings"
 	"time"
 )
 
@@ -23,18 +25,19 @@ type ScannedNote struct {
 type ParsedNote struct {
 	*ScannedNote
 
-	// Parsed content
-	Title       string
-	RawBody     []byte
-	HTMLContent template.HTML
-	Date        time.Time
-	Author      string
-	UpdatedAt   *time.Time
-	Images      []Image
-	Tags        []Tag
-	LinkedFrom  []Link
-	Wikilinks   []string
-	URL         string
+	Title        string
+	RawBody      []byte
+	HTMLContent  template.HTML
+	Date         time.Time
+	Author       string
+	UpdatedAt    *time.Time
+	Images       []Image
+	Tags         []Tag
+	LinkedFrom   []Link
+	Wikilinks    []string
+	URL          string
+	Warnings     []string
+	MissingFiles []string
 }
 
 type EmbeddedPost struct {
@@ -67,4 +70,26 @@ type Folder struct {
 	Path     string
 	Posts    []*ParsedNote
 	Children map[string]*Folder
+}
+
+func (p *ParsedNote) HasWarnings() bool {
+	return len(p.Warnings) > 0
+}
+
+func (p *ParsedNote) HasMissingFiles() bool {
+	return len(p.MissingFiles) > 0
+}
+
+func (p *ParsedNote) GetWarningsString() string {
+	if !p.HasWarnings() {
+		return ""
+	}
+	return fmt.Sprintf("warnings: %s", strings.Join(p.Warnings, "; "))
+}
+
+func (p *ParsedNote) GetMissingFilesString() string {
+	if !p.HasMissingFiles() {
+		return ""
+	}
+	return fmt.Sprintf("missing files: %s", strings.Join(p.MissingFiles, ", "))
 }

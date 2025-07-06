@@ -1,57 +1,56 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.SiteTitle}}</title>
-    {{template "styles" .}}
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1>{{.SiteTitle}}</h1>
-        <p class="subtitle">{{.SiteSubtitle}}</p>
-        {{template "theme_switcher" .}}
-      </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{.SiteTitle}}</title>
+        {{template "styles" .}}
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>{{.SiteTitle}}</h1>
+                <p class="subtitle">{{.SiteSubtitle}}</p>
+                {{template "theme_switcher" .}}
+            </header>
 
-      <div class="content-wrapper">
+            <div class="content-wrapper">
+                {{template "left_sidebar" .}}
 
-        
-        {{template "left_sidebar" .}}
-
-        <main>
-          {{if .Posts}}
-          <div class="latest-posts">Latest Posts</div>
-          <div class="post-grid">
-            {{range .Posts}}
-            <div class="post-card">
-              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
-              <div class="post-card-meta">
-                {{range .Tags}}
-                <a href="/tag/{{.Slug}}/" class="tag-link">
-                  <span class="tag">{{.Name}}</span>
-                </a>
-                {{end}} {{if .Author}}
-                <span class="author">{{.Author}}</span>
-                {{end}}
-                <span class="post-date"
-                  >{{.Date.Format "January 2, 2006"}}</span
-                >
-              </div>
+                <main>
+                    {{if .Posts}}
+                    <div class="latest-posts">Latest Posts</div>
+                    <div class="post-grid">
+                        {{range .Posts}}
+                        <div class="post-card">
+                            <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+                            <div class="post-card-meta">
+                                {{range .Tags}}
+                                <a href="/tag/{{.Slug}}/" class="tag-link">
+                                    <span class="tag">{{.Name}}</span>
+                                </a>
+                                {{end}} {{if .Author}}
+                                <span class="author">{{.Author}}</span>
+                                {{end}}
+                                <span class="post-date"
+                                    >{{.Date.Format "January 2, 2006"}}</span
+                                >
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{template "pagination" .Pagination}} {{else}}
+                    <p>No blog posts found yet.</p>
+                    {{end}}
+                </main>
             </div>
-            {{end}}
-          </div>
-          {{else}}
-          <p>No blog posts found yet.</p>
-          {{end}}
-        </main>
 
-      </div>
-
-      <footer>
-        <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
-      </footer>
-    </div>
-    {{template "scripts" .}}
-  </body>
+            <footer>
+                <p>
+                    &copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.
+                </p>
+            </footer>
+        </div>
+        {{template "scripts" .}}
+    </body>
 </html>

@@ -10,7 +10,7 @@ import (
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("could not open source file %s: %w", src, err)
+		return fmt.Errorf("could not open source file %s: %w\n", src, err)
 	}
 	defer sourceFile.Close()
 

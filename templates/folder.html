@@ -1,65 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.Folder.Name}} | {{.SiteTitle}}</title>
-    {{template "styles" .}}
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <a href="/" class="back-link">
-          <i class="fa-solid fa-arrow-left"></i>
-          Back to Home</a>
-        <h1>{{.SiteTitle}}</h1>
-        <p class="subtitle">{{.SiteSubtitle}}</p>
-        {{template "theme_switcher" .}}
-      </header>
-      <div class="content-wrapper">
-        {{template "left_sidebar" .}}
-
-        <main>
-          <h1 class="tag-title">Folder: <span>{{.Folder.Name}}</span></h1>
-
-          {{if .Folder.Children}}
-          <h2 class="folder-subtitle">Sub-folders</h2>
-          <div class="folder-list">
-            <ul>
-              {{range .Folder.Children}}
-              <li><a href="/{{.Path}}">{{.Name}}</a></li>
-              {{end}}
-            </ul>
-          </div>
-          {{end}} {{if .Folder.Posts}}
-          <h2 class="folder-subtitle">Posts</h2>
-          <div class="post-grid">
-            {{range .Folder.Posts}}
-            <div class="post-card">
-              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
-              <div class="post-card-meta">
-                {{range .Tags}}
-                <a href="/tag/{{.Slug}}/" class="tag-link">
-                  <span class="tag">{{.Name}}</span>
-                </a>
-                {{end}}
-                <span class="post-date"
-                  >{{.Date.Format "January 2, 2006"}}</span
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{.Folder.Name}} | {{.SiteTitle}}</title>
+        {{template "styles" .}}
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <a href="/" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back to Home</a
                 >
-              </div>
-            </div>
-            {{end}}
-          </div>
-          {{else}} {{if not .Folder.Children}}
-          <p>This folder is empty.</p>
-          {{end}} {{end}}
-        </main>
-      </div>
+                <h1>{{.SiteTitle}}</h1>
+                <p class="subtitle">{{.SiteSubtitle}}</p>
+                {{template "theme_switcher" .}}
+            </header>
+            <div class="content-wrapper">
+                {{template "left_sidebar" .}}
 
-      <footer>
-        <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
-      </footer>
-    </div>
-    {{template "scripts" .}}
-  </body>
+                <main>
+                    <h1 class="tag-title">
+                        Folder: <span>{{.Folder.Name}}</span>
+                    </h1>
+
+                    {{if .Folder.Children}}
+                    <h2 class="folder-subtitle">Sub-folders</h2>
+                    <div class="folder-list">
+                        <ul>
+                            {{range .Folder.Children}}
+                            <li><a href="/{{.Path}}">{{.Name}}</a></li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}} {{if .Folder.Posts}}
+                    <h2 class="folder-subtitle">Posts</h2>
+                    <div class="post-grid">
+                        {{range .Posts}}
+                        <div class="post-card">
+                            <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+                            <div class="post-card-meta">
+                                {{range .Tags}}
+                                <a href="/tag/{{.Slug}}/" class="tag-link">
+                                    <span class="tag">{{.Name}}</span>
+                                </a>
+                                {{end}}
+                                <span class="post-date"
+                                    >{{.Date.Format "January 2, 2006"}}</span
+                                >
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{template "pagination" .Pagination}} {{else}} {{if not
+                    .Folder.Children}}
+                    <p>This folder is empty.</p>
+                    {{end}} {{end}}
+                </main>
+            </div>
+
+            <footer>
+                <p>
+                    &copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.
+                </p>
+            </footer>
+        </div>
+        {{template "scripts" .}}
+    </body>
 </html>
