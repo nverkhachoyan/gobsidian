@@ -2,6 +2,7 @@
 author: Nver Khachoyan
 title: Welcome to My Digital Garden
 date: 2025-06-29
+bruh: hey
 ---
 Welcome to my little corner of the internet! This space is a digital garden, a place where I'll share my thoughts, learnings, and explorations.
 

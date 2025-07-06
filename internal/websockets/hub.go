@@ -28,15 +28,12 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.Register:
 			h.Clients[client] = true
-			h.logger.Debug("Client registered", "remote_addr", client.RemoteAddr())
 		case client := <-h.Unregister:
 			if _, ok := h.Clients[client]; ok {
 				delete(h.Clients, client)
 				_ = client.Close()
-				h.logger.Debug("Client unregistered", "remote_addr", client.RemoteAddr())
 			}
 		case message := <-h.Broadcast:
-			h.logger.Debug("Broadcasting message", "message", string(message), "clients", len(h.Clients))
 			for client := range h.Clients {
 				err := client.WriteMessage(websocket.TextMessage, message)
 				if err != nil {

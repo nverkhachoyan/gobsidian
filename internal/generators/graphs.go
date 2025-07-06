@@ -38,7 +38,7 @@ func NewGraphGenerator(logger *log.Logger) *GraphGenerator {
 	}
 }
 
-func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, notesRepository *repository.NoteRepository) []byte {
+func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, notesRepository *repository.NoteRepository) (time.Duration, []byte) {
 	start := time.Now()
 	notesByPath := notesRepository.GetAllByPath()
 
@@ -66,13 +66,13 @@ func (g *GraphGenerator) Generate(notes map[string]*models.ParsedNote, notesRepo
 		Edges: edges,
 	})
 
-	g.Logger.Printf("Graph generation took %s", time.Since(start))
+	endTime := time.Since(start)
 	if err != nil {
 		g.Logger.Print("Failed to generate JSON", "error", err)
-		return nil
+		return endTime, nil
 	}
 
-	return json
+	return endTime, json
 }
 
 func (g *GraphGenerator) handleLinksInsideFolders(relativePathText string, notesByPath map[string]*models.ParsedNote) int64 {
