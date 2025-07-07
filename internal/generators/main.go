@@ -16,10 +16,12 @@ import (
 	"sort"
 	"strings"
 
+	"gobsidian/internal/config"
 	"gobsidian/internal/executors"
 	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
 	"gobsidian/internal/repository"
+	"gobsidian/internal/scanner"
 	"gobsidian/internal/terminal"
 	"gobsidian/internal/transformers"
 	"gobsidian/internal/utils"
@@ -30,20 +32,16 @@ import (
 )
 
 type Generator interface {
-	Generate() error
+	Generate(scannedNotes []*models.ScannedNote) error
 }
 
 type StaticSiteGenerator struct {
-	InputDirectory         string
-	OutputDirectory        string
-	SiteTitle              string
-	SiteSubtitle           string
-	BaseURL                string
-	NotesPerPage           int
-	Regexes                *models.ParserRegexes
+	SiteConfig             config.SiteConfig
+	Regexes                *config.Regexes
 	Logger                 *log.Logger
 	Templates              *template.Template
 	Parser                 parsers.Parser
+	Scanner                *scanner.NoteScanner
 	MarkdownRenderer       *html.Renderer
 	shouldPrintVaultHealth bool
 }
@@ -68,67 +66,38 @@ type BaseTemplateData struct {
 }
 
 func NewStaticSiteGenerator(
-	inputDirectory string,
-	outputDirectory string,
-	siteTitle string,
-	siteSubtitle string,
-	baseURL string,
-	notesPerPage int,
-	regexes *models.ParserRegexes,
+	siteConfig config.SiteConfig,
+	regexes *config.Regexes,
 	logger *log.Logger,
 	templates *template.Template,
 	parser parsers.Parser,
+	scanner *scanner.NoteScanner,
 	markdownRenderer *html.Renderer,
 	shouldPrintVaultHealth bool,
 ) (*StaticSiteGenerator, error) {
 	return &StaticSiteGenerator{
-		InputDirectory:         inputDirectory,
-		OutputDirectory:        outputDirectory,
-		SiteTitle:              siteTitle,
-		SiteSubtitle:           siteSubtitle,
-		BaseURL:                baseURL,
-		NotesPerPage:           notesPerPage,
+		SiteConfig:             siteConfig,
 		Regexes:                regexes,
 		Logger:                 logger,
 		Templates:              templates,
 		Parser:                 parser,
+		Scanner:                scanner,
 		MarkdownRenderer:       markdownRenderer,
 		shouldPrintVaultHealth: shouldPrintVaultHealth,
 	}, nil
 }
 
-func (g *StaticSiteGenerator) Generate() error {
+func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error {
 	start := time.Now()
 
-	stepDefs := []terminal.StepDefinition{
-		terminal.CreateStep("Scanning files", "📄"),
-		terminal.CreateStep("Parsing notes", "📝"),
-		terminal.CreateStep("Building graph", "🔗"),
-		terminal.CreateStep("Transforming content", "✨"),
-		terminal.CreateStep("Building folder tree", "📁"),
-		terminal.CreateStep("Executing templates", "🎨"),
-		terminal.CreateStep("Copying assets", "📦"),
-	}
+	printer := terminal.NewPrettyPrinter()
+	reporter := terminal.NewProgressReporter(printer)
 
-	progressManager := terminal.NewProgressManager(stepDefs)
-	progressManager.StartAsync()
+	parseStep := terminal.Step{Name: "Parsing notes", Icon: "📝"}
 
-	// Step 1: Scan notes
-	stepStart := time.Now()
-	noteScanner := NewNoteScanner(g.Logger, g.InputDirectory)
-	scanTime, err := noteScanner.ScanAllNotes()
-	if err != nil {
-		progressManager.SendStepComplete(0, time.Since(stepStart), 0, err)
-		return err
-	}
-	scannedNotes := noteScanner.GetAllNotes()
-	progressManager.SendStepComplete(0, scanTime, len(scannedNotes), nil)
-
-	// Step 2: Parse notes
-	stepStart = time.Now()
 	notesRepository := repository.NewNoteRepository()
 	graphGenerator := NewGraphGenerator(g.Logger)
-	transformCtx := transformers.NewTransformContext(g.BaseURL, g.OutputDirectory, notesRepository)
+	transformCtx := transformers.NewTransformContext(g.SiteConfig.BaseURL, g.SiteConfig.OutputDirectory, notesRepository)
 
 	pipeline := transformers.NewPipeline(
 		transformers.NewSyntaxHighlighter(true),
@@ -146,40 +115,67 @@ func (g *StaticSiteGenerator) Generate() error {
 	parseTime := g.parseNotes(scannedNotes, notesRepository)
 	notesByPath := notesRepository.GetAllByPath()
 	notesSlice := notesRepository.GetAllNotesSlice()
-	progressManager.SendStepComplete(1, parseTime, len(notesSlice), nil)
 
-	// Step 3: Build graph
-	stepStart = time.Now()
+	reporter.ReportStep(parseStep, terminal.StepResult{
+		Duration: parseTime,
+		Count:    len(notesSlice),
+		Error:    nil,
+	})
+
+	graphStep := terminal.Step{Name: "Building graph", Icon: "🔗"}
 	graphTime, graph := graphGenerator.Generate(notesByPath, notesRepository)
-	progressManager.SendStepComplete(2, graphTime, len(notesByPath), nil)
 
-	// Step 4: Transform content
-	stepStart = time.Now()
+	reporter.ReportStep(graphStep, terminal.StepResult{
+		Duration: graphTime,
+		Count:    len(notesByPath),
+		Error:    nil,
+	})
+
+	transformStep := terminal.Step{Name: "Transforming content", Icon: "✨"}
 	transformTime, _ := g.applyTransformationsConcurrently(pipeline, transformCtx, notesSlice)
-	progressManager.SendStepComplete(3, transformTime, len(notesSlice), nil)
 
-	// Step 5: Build folder tree
-	stepStart = time.Now()
+	reporter.ReportStep(transformStep, terminal.StepResult{
+		Duration: transformTime,
+		Count:    len(notesSlice),
+		Error:    nil,
+	})
+
+	treeStep := terminal.Step{Name: "Building folder tree", Icon: "📁"}
 	buildTreeTime, fileTree, numberOfFolders := g.buildFolderTree(notesByPath)
-	progressManager.SendStepComplete(4, buildTreeTime, numberOfFolders, nil)
 
-	// Step 6: Execute templates
-	stepStart = time.Now()
+	reporter.ReportStep(treeStep, terminal.StepResult{
+		Duration: buildTreeTime,
+		Count:    numberOfFolders,
+		Error:    nil,
+	})
+
+	templateStep := terminal.Step{Name: "Executing templates", Icon: "🎨"}
+	templateStart := time.Now()
 	sortedNotes := g.sortNotes(notesSlice)
 	templateExecTime, numberOfTags, err := g.executeTemplatesBatch(sortedNotes, fileTree, graph)
 	if err != nil {
-		progressManager.SendStepComplete(5, time.Since(stepStart), 0, err)
+		reporter.ReportStep(templateStep, terminal.StepResult{
+			Duration: time.Since(templateStart),
+			Count:    0,
+			Error:    err,
+		})
 		return err
 	}
-	progressManager.SendStepComplete(5, templateExecTime, len(sortedNotes), nil)
 
-	// Step 7: Copy assets
-	stepStart = time.Now()
+	reporter.ReportStep(templateStep, terminal.StepResult{
+		Duration: templateExecTime,
+		Count:    len(sortedNotes),
+		Error:    nil,
+	})
+
+	assetsStep := terminal.Step{Name: "Copying assets", Icon: "📦"}
 	assetCopyTime := g.copyAssets(notesByPath)
-	progressManager.SendStepComplete(6, assetCopyTime, len(notesByPath), nil)
 
-	time.Sleep(100 * time.Millisecond)
-	progressManager.Quit()
+	reporter.ReportStep(assetsStep, terminal.StepResult{
+		Duration: assetCopyTime,
+		Count:    len(notesByPath),
+		Error:    nil,
+	})
 
 	if g.shouldPrintVaultHealth {
 		g.printDiagnosticsSummary(notesSlice)
@@ -189,7 +185,6 @@ func (g *StaticSiteGenerator) Generate() error {
 		"duration", time.Since(start),
 		"notes", len(notesByPath),
 		"notes/second", float64(len(notesByPath))/time.Since(start).Seconds(),
-		"avg ms/note", time.Since(start).Milliseconds()/int64(len(notesByPath)),
 		"tags", numberOfTags,
 		"preview pages", len(notesByPath),
 		"folders", numberOfFolders,
@@ -266,7 +261,7 @@ func (g *StaticSiteGenerator) parseNoteWorker(
 		}
 	}
 
-	URL := strings.TrimPrefix(shallowNote.FullPath, g.InputDirectory)
+	URL := strings.TrimPrefix(shallowNote.FullPath, g.SiteConfig.InputDirectory)
 	URL = strings.TrimPrefix(URL, "/")
 	URL = strings.TrimSuffix(URL, ".md")
 
@@ -425,7 +420,7 @@ func (g *StaticSiteGenerator) executeTemplatesBatch(
 	graph []byte,
 ) (time.Duration, int, error) {
 	start := time.Now()
-	batchWriter := executors.NewBatchWriter(g.OutputDirectory, g.Logger, g.Templates)
+	batchWriter := executors.NewBatchWriter(g.SiteConfig.OutputDirectory, g.Logger, g.Templates)
 
 	tags, postsByTag := g.computeTags(notes)
 	baseData := g.createBaseTemplateData(fileTree, graph, tags)
@@ -526,11 +521,11 @@ func (g *StaticSiteGenerator) paginateIndexPages(
 		return batchWriter.AddFile("index.html", "index.html", data)
 	}
 
-	totalPages := (len(posts) + g.NotesPerPage - 1) / g.NotesPerPage
+	totalPages := (len(posts) + g.SiteConfig.NotesPerPage - 1) / g.SiteConfig.NotesPerPage
 
 	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * g.NotesPerPage
-		end := min(start+g.NotesPerPage, len(posts))
+		start := (page - 1) * g.SiteConfig.NotesPerPage
+		end := min(start+g.SiteConfig.NotesPerPage, len(posts))
 		pagePosts := posts[start:end]
 
 		var pagePath string
@@ -547,14 +542,14 @@ func (g *StaticSiteGenerator) paginateIndexPages(
 		if page > 1 {
 			pagination.HasPrev = true
 			if page == 2 {
-				pagination.PrevPageURL = g.BaseURL
+				pagination.PrevPageURL = g.SiteConfig.BaseURL
 			} else {
-				pagination.PrevPageURL = g.BaseURL + fmt.Sprintf("page/%d/", page-1)
+				pagination.PrevPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("page/%d/", page-1)
 			}
 		}
 		if page < totalPages {
 			pagination.HasNext = true
-			pagination.NextPageURL = g.BaseURL + fmt.Sprintf("page/%d/", page+1)
+			pagination.NextPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("page/%d/", page+1)
 		}
 
 		data := struct {
@@ -585,12 +580,12 @@ func (g *StaticSiteGenerator) paginateTagPages(
 		return nil
 	}
 
-	totalPages := (len(posts) + g.NotesPerPage - 1) / g.NotesPerPage
+	totalPages := (len(posts) + g.SiteConfig.NotesPerPage - 1) / g.SiteConfig.NotesPerPage
 	pathPrefix := filepath.Join("tag", tag.Slug)
 
 	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * g.NotesPerPage
-		end := min(start+g.NotesPerPage, len(posts))
+		start := (page - 1) * g.SiteConfig.NotesPerPage
+		end := min(start+g.SiteConfig.NotesPerPage, len(posts))
 		pagePosts := posts[start:end]
 
 		var pagePath string
@@ -607,14 +602,14 @@ func (g *StaticSiteGenerator) paginateTagPages(
 		if page > 1 {
 			pagination.HasPrev = true
 			if page == 2 {
-				pagination.PrevPageURL = g.BaseURL + strings.ReplaceAll(pathPrefix, "\\", "/") + "/"
+				pagination.PrevPageURL = g.SiteConfig.BaseURL + strings.ReplaceAll(pathPrefix, "\\", "/") + "/"
 			} else {
-				pagination.PrevPageURL = g.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page-1)
+				pagination.PrevPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page-1)
 			}
 		}
 		if page < totalPages {
 			pagination.HasNext = true
-			pagination.NextPageURL = g.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page+1)
+			pagination.NextPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page+1)
 		}
 
 		data := struct {
@@ -658,11 +653,11 @@ func (g *StaticSiteGenerator) paginateFolderPages(
 		return batchWriter.AddFile(folderPath, "folder.html", data)
 	}
 
-	totalPages := (len(folder.Posts) + g.NotesPerPage - 1) / g.NotesPerPage
+	totalPages := (len(folder.Posts) + g.SiteConfig.NotesPerPage - 1) / g.SiteConfig.NotesPerPage
 
 	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * g.NotesPerPage
-		end := min(start+g.NotesPerPage, len(folder.Posts))
+		start := (page - 1) * g.SiteConfig.NotesPerPage
+		end := min(start+g.SiteConfig.NotesPerPage, len(folder.Posts))
 		pagePosts := folder.Posts[start:end]
 
 		var pagePath string
@@ -679,14 +674,14 @@ func (g *StaticSiteGenerator) paginateFolderPages(
 		if page > 1 {
 			pagination.HasPrev = true
 			if page == 2 {
-				pagination.PrevPageURL = g.BaseURL + strings.ReplaceAll(folder.Path, "\\", "/") + "/"
+				pagination.PrevPageURL = g.SiteConfig.BaseURL + strings.ReplaceAll(folder.Path, "\\", "/") + "/"
 			} else {
-				pagination.PrevPageURL = g.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page-1)
+				pagination.PrevPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page-1)
 			}
 		}
 		if page < totalPages {
 			pagination.HasNext = true
-			pagination.NextPageURL = g.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page+1)
+			pagination.NextPageURL = g.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page+1)
 		}
 
 		data := struct {
@@ -727,7 +722,7 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 		wg.Add(1)
 		go func(name, path string) {
 			defer wg.Done()
-			destPath := filepath.Join(g.OutputDirectory, "images", name)
+			destPath := filepath.Join(g.SiteConfig.OutputDirectory, "images", name)
 			if err := utils.CopyFile(path, destPath); err != nil {
 				errorChan <- fmt.Errorf("image %s: %w", name, err)
 			}
@@ -739,7 +734,7 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 		go func(dir string) {
 			defer wg.Done()
 			g.Logger.Debug("Copying static assets 📦", "dir", dir)
-			if err := utils.CopyStaticDirectory(dir, g.OutputDirectory); err != nil {
+			if err := utils.CopyStaticDirectory(dir, g.SiteConfig.OutputDirectory); err != nil {
 				errorChan <- fmt.Errorf("asset folder '%s': %w", dir, err)
 			}
 		}(dir)
@@ -761,9 +756,9 @@ func (g *StaticSiteGenerator) createBaseTemplateData(
 	tags []models.Tag,
 ) BaseTemplateData {
 	return BaseTemplateData{
-		SiteTitle:    g.SiteTitle,
-		SiteSubtitle: g.SiteSubtitle,
-		BaseURL:      g.BaseURL,
+		SiteTitle:    g.SiteConfig.SiteTitle,
+		SiteSubtitle: g.SiteConfig.SiteSubtitle,
+		BaseURL:      g.SiteConfig.BaseURL,
 		CurrentYear:  time.Now().Year(),
 		FileTree:     fileTree,
 		Graph:        template.JS(graph),
@@ -847,13 +842,12 @@ func (g *StaticSiteGenerator) printDiagnosticsSummary(notes []*models.ParsedNote
 		MissingFileTypes:      missingFileTypes,
 	}
 
-	formatter := terminal.NewDiagnosticsFormatter()
-	output := formatter.FormatDiagnosticsSummary(summary)
-	fmt.Print(output)
+	printer := terminal.NewPrettyPrinter()
+	output := printer.PrintDiagnostics(summary)
+	fmt.Println(printer.Box("Vault diagnostics", output))
 
 	if totalWarnings > 0 || totalMissingFiles > 0 {
 		g.exportDiagnostics(notes, warningTypes, missingFileTypes, totalWarnings, totalMissingFiles)
-		g.Logger.Debug("📊 Diagnostics report exported", "path", filepath.Join(g.OutputDirectory, "vault-diagnostics.json"), "size", "0.5 KB")
 	}
 }
 
@@ -923,7 +917,7 @@ func (g *StaticSiteGenerator) exportDiagnostics(
 		ProblematicNotes:      problematicNotes,
 	}
 
-	diagnosticsPath := filepath.Join(g.OutputDirectory, "vault-diagnostics.json")
+	diagnosticsPath := filepath.Join(g.SiteConfig.OutputDirectory, "vault-diagnostics.json")
 	jsonData, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		g.Logger.Warn("Failed to marshal diagnostics report", "error", err)

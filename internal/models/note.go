@@ -55,6 +55,7 @@ type Image struct {
 type Link struct {
 	Title       string
 	URL         string
+	FullPath    string
 	RawFileName string
 	PseudoName  string
 }

@@ -3,9 +3,6 @@ package terminal
 import (
 	"fmt"
 	"strings"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
 )
 
 type DiagnosticsSummary struct {
@@ -18,160 +15,81 @@ type DiagnosticsSummary struct {
 	MissingFileTypes      map[string]int
 }
 
-type DiagnosticsFormatter struct {
-	red       lipgloss.Color
-	orange    lipgloss.Color
-	yellow    lipgloss.Color
-	gray      lipgloss.Color
-	lightGray lipgloss.Color
-
-	headerStyle  lipgloss.Style
-	cellStyle    lipgloss.Style
-	oddRowStyle  lipgloss.Style
-	evenRowStyle lipgloss.Style
-}
-
-func NewDiagnosticsFormatter() *DiagnosticsFormatter {
-	red := lipgloss.Color("#b64229")
-	orange := lipgloss.Color("208")
-	yellow := lipgloss.Color("#b69c29")
-	gray := lipgloss.Color("245")
-	lightGray := lipgloss.Color("241")
-
-	headerStyle := lipgloss.NewStyle().Foreground(red).Bold(true).Align(lipgloss.Center)
-	cellStyle := lipgloss.NewStyle().Padding(1, 1).Width(22)
-	oddRowStyle := cellStyle.Foreground(gray)
-	evenRowStyle := cellStyle.Foreground(lightGray)
-
-	return &DiagnosticsFormatter{
-		red:          red,
-		orange:       orange,
-		yellow:       yellow,
-		gray:         gray,
-		lightGray:    lightGray,
-		headerStyle:  headerStyle,
-		cellStyle:    cellStyle,
-		oddRowStyle:  oddRowStyle,
-		evenRowStyle: evenRowStyle,
-	}
-}
-
-func (df *DiagnosticsFormatter) FormatDiagnosticsSummary(summary DiagnosticsSummary) string {
+func (pp *PrettyPrinter) PrintDiagnostics(summary DiagnosticsSummary) string {
 	if summary.TotalWarnings == 0 && summary.TotalMissingFiles == 0 {
-		return "\n✅ No parsing issues detected - vault is healthy!"
+		return pp.Success("No parsing issues detected - vault is healthy!")
 	}
 
 	var output strings.Builder
-	output.WriteString("\n🔍 VAULT DIAGNOSTICS SUMMARY\n")
 
-	mainTable := df.createMainTable(summary)
-	output.WriteString(mainTable)
+	output.WriteString("\n\n")
+
+	output.WriteString(pp.formatDiagnosticMetrics(summary))
 	output.WriteString("\n")
 
 	if summary.TotalWarnings > 0 && len(summary.WarningTypes) > 0 {
-		warningTable := df.createWarningTypesTable(summary.WarningTypes, summary.TotalWarnings)
-		output.WriteString(warningTable)
+		output.WriteString(pp.formatWarningBreakdown(summary.WarningTypes, summary.TotalWarnings))
 		output.WriteString("\n")
 	}
 
 	if summary.TotalMissingFiles > 0 && len(summary.MissingFileTypes) > 0 {
-		missingTable := df.createMissingFileTypesTable(summary.MissingFileTypes, summary.TotalMissingFiles)
-		output.WriteString(missingTable)
+		output.WriteString(pp.formatMissingFilesBreakdown(summary.MissingFileTypes, summary.TotalMissingFiles))
 		output.WriteString("\n")
 	}
 
 	return output.String()
 }
 
-func (df *DiagnosticsFormatter) createMainTable(summary DiagnosticsSummary) string {
-	mainTable := table.New().
-		Border(lipgloss.DoubleBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(df.red)).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
-				return df.headerStyle
-			case row%2 == 0:
-				return df.evenRowStyle
-			default:
-				return df.oddRowStyle
-			}
-		}).
-		Headers("METRIC", "COUNT", "PERCENTAGE")
+func (pp *PrettyPrinter) formatDiagnosticMetrics(summary DiagnosticsSummary) string {
+	var output strings.Builder
+
+	output.WriteString(pp.Info("Total Notes", "count", summary.TotalNotes))
+	output.WriteString("\n")
 
 	if summary.TotalWarnings > 0 {
 		warningPercentage := fmt.Sprintf("%.1f%%", float64(summary.NotesWithWarnings)/float64(summary.TotalNotes)*100)
-		mainTable.Row("⚠️  Total Warnings", fmt.Sprintf("%d", summary.TotalWarnings), "-")
-		mainTable.Row("📄 Notes w/ Warnings", fmt.Sprintf("%d", summary.NotesWithWarnings), warningPercentage)
+		output.WriteString(pp.Warning("Notes with warnings", "count", summary.NotesWithWarnings, "percentage", warningPercentage))
+		output.WriteString("\n")
+
+		output.WriteString(pp.Warning("Total warnings", "count", summary.TotalWarnings))
+		output.WriteString("\n")
 	}
 
 	if summary.TotalMissingFiles > 0 {
 		missingPercentage := fmt.Sprintf("%.1f%%", float64(summary.NotesWithMissingFiles)/float64(summary.TotalNotes)*100)
-		mainTable.Row("❌ Missing Files", fmt.Sprintf("%d", summary.TotalMissingFiles), "-")
-		mainTable.Row("📄 Notes w/ Missing", fmt.Sprintf("%d", summary.NotesWithMissingFiles), missingPercentage)
+		output.WriteString(pp.Error("Notes with missing files", "count", summary.NotesWithMissingFiles, "percentage", missingPercentage))
+		output.WriteString("\n")
+
+		output.WriteString(pp.Error("Total missing files", "count", summary.TotalMissingFiles))
+		output.WriteString("\n")
 	}
 
-	mainTable.Row("📊 Total Notes", fmt.Sprintf("%d", summary.TotalNotes), "100%")
-
-	return mainTable.String()
-}
-
-func (df *DiagnosticsFormatter) createWarningTypesTable(warningTypes map[string]int, totalWarnings int) string {
-	var output strings.Builder
-	output.WriteString("\n⚠️  WARNING TYPES BREAKDOWN\n")
-
-	warningTable := table.New().
-		Border(lipgloss.DoubleBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(df.orange)).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
-				return lipgloss.NewStyle().Foreground(df.orange).Bold(true).Align(lipgloss.Center)
-			case row%2 == 0:
-				return df.evenRowStyle
-			default:
-				return df.oddRowStyle
-			}
-		}).
-		Headers("WARNING TYPE", "COUNT", "PERCENTAGE")
-
-	for warningType, count := range warningTypes {
-		percentage := fmt.Sprintf("%.1f%%", float64(count)/float64(totalWarnings)*100)
-		var displayType string
-		switch warningType {
-		case "unknown_frontmatter":
-			displayType = "Unknown Frontmatter"
-		case "frontmatter_parsing":
-			displayType = "Frontmatter Parsing"
-		default:
-			temp := strings.ReplaceAll(warningType, "_", " ")
-			displayType = strings.ToUpper(temp[:1]) + temp[1:]
-		}
-		warningTable.Row(displayType, fmt.Sprintf("%d", count), percentage)
-	}
-
-	output.WriteString(warningTable.String())
 	return output.String()
 }
 
-func (df *DiagnosticsFormatter) createMissingFileTypesTable(missingFileTypes map[string]int, totalMissingFiles int) string {
+func (pp *PrettyPrinter) formatWarningBreakdown(warningTypes map[string]int, totalWarnings int) string {
 	var output strings.Builder
-	output.WriteString("\n📁 MISSING FILE TYPES BREAKDOWN\n")
 
-	missingTable := table.New().
-		Border(lipgloss.DoubleBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(df.yellow)).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
-				return lipgloss.NewStyle().Foreground(df.yellow).Bold(true).Align(lipgloss.Center)
-			case row%2 == 0:
-				return df.evenRowStyle
-			default:
-				return df.oddRowStyle
-			}
-		}).
-		Headers("FILE TYPE", "COUNT", "PERCENTAGE")
+	output.WriteString(pp.Warning("Warning Types Breakdown"))
+	output.WriteString("\n")
+
+	for warningType, count := range warningTypes {
+		percentage := fmt.Sprintf("%.1f%%", float64(count)/float64(totalWarnings)*100)
+		displayType := pp.formatWarningType(warningType)
+
+		line := fmt.Sprintf("  • %s", displayType)
+		output.WriteString(pp.formatMessage(line, "count", count, "percentage", percentage))
+		output.WriteString("\n")
+	}
+
+	return output.String()
+}
+
+func (pp *PrettyPrinter) formatMissingFilesBreakdown(missingFileTypes map[string]int, totalMissingFiles int) string {
+	var output strings.Builder
+
+	output.WriteString(pp.Error("❌ Missing File Types Breakdown"))
+	output.WriteString("\n")
 
 	for fileType, count := range missingFileTypes {
 		percentage := fmt.Sprintf("%.1f%%", float64(count)/float64(totalMissingFiles)*100)
@@ -179,9 +97,48 @@ func (df *DiagnosticsFormatter) createMissingFileTypesTable(missingFileTypes map
 		if fileType == "no_extension" {
 			displayType = "No Extension"
 		}
-		missingTable.Row(displayType, fmt.Sprintf("%d", count), percentage)
+
+		line := fmt.Sprintf("  • %s", displayType)
+		output.WriteString(pp.formatMessage(line, "count", count, "percentage", percentage))
+		output.WriteString("\n")
 	}
 
-	output.WriteString(missingTable.String())
 	return output.String()
+}
+
+func (pp *PrettyPrinter) formatWarningType(warningType string) string {
+	switch warningType {
+	case "unknown_frontmatter":
+		return "Unknown Frontmatter"
+	case "frontmatter_parsing":
+		return "Frontmatter Parsing"
+	default:
+		temp := strings.ReplaceAll(warningType, "_", " ")
+		return strings.ToUpper(temp[:1]) + temp[1:]
+	}
+}
+
+func (pp *PrettyPrinter) PrintDiagnosticsSummary(summary DiagnosticsSummary) string {
+	if summary.TotalWarnings == 0 && summary.TotalMissingFiles == 0 {
+		return pp.Success("Vault is healthy", "notes", summary.TotalNotes)
+	}
+
+	var issues []string
+	if summary.TotalWarnings > 0 {
+		issues = append(issues, fmt.Sprintf("warnings=%d", summary.TotalWarnings))
+	}
+	if summary.TotalMissingFiles > 0 {
+		issues = append(issues, fmt.Sprintf("missing=%d", summary.TotalMissingFiles))
+	}
+
+	message := "Vault diagnostics"
+	keyvals := []any{"notes", summary.TotalNotes}
+	for _, issue := range issues {
+		parts := strings.SplitN(issue, "=", 2)
+		if len(parts) == 2 {
+			keyvals = append(keyvals, parts[0], parts[1])
+		}
+	}
+
+	return pp.Warning(message, keyvals...)
 }

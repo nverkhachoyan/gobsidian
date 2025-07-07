@@ -4,7 +4,6 @@ author: Nver Khachoyan
 date: 2025-06-29
 ---
 This note serves as a starting point to navigate my digital garden.
-
 ## Main Areas
 
 - **Technology & Programming:** Notes on software development, languages, and tools.

@@ -49,7 +49,7 @@ func (ws *WebServer) Serve() {
 	ws.serveMux.HandleFunc("/ws", ws.handleWebSocket)
 	ws.serveMux.Handle("/", ws.fileServerHandler())
 
-	ws.logger.Info("Serving static website", "url", "http://localhost:"+ws.port)
+	ws.logger.Debug("Serving static website", "url", "http://localhost:"+ws.port)
 
 	go func() {
 		if err := ws.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -65,7 +65,7 @@ func (ws *WebServer) Serve() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	ws.logger.Info("Shutdown signal received, exiting gracefully.")
+	ws.logger.Debug("Shutdown signal received, exiting gracefully.")
 	ws.server.Shutdown(context.Background())
 }
 

@@ -2,11 +2,12 @@ package config
 
 import (
 	"html/template"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -16,25 +17,30 @@ var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
 
 type Config struct {
-	InputDirectory  string `toml:"input_directory"`
-	OutputDirectory string `toml:"output_directory"`
-	Env             string `toml:"env"`
+	SiteConfig SiteConfig
+	Regexes    Regexes
+	Templates  *template.Template
+	Logger     *log.Logger
+}
+
+type SiteConfig struct {
 	SiteTitle       string `toml:"site_title"`
 	SiteSubtitle    string `toml:"site_subtitle"`
 	BaseURL         string `toml:"base_url"`
 	NotesPerPage    int    `toml:"notes_per_page"`
-	RegexpConfig    RegexpConfig
-	Templates       *template.Template
+	InputDirectory  string `toml:"input_directory"`
+	OutputDirectory string `toml:"output_directory"`
+	Env             string `toml:"env"`
 }
 
-type RegexpConfig struct {
+type Regexes struct {
 	ObsidianImageRegex *regexp.Regexp
 	FrontmatterRegex   *regexp.Regexp
 	HashtagRegex       *regexp.Regexp
 	WikilinkRegex      *regexp.Regexp
 }
 
-func ReadConfig(filePath string) (Config, error) {
+func LoadConfig(filePath string) (Config, error) {
 	var templates *template.Template
 
 	templateDir := "templates"
@@ -62,12 +68,14 @@ func ReadConfig(filePath string) (Config, error) {
 		log.Printf("Failed to read config file: %s", err)
 		log.Printf("Using default config")
 		return Config{
-			InputDirectory:  "content",
-			OutputDirectory: "public",
-			SiteTitle:       "My Blog",
-			SiteSubtitle:    "A blog about my life",
-			BaseURL:         "/",
-			RegexpConfig: RegexpConfig{
+			SiteConfig: SiteConfig{
+				InputDirectory:  "content",
+				OutputDirectory: "public",
+				SiteTitle:       "My Blog",
+				SiteSubtitle:    "A blog about my life",
+				BaseURL:         "/",
+			},
+			Regexes: Regexes{
 				ObsidianImageRegex: ObsidianImageRegex,
 				FrontmatterRegex:   frontmatterRegex,
 				HashtagRegex:       hashtagRegex,
@@ -78,11 +86,14 @@ func ReadConfig(filePath string) (Config, error) {
 	}
 
 	var cfg Config
-	if err := toml.Unmarshal(yamlContent, &cfg); err != nil {
+	var siteConfig SiteConfig
+	if err := toml.Unmarshal(yamlContent, &siteConfig); err != nil {
 		return Config{}, err
 	}
 
-	cfg.RegexpConfig = RegexpConfig{
+	cfg.SiteConfig = siteConfig
+
+	cfg.Regexes = Regexes{
 		ObsidianImageRegex: ObsidianImageRegex,
 		FrontmatterRegex:   frontmatterRegex,
 		HashtagRegex:       hashtagRegex,
@@ -90,6 +101,19 @@ func ReadConfig(filePath string) (Config, error) {
 	}
 
 	cfg.Templates = templates
+
+	loggerLevel := log.InfoLevel
+	if cfg.SiteConfig.Env == "development" {
+		loggerLevel = log.DebugLevel
+	}
+
+	logger := log.NewWithOptions(os.Stderr, log.Options{
+		TimeFormat:      time.Kitchen,
+		ReportTimestamp: true,
+		Level:           loggerLevel,
+	})
+
+	cfg.Logger = logger
 
 	return cfg, nil
 }
