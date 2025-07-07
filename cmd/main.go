@@ -4,18 +4,18 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
-	"runtime/pprof"
 	"time"
 
 	"gobsidian/internal/config"
 	"gobsidian/internal/diff"
 	"gobsidian/internal/generators"
 	"gobsidian/internal/parsers"
+	"gobsidian/internal/profilers"
 	"gobsidian/internal/renderers"
 	"gobsidian/internal/scanner"
 	"gobsidian/internal/server"
 	"gobsidian/internal/terminal"
+	"gobsidian/internal/utils"
 )
 
 type AppConfig struct {
@@ -53,25 +53,7 @@ func (app *App) run() error {
 		return err
 	}
 
-	f, err := os.Create(app.flags.CPUProfile)
-	if err != nil {
-		app.config.Logger.Fatal("could not create CPU profile: ", err)
-	}
-	defer f.Close()
-	if err := pprof.StartCPUProfile(f); err != nil {
-		app.config.Logger.Fatal("could not start CPU profile: ", err)
-	}
-	defer pprof.StopCPUProfile()
-
-	fmem, err := os.Create(app.flags.MemProfile)
-	if err != nil {
-		app.config.Logger.Fatal("could not create memory profile: ", err)
-	}
-	defer fmem.Close()
-	runtime.GC()
-	if err := pprof.WriteHeapProfile(fmem); err != nil {
-		app.config.Logger.Fatal("could not write memory profile: ", err)
-	}
+	profilers.RunProfilers(&app.flags.CPUProfile, &app.flags.MemProfile)
 
 	if app.flags.Clear {
 		if err := app.clearOutputDirectory(); err != nil {
@@ -84,9 +66,74 @@ func (app *App) run() error {
 		return err
 	}
 
-	if err := app.generateSite(changedFiles); err != nil {
-		return err
+	start := time.Now()
+
+	reporter := terminal.NewProgressReporter(app.printer)
+
+	scanner := scanner.NewNoteScanner(app.config.Logger, app.config.SiteConfig.InputDirectory)
+	markdownRenderer := renderers.NewMarkdownRenderer()
+	parser := parsers.NewObsidianParser(&parsers.ObsidianParser{
+		InputDirectory: app.config.SiteConfig.InputDirectory,
+		Regexes:        &app.config.Regexes,
+	})
+
+	scanStep := terminal.Step{Name: "Scanning files", Icon: "📄"}
+	scanStart := time.Now()
+
+	var scanDuration time.Duration
+
+	isOutputDirectoryExists, err := utils.IsDirectoryExists(app.config.SiteConfig.OutputDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to check if output directory exists: %w", err)
 	}
+
+	if !isOutputDirectoryExists {
+		fmt.Println(app.printer.Info("Output directory does not exist, scanning all notes"))
+		scanDuration, err = scanner.ScanAllNotes()
+	} else if len(changedFiles) > 0 {
+		fmt.Println(app.printer.Info("Changes detected, scanning notes"))
+		scanDuration, err = scanner.ScanNotesByPaths(changedFiles)
+	} else {
+		fmt.Println(app.printer.Info("No changes detected"))
+	}
+
+	if err != nil {
+		reporter.ReportStep(scanStep, terminal.StepResult{
+			Duration: time.Since(scanStart),
+			Count:    0,
+			Error:    err,
+		})
+		return fmt.Errorf("failed to scan notes: %w", err)
+	}
+
+	scannedNotes := scanner.GetAllNotes()
+
+	reporter.ReportStep(scanStep, terminal.StepResult{
+		Duration: scanDuration,
+		Count:    len(scannedNotes),
+		Error:    nil,
+	})
+
+	gen, err := generators.NewStaticSiteGenerator(
+		app.config.SiteConfig,
+		&app.config.Regexes,
+		app.config.Logger,
+		app.config.Templates,
+		parser,
+		scanner,
+		markdownRenderer,
+		app.flags.VaultHealth,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize generator: %w", err)
+	}
+
+	if err := gen.Generate(scannedNotes); err != nil {
+		return fmt.Errorf("failed to generate site: %w", err)
+	}
+
+	totalDuration := time.Since(start)
+	fmt.Println(app.printer.Success("Site generated successfully", "duration", totalDuration))
 
 	if app.flags.Serve {
 		return app.serveSite()
@@ -127,7 +174,7 @@ func (app *App) clearOutputDirectory() error {
 }
 
 func (app *App) detectChanges() ([]string, error) {
-	diffTracker := diff.NewTracker(app.config.SiteConfig.InputDirectory)
+	diffTracker := diff.NewTracker(app.config.SiteConfig.InputDirectory, app.config.SiteConfig.OutputDirectory)
 
 	hasChanges, err := diffTracker.HasChanges()
 	if err != nil {
@@ -135,11 +182,8 @@ func (app *App) detectChanges() ([]string, error) {
 	}
 
 	if !hasChanges {
-		fmt.Println(app.printer.Info("No changes detected"))
 		return nil, nil
 	}
-
-	fmt.Println(app.printer.Info("Changes detected, scanning notes"))
 
 	changedFiles, err := diffTracker.GetChangedFiles()
 	if err != nil {
@@ -153,70 +197,6 @@ func (app *App) detectChanges() ([]string, error) {
 
 	fmt.Println(app.printer.PrintDiffsSummary(diffs))
 	return changedFiles, nil
-}
-
-func (app *App) generateSite(changedFiles []string) error {
-	start := time.Now()
-
-	reporter := terminal.NewProgressReporter(app.printer)
-
-	scanner := scanner.NewNoteScanner(app.config.Logger, app.config.SiteConfig.InputDirectory)
-	markdownRenderer := renderers.NewMarkdownRenderer()
-	parser := parsers.NewObsidianParser(&parsers.ObsidianParser{
-		InputDirectory: app.config.SiteConfig.InputDirectory,
-		Regexes:        &app.config.Regexes,
-	})
-
-	scanStep := terminal.Step{Name: "Scanning files", Icon: "📄"}
-	scanStart := time.Now()
-
-	var scanDuration time.Duration
-	var err error
-
-	if len(changedFiles) > 0 {
-		scanDuration, err = scanner.ScanNotesByPaths(changedFiles)
-	} else {
-		scanDuration, err = scanner.ScanAllNotes()
-	}
-
-	if err != nil {
-		reporter.ReportStep(scanStep, terminal.StepResult{
-			Duration: time.Since(scanStart),
-			Count:    0,
-			Error:    err,
-		})
-		return fmt.Errorf("failed to scan notes: %w", err)
-	}
-
-	scannedNotes := scanner.GetAllNotes()
-
-	reporter.ReportStep(scanStep, terminal.StepResult{
-		Duration: scanDuration,
-		Count:    len(scannedNotes),
-		Error:    nil,
-	})
-
-	gen, err := generators.NewStaticSiteGenerator(
-		app.config.SiteConfig,
-		&app.config.Regexes,
-		app.config.Logger,
-		app.config.Templates,
-		parser,
-		scanner,
-		markdownRenderer,
-		app.flags.VaultHealth,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize generator: %w", err)
-	}
-
-	if err := gen.Generate(scannedNotes); err != nil {
-		return fmt.Errorf("failed to generate site: %w", err)
-	}
-
-	totalDuration := time.Since(start)
-	fmt.Println(app.printer.Success("Site generated successfully", "duration", totalDuration))
-	return nil
 }
 
 func (app *App) serveSite() error {

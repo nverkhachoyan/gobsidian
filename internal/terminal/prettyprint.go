@@ -20,6 +20,7 @@ type PrettyPrinter struct {
 	successStyle lipgloss.Style
 	errorStyle   lipgloss.Style
 	infoStyle    lipgloss.Style
+	printStyle   lipgloss.Style
 	warningStyle lipgloss.Style
 	diffAddStyle lipgloss.Style
 	diffDelStyle lipgloss.Style
@@ -45,6 +46,7 @@ func NewPrettyPrinter() *PrettyPrinter {
 		successStyle: lipgloss.NewStyle().Foreground(green).Bold(true),
 		errorStyle:   lipgloss.NewStyle().Foreground(red).Bold(true),
 		infoStyle:    lipgloss.NewStyle().Foreground(blue).Bold(true),
+		printStyle:   lipgloss.NewStyle().Foreground(gray),
 		warningStyle: lipgloss.NewStyle().Foreground(yellow).Bold(true),
 		diffAddStyle: lipgloss.NewStyle().Foreground(green),
 		diffDelStyle: lipgloss.NewStyle().Foreground(red),
@@ -57,19 +59,19 @@ func (pp *PrettyPrinter) Success(message string, keyvals ...any) string {
 }
 
 func (pp *PrettyPrinter) Print(message string, keyvals ...any) string {
-	return pp.infoStyle.Render(pp.formatMessage(message, keyvals...))
+	return pp.printStyle.Render(pp.formatMessage(message, keyvals...))
 }
 
 func (pp *PrettyPrinter) Error(message string, keyvals ...any) string {
-	return pp.errorStyle.Render("❌  " + pp.formatMessage(message, keyvals...))
+	return pp.errorStyle.Render("❌ " + pp.formatMessage(message, keyvals...))
 }
 
 func (pp *PrettyPrinter) Info(message string, keyvals ...any) string {
-	return pp.infoStyle.Render("ℹ️  " + pp.formatMessage(message, keyvals...))
+	return pp.infoStyle.Render("ℹ️ " + pp.formatMessage(message, keyvals...))
 }
 
 func (pp *PrettyPrinter) Warning(message string, keyvals ...any) string {
-	return pp.warningStyle.Render("⚠️  " + pp.formatMessage(message, keyvals...))
+	return pp.warningStyle.Render("⚠️ " + pp.formatMessage(message, keyvals...))
 }
 
 func (pp *PrettyPrinter) Header(title string) string {

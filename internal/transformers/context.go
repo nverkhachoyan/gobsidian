@@ -14,7 +14,6 @@ type TransformContext struct {
 	notesRepository     *repository.NoteRepository
 	EmbeddedPosts       map[string]models.EmbeddedPost
 
-	IsDarkMode      bool
 	BaseURL         string
 	OutputDirectory string
 }
@@ -27,7 +26,6 @@ func NewTransformContext(baseURL, outputDir string, notesRepository *repository.
 		notesRepository:     notesRepository,
 		EmbeddedPosts:       make(map[string]models.EmbeddedPost),
 		BaseURL:             baseURL,
-		IsDarkMode:          true,
 		OutputDirectory:     outputDir,
 	}
 }
@@ -41,7 +39,6 @@ func (tc *TransformContext) Clone() *TransformContext {
 		cacheMu:             &sync.RWMutex{},
 		notesRepository:     tc.notesRepository,
 		BaseURL:             tc.BaseURL,
-		IsDarkMode:          tc.IsDarkMode,
 		OutputDirectory:     tc.OutputDirectory,
 	}
 }

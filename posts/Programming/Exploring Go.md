@@ -22,6 +22,7 @@ import "fmt"
 
 func main() {
     fmt.Println("Hello, Go!")
+    var henlo string
 }
 ```
 

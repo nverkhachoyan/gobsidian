@@ -16,6 +16,11 @@ import (
 	"sort"
 	"strings"
 
+	"regexp"
+
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/styles"
+
 	"gobsidian/internal/config"
 	"gobsidian/internal/executors"
 	"gobsidian/internal/models"
@@ -122,7 +127,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		Error:    nil,
 	})
 
-	graphStep := terminal.Step{Name: "Building graph", Icon: "🔗"}
+	graphStep := terminal.Step{Name: "Built graph", Icon: "🔗"}
 	graphTime, graph := graphGenerator.Generate(notesByPath, notesRepository)
 
 	reporter.ReportStep(graphStep, terminal.StepResult{
@@ -131,7 +136,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		Error:    nil,
 	})
 
-	transformStep := terminal.Step{Name: "Transforming content", Icon: "✨"}
+	transformStep := terminal.Step{Name: "Transformed content", Icon: "✨"}
 	transformTime, _ := g.applyTransformationsConcurrently(pipeline, transformCtx, notesSlice)
 
 	reporter.ReportStep(transformStep, terminal.StepResult{
@@ -140,7 +145,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		Error:    nil,
 	})
 
-	treeStep := terminal.Step{Name: "Building folder tree", Icon: "📁"}
+	treeStep := terminal.Step{Name: "Built folder tree", Icon: "📁"}
 	buildTreeTime, fileTree, numberOfFolders := g.buildFolderTree(notesByPath)
 
 	reporter.ReportStep(treeStep, terminal.StepResult{
@@ -149,7 +154,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		Error:    nil,
 	})
 
-	templateStep := terminal.Step{Name: "Executing templates", Icon: "🎨"}
+	templateStep := terminal.Step{Name: "Executed templates", Icon: "🎨"}
 	templateStart := time.Now()
 	sortedNotes := g.sortNotes(notesSlice)
 	templateExecTime, numberOfTags, err := g.executeTemplatesBatch(sortedNotes, fileTree, graph)
@@ -168,8 +173,9 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		Error:    nil,
 	})
 
-	assetsStep := terminal.Step{Name: "Copying assets", Icon: "📦"}
+	assetsStep := terminal.Step{Name: "Copied assets", Icon: "📦"}
 	assetCopyTime := g.copyAssets(notesByPath)
+	g.generateSyntaxHighlighterCSS()
 
 	reporter.ReportStep(assetsStep, terminal.StepResult{
 		Duration: assetCopyTime,
@@ -933,4 +939,62 @@ func (g *StaticSiteGenerator) exportDiagnostics(
 		"path", diagnosticsPath,
 		"size", fmt.Sprintf("%.1f KB", float64(len(jsonData))/1024),
 	)
+}
+
+func (g *StaticSiteGenerator) generateSyntaxHighlighterCSS() error {
+	var lightBuf, darkBuf bytes.Buffer
+	formatter := chromahtml.New(chromahtml.WithClasses(true))
+
+	if err := formatter.WriteCSS(
+		&lightBuf,
+		styles.Get(g.SiteConfig.Theme.SyntaxHighlighterLight),
+	); err != nil {
+		return fmt.Errorf("failed to generate light theme: %w", err)
+	}
+
+	if err := formatter.WriteCSS(
+		&darkBuf,
+		styles.Get(g.SiteConfig.Theme.SyntaxHighlighterDark),
+	); err != nil {
+		return fmt.Errorf("failed to generate dark theme: %w", err)
+	}
+
+	scopedDarkCSS := g.scopeCSS(darkBuf.String(), "html.dark-mode")
+
+	// combine light and dark themes
+	finalCSS := lightBuf.String() + "\n" + scopedDarkCSS
+	outputPath := filepath.Join(g.SiteConfig.OutputDirectory, "css", "chroma.css")
+
+	if err := os.WriteFile(outputPath, []byte(finalCSS), 0644); err != nil {
+		return fmt.Errorf("failed to write combined CSS file: %w", err)
+	}
+
+	g.Logger.Debug("Successfully generated combined Chroma CSS at %s", outputPath)
+	return nil
+}
+
+// util function to scope CSS to a specific selector
+func (g *StaticSiteGenerator) scopeCSS(css, scope string) string {
+	var result strings.Builder
+	r := regexp.MustCompile(`(?s)([^}]+)({[^}]+})`)
+	submatches := r.FindAllStringSubmatch(css, -1)
+
+	for _, submatch := range submatches {
+		selectors := strings.TrimSpace(submatch[1])
+		declarations := submatch[2]
+
+		if strings.HasPrefix(selectors, "@") {
+			result.WriteString(selectors)
+			result.WriteString(declarations)
+			continue
+		}
+
+		var scopedSelectors []string
+		for _, selector := range strings.Split(selectors, ",") {
+			scopedSelectors = append(scopedSelectors, scope+" "+strings.TrimSpace(selector))
+		}
+		result.WriteString(strings.Join(scopedSelectors, ", "))
+		result.WriteString(declarations)
+	}
+	return result.String()
 }

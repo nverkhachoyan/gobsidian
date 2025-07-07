@@ -1,0 +1,69 @@
+hash_format = 'sha256'
+
+[[files]]
+path = 'posts/.obsidian/app.json'
+hash = '4374eeac1712a41b47890b4ffff2a54ecce4223c02a1d83816087c03f1ba1ad8'
+
+[[files]]
+path = 'posts/.obsidian/appearance.json'
+hash = '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a'
+
+[[files]]
+path = 'posts/.obsidian/core-plugins.json'
+hash = 'fa01ffebed2b842d6f9fcdf817d476114379043050dbd7ca9ccae68d14cb970a'
+
+[[files]]
+path = 'posts/.obsidian/graph.json'
+hash = '9f87f629cd79f89f31c5d06349c0617cfe3fc1885b988ec679ddc273bffbc937'
+
+[[files]]
+path = 'posts/.obsidian/workspace.json'
+hash = 'b7be8eb7a4fd192dd570ffce8dce041bdbfc21a7af45d83e2afe817bd03e09ef'
+
+[[files]]
+path = 'posts/Brother.md'
+hash = 'a08c47f3f0cb9954433a581d1af91b126eb605ace3359ed5e1e055bdab46c17b'
+
+[[files]]
+path = 'posts/Bugs.md'
+hash = 'f3add96cf6cdeddf72d84f771840562dc5767dd0790654922ea82a62505e336d'
+
+[[files]]
+path = 'posts/Exploring Go.md'
+hash = 'dc82f82422eeda99287d731da47e80db390edff072774fec1c4d14590e7a07e0'
+
+[[files]]
+path = 'posts/Map of Content.md'
+hash = '5dbfc2a610c2f9417b331fbad80bca4f8c23e071e2bc48b691c711811c615f65'
+
+[[files]]
+path = 'posts/Markdown Syntax Guide.md'
+hash = '54e028d22716d807746d362d9173e5a034b3abcabfa2ad391fc316f641ade977'
+
+[[files]]
+path = 'posts/Personal/Reading Habits.md'
+hash = '37410526b30472e841d5e9cbf434a360b3a8e455a77b47e38419d21d4bcfafd5'
+
+[[files]]
+path = 'posts/Personal/Tomfoolery And Stuff/What are threads anyway?.md'
+hash = '3398925972e3334549b1358cc5df25809686717fdadb0c43adedb068911ed796'
+
+[[files]]
+path = 'posts/Programming/Exploring Go.md'
+hash = '7f6ea2653c4905ff1ac06429e860b54c3e2e5577e97cb2db991354842e24cae9'
+
+[[files]]
+path = 'posts/Reading Habits.md'
+hash = '4d79c7e0e47d879b772c1b50f0aa27b3da737f80c590f46ea87d66791a2c6038'
+
+[[files]]
+path = 'posts/Welcome to My Digital Garden.md'
+hash = '497a6d9db8d347dfe9f9004a5ad2002d7d5581c02a7cf70215efb8f3c850ecd5'
+
+[[files]]
+path = 'posts/What are threads anyway?.md'
+hash = '4ac844d86939ec74d869114a90bee3a2404e51e1240832aa69024db3a37de2ff'
+
+[[files]]
+path = 'posts/cigar-denver.png'
+hash = '620d59e869926e519f81a5f940151d55807f73363a1356e15514b10890f46a5c'

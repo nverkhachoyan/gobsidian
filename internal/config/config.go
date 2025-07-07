@@ -31,6 +31,7 @@ type SiteConfig struct {
 	InputDirectory  string `toml:"input_directory"`
 	OutputDirectory string `toml:"output_directory"`
 	Env             string `toml:"env"`
+	Theme           Theme  `toml:"theme"`
 }
 
 type Regexes struct {
@@ -38,6 +39,11 @@ type Regexes struct {
 	FrontmatterRegex   *regexp.Regexp
 	HashtagRegex       *regexp.Regexp
 	WikilinkRegex      *regexp.Regexp
+}
+
+type Theme struct {
+	SyntaxHighlighterLight string `toml:"syntax_highlighter_light"`
+	SyntaxHighlighterDark  string `toml:"syntax_highlighter_dark"`
 }
 
 func LoadConfig(filePath string) (Config, error) {
@@ -74,6 +80,10 @@ func LoadConfig(filePath string) (Config, error) {
 				SiteTitle:       "My Blog",
 				SiteSubtitle:    "A blog about my life",
 				BaseURL:         "/",
+				Theme: Theme{
+					SyntaxHighlighterLight: "github",
+					SyntaxHighlighterDark:  "monokai",
+				},
 			},
 			Regexes: Regexes{
 				ObsidianImageRegex: ObsidianImageRegex,

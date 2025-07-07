@@ -6,7 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/alecthomas/chroma/v2"
+	"github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/styles"
 )
 
 type SyntaxHighlighter struct {
@@ -39,23 +42,33 @@ func (s *SyntaxHighlighter) Transform(content string, note *models.ParsedNote, c
 		language := parts[1]
 		code := parts[2]
 
-		return s.highlightCode(code, language, ctx.IsDarkMode)
+		return s.highlightCode(code, language)
 
 	}), nil
 }
 
-func (*SyntaxHighlighter) highlightCode(code, language string, isDarkMode bool) string {
+func (*SyntaxHighlighter) highlightCode(code, language string) string {
 	var buf strings.Builder
+	lexer := lexers.Get(language)
+	if lexer == nil {
+		lexer = lexers.Analyse(code)
+	}
+	if lexer == nil {
+		lexer = lexers.Fallback
+	}
+	lexer = chroma.Coalesce(lexer)
 
-	theme := "github"
-	if isDarkMode {
-		theme = "monokai"
+	formatter := html.New(html.WithClasses(true))
+
+	iterator, err := lexer.Tokenise(nil, code)
+	if err != nil {
+		fmt.Printf("tokenise error: %v", err)
+		return "<pre><code>" + code + "</code></pre>"
 	}
 
-	err := quick.Highlight(&buf, code, language, "html", theme)
-
+	err = formatter.Format(&buf, styles.Fallback, iterator)
 	if err != nil {
-		fmt.Printf("PROBLEMO: %v", err)
+		fmt.Printf("format error: %v", err)
 		return "<pre><code>" + code + "</code></pre>"
 	}
 
