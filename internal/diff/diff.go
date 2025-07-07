@@ -48,14 +48,16 @@ type Diff struct {
 }
 
 type Tracker struct {
-	directory string
-	lockFile  string
+	directory       string
+	outputDirectory string
+	lockFile        string
 }
 
-func NewTracker(directory string) *Tracker {
+func NewTracker(vaultDirectory, outputDirectory string) *Tracker {
 	return &Tracker{
-		directory: directory,
-		lockFile:  filepath.Join(directory, "lock.toml"),
+		directory:       vaultDirectory,
+		outputDirectory: outputDirectory,
+		lockFile:        filepath.Join(vaultDirectory, "lock.toml"),
 	}
 }
 
@@ -107,6 +109,11 @@ func (t *Tracker) UpdateLockFile() ([]Diff, error) {
 	}
 
 	return diffs, nil
+}
+
+func (t *Tracker) IsOutputDirectoryExists() bool {
+	_, err := os.Stat(t.directory)
+	return !os.IsNotExist(err)
 }
 
 func (t *Tracker) generateLockFile() (*LockFile, error) {
