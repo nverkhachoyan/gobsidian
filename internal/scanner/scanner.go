@@ -87,6 +87,11 @@ func (ns *NoteScanner) ScanNotesByPaths(paths []string) (time.Duration, error) {
 	start := time.Now()
 
 	for _, path := range paths {
+
+		if !strings.HasSuffix(path, ".md") {
+			continue
+		}
+
 		noteFile, err := os.Open(path)
 		if err != nil {
 			return time.Duration(0), fmt.Errorf("error opening note file: %w", err)

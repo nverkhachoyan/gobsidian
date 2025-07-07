@@ -4,8 +4,8 @@ date: 2024-01-15
 author: Nver Khachoyan
 updatedAt: 2024-01-15
 ---
-
-I've recently started learning Go, and it's been a fascinating journey so far. The language's simplicity, performance, and strong focus on concurrency are compelling.
+Heyy
+I've recently started learning Go, and it's been a fascinating journey so far. The language's simplicity, performance, and strong focus on concurrency are compelling. 
 
 ## Key Features I'm Enjoying
 

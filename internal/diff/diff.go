@@ -18,6 +18,7 @@ type File struct {
 
 type LockFile struct {
 	HashFormat string `toml:"hash_format"`
+	VaultName  string `toml:"vault_name"`
 	Files      []File `toml:"files"`
 }
 
@@ -48,16 +49,16 @@ type Diff struct {
 }
 
 type Tracker struct {
-	directory       string
+	inputDirectory  string
 	outputDirectory string
 	lockFile        string
 }
 
 func NewTracker(vaultDirectory, outputDirectory string) *Tracker {
 	return &Tracker{
-		directory:       vaultDirectory,
+		inputDirectory:  vaultDirectory,
 		outputDirectory: outputDirectory,
-		lockFile:        filepath.Join(vaultDirectory, "lock.toml"),
+		lockFile:        filepath.Join(outputDirectory, "lock.toml"),
 	}
 }
 
@@ -112,13 +113,13 @@ func (t *Tracker) UpdateLockFile() ([]Diff, error) {
 }
 
 func (t *Tracker) IsOutputDirectoryExists() bool {
-	_, err := os.Stat(t.directory)
+	_, err := os.Stat(t.inputDirectory)
 	return !os.IsNotExist(err)
 }
 
 func (t *Tracker) generateLockFile() (*LockFile, error) {
 	var filePaths []string
-	err := filepath.WalkDir(t.directory, func(path string, entry fs.DirEntry, err error) error {
+	err := filepath.WalkDir(t.inputDirectory, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -134,6 +135,7 @@ func (t *Tracker) generateLockFile() (*LockFile, error) {
 
 	lockFile := &LockFile{
 		HashFormat: "sha256",
+		VaultName:  t.inputDirectory,
 		Files:      make([]File, 0, len(filePaths)),
 	}
 

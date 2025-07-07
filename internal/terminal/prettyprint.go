@@ -270,3 +270,36 @@ func (pp *PrettyPrinter) PrintDiffsSummary(diffs []diff.Diff) string {
 	summary := fmt.Sprintf("📄 Changes: %s", strings.Join(parts, " "))
 	return pp.infoStyle.Render(summary)
 }
+
+func (pp *PrettyPrinter) PrintDiffsDetailed(diffs []diff.Diff) string {
+	if len(diffs) == 0 {
+		return pp.Info("No changes detected")
+	}
+
+	var output strings.Builder
+
+	output.WriteString("\n")
+
+	for _, d := range diffs {
+		var icon string
+		var style lipgloss.Style
+
+		switch d.ChangeType {
+		case diff.Added:
+			icon = "+"
+			style = lipgloss.NewStyle().Foreground(pp.green)
+		case diff.Modified:
+			icon = "~"
+			style = lipgloss.NewStyle().Foreground(pp.yellow)
+		case diff.Deleted:
+			icon = "-"
+			style = lipgloss.NewStyle().Foreground(pp.red)
+		}
+
+		line := fmt.Sprintf("  %s %s", icon, d.File)
+		output.WriteString(style.Render(line))
+		output.WriteString("\n")
+	}
+
+	return output.String()
+}

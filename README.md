@@ -48,6 +48,10 @@ site_subtitle = "My Personal Blog - Built with Go and Obsidian Notes"
 notes_per_page = 5
 base_url = "/"
 env = "production"
+
+[theme]
+syntax_highlighter_dark = "monokai"
+syntax_highlighter_light = "github"
 ```
 
 `input_directory` is the obsidian vault directory.
