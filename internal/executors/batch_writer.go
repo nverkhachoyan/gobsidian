@@ -14,7 +14,6 @@ import (
 
 type FileToWrite struct {
 	Path     string
-	Content  []byte
 	Template string
 	Data     any
 }
@@ -28,7 +27,11 @@ type BatchWriter struct {
 	mu         sync.Mutex
 }
 
-func NewBatchWriter(outputDir string, logger *log.Logger, templates *template.Template) *BatchWriter {
+func NewBatchWriter(
+	outputDir string,
+	logger *log.Logger,
+	templates *template.Template,
+) *BatchWriter {
 	return &BatchWriter{
 		outputDir: outputDir,
 		logger:    logger,
@@ -41,19 +44,12 @@ func NewBatchWriter(outputDir string, logger *log.Logger, templates *template.Te
 	}
 }
 
-func (bw *BatchWriter) AddFile(relativePath, templateName string, data any) error {
-	buf := bw.bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer bw.bufferPool.Put(buf)
-
-	if err := bw.templates.ExecuteTemplate(buf, templateName, data); err != nil {
-		return fmt.Errorf("template execution failed for %s: %w", relativePath, err)
-	}
-
+func (bw *BatchWriter) AddFile(
+	relativePath, templateName string, data any,
+) error {
 	bw.mu.Lock()
 	bw.files = append(bw.files, FileToWrite{
 		Path:     filepath.Join(bw.outputDir, relativePath),
-		Content:  append([]byte(nil), buf.Bytes()...),
 		Data:     data,
 		Template: templateName,
 	})
@@ -98,9 +94,17 @@ func (bw *BatchWriter) writeFilesConcurrently() error {
 		go func() {
 			defer wg.Done()
 			for file := range filesChan {
-				if err := os.WriteFile(file.Path, file.Content, 0644); err != nil {
-					errorsChan <- fmt.Errorf("failed to write file %s: %w", file.Path, err)
+				buf := bw.bufferPool.Get().(*bytes.Buffer)
+				buf.Reset()
+
+				if err := bw.templates.ExecuteTemplate(buf, file.Template, file.Data); err != nil {
+					errorsChan <- fmt.Errorf("template execution failed for %s: %w", file.Path, err)
+				} else {
+					if err := os.WriteFile(file.Path, buf.Bytes(), 0644); err != nil {
+						errorsChan <- fmt.Errorf("failed to write file %s: %w", file.Path, err)
+					}
 				}
+				bw.bufferPool.Put(buf)
 			}
 		}()
 	}

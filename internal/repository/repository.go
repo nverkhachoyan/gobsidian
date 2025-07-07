@@ -71,6 +71,7 @@ func (wr *NoteRepository) AddBacklink(targetNote *models.ParsedNote, sourceNote 
 	targetNote.LinkedFrom = append(targetNote.LinkedFrom, models.Link{
 		Title:       sourceNote.Title,
 		URL:         sourceNote.URL,
+		FullPath:    sourceNote.FullPath,
 		RawFileName: htmlFileName,
 		PseudoName:  pseudoName,
 	})

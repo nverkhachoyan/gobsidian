@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"gobsidian/internal/config"
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 
@@ -20,7 +21,7 @@ type Parser interface {
 
 type ObsidianParser struct {
 	InputDirectory string
-	Regexes        *models.ParserRegexes
+	Regexes        *config.Regexes
 }
 
 func NewObsidianParser(c *ObsidianParser) *ObsidianParser {

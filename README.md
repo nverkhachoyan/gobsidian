@@ -24,27 +24,33 @@ air
 
 ### Flags
 
+`--serve` serve the generated website after building.
+
+`--port` port to serve the website on.
+
+`--vhealth` prints out health diagnostics on your vault, and saves it to `vault-diagnostics.json` in the output directory.
+
 `--clear` removes the public directory before generating the site.
 
-`--watch` will watch for changes in the `public` and `templates` directories.
+`--cpuprofile <filename>` to generate CPU profiler file.
 
-`--serve` serve the generated website after building
-
-`--port` port to serve the website on
+`--memprofile <filename>` to generate memory profiler file.
 
 ### Config
 
-`config.yaml` is the config file.
+`.config.toml` is the config file.
 
-```yaml
-InputDirectory: ./posts
-OutputDirectory: ./public
-SiteTitle: Nver Khachoyan's Blog
-SiteSubtitle: Random ramblings
-BaseURL: /
+```toml
+input_directory = "posts"
+output_directory = "public"
+site_title = "Nver Khachoyan's Blog"
+site_subtitle = "My Personal Blog - Built with Go and Obsidian Notes"
+notes_per_page = 5
+base_url = "/"
+env = "production"
 ```
 
-`InputDirectory` is the obsidian vault directory.
+`input_directory` is the obsidian vault directory.
 
 ### Current state
 
@@ -53,6 +59,7 @@ BaseURL: /
 3. [x] Obsidian style images
 4. [x] Frontmatter parsing (yaml)
 5. [x] Folders and Subfolders
+6. [x] Paginated content (set # pages in config)
 
 ### Frontmatter
 
