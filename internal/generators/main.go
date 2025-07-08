@@ -174,7 +174,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	})
 
 	assetsStep := terminal.Step{Name: "Copied assets", Icon: "📦"}
-	assetCopyTime := g.copyAssets(notesByPath)
+	assetCopyTime := g.copyAssets(notesByPath, graph)
 	g.generateSyntaxHighlighterCSS()
 
 	reporter.ReportStep(assetsStep, terminal.StepResult{
@@ -710,7 +710,7 @@ func (g *StaticSiteGenerator) paginateFolderPages(
 	return nil
 }
 
-func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote) time.Duration {
+func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote, graph []byte) time.Duration {
 	start := time.Now()
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
@@ -735,7 +735,7 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 		}(name, path)
 	}
 
-	for _, dir := range []string{"js", "css", "assets"} {
+	for _, dir := range []string{"assets", "css", "js"} {
 		wg.Add(1)
 		go func(dir string) {
 			defer wg.Done()
@@ -963,7 +963,7 @@ func (g *StaticSiteGenerator) generateSyntaxHighlighterCSS() error {
 
 	// combine light and dark themes
 	finalCSS := lightBuf.String() + "\n" + scopedDarkCSS
-	outputPath := filepath.Join(g.SiteConfig.OutputDirectory, "css", "chroma.css")
+	outputPath := filepath.Join(g.SiteConfig.OutputDirectory, "assets", "chroma.css")
 
 	if err := os.WriteFile(outputPath, []byte(finalCSS), 0644); err != nil {
 		return fmt.Errorf("failed to write combined CSS file: %w", err)

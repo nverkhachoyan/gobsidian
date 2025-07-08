@@ -1,22 +1,22 @@
 {{define "file_tree"}}
 <ul class="file-tree__list">
     {{range .Children}}
-    <li class="file-tree__item file-tree__item--folder">
+    <li class="file-tree__item file-tree__item--folder"
+        x-data="{ expanded: false }"
+        :class="{ 'expanded': expanded }">
       <div class="file-tree__folder-header">
-        <span class="file-tree__toggle">
+        <span @click="expanded = !expanded" class="file-tree__toggle">
           <i class="fas fa-folder file-tree__icon file-tree__icon--closed"></i>
           <i class="fas fa-folder-open file-tree__icon file-tree__icon--open"></i>
         </span>
-        <span class="file-tree__file_name file-tree__toggle">
+        
+        <span @click="expanded = !expanded" class="file-tree__file_name file-tree__toggle"  >
           {{.Name}}
-          <a
-            href="/{{.Path}}/"
-            class="file-tree__link file-tree__folder-icon"
-            title="Go to folder"
-          >
-            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-          </a>
         </span>
+
+        <a href="/{{.Path}}/" class="file-tree__link file-tree__folder-icon" title="Go to folder">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>
       </div>
       <div class="file-tree__children">{{template "file_tree" .}}</div>
     </li>

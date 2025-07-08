@@ -1,3 +1,13 @@
+@import "./colors.css";
+@import "./posts.css";
+@import "./folder.css";
+@import "./left-sidebar.css";
+@import "./link-previews.css";
+@import "./markdown.css";
+@import "./pagination.css";
+@import "./tags.css";
+@import "./theme-switcher.css";
+
 @import url("https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Inter:wght@400;500&display=swap");
 
 /* General Body Styles */

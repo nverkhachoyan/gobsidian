@@ -34,11 +34,7 @@ html.dark-mode .theme-switcher .sun {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
-
     position: static;
-    align-self: flex-end;
-
-  
- 
+    align-self: flex-end; 
   }
 }
