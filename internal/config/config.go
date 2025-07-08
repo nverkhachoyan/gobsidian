@@ -32,6 +32,7 @@ type SiteConfig struct {
 	OutputDirectory string `toml:"output_directory"`
 	Env             string `toml:"env"`
 	Theme           Theme  `toml:"theme"`
+	TemplateDir     string `toml:"template_dir"`
 }
 
 type Regexes struct {
@@ -47,27 +48,6 @@ type Theme struct {
 }
 
 func LoadConfig(filePath string) (Config, error) {
-	var templates *template.Template
-
-	templateDir := "templates"
-	templates = template.New("main")
-
-	err := filepath.WalkDir(templateDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && filepath.Ext(path) == ".html" {
-			templates, err = templates.ParseFiles(path)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	if err != nil {
-		log.Fatalf("Failed to parse templates: %s", err)
-	}
 
 	yamlContent, err := os.ReadFile(filePath)
 	if err != nil {
@@ -84,6 +64,7 @@ func LoadConfig(filePath string) (Config, error) {
 					SyntaxHighlighterLight: "github",
 					SyntaxHighlighterDark:  "monokai",
 				},
+				TemplateDir: "templates",
 			},
 			Regexes: Regexes{
 				ObsidianImageRegex: ObsidianImageRegex,
@@ -91,7 +72,6 @@ func LoadConfig(filePath string) (Config, error) {
 				HashtagRegex:       hashtagRegex,
 				WikilinkRegex:      wikilinkRegex,
 			},
-			Templates: templates,
 		}, nil
 	}
 
@@ -110,7 +90,7 @@ func LoadConfig(filePath string) (Config, error) {
 		WikilinkRegex:      wikilinkRegex,
 	}
 
-	cfg.Templates = templates
+	cfg.Templates = LoadTemplates(cfg.SiteConfig.TemplateDir)
 
 	loggerLevel := log.InfoLevel
 	if cfg.SiteConfig.Env == "development" {
@@ -126,4 +106,31 @@ func LoadConfig(filePath string) (Config, error) {
 	cfg.Logger = logger
 
 	return cfg, nil
+}
+
+func LoadTemplates(templateDir string) *template.Template {
+	if templateDir == "" {
+		templateDir = "templates"
+	}
+
+	templates := template.New("main")
+
+	err := filepath.WalkDir(templateDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && filepath.Ext(path) == ".html" {
+			templates, err = templates.ParseFiles(path)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Fatalf("Failed to parse templates: %s", err)
+	}
+
+	return templates
 }

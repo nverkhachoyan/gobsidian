@@ -13,12 +13,14 @@
 
     {{if .FileTree}} 
     <div class="left-sidebar-item file-tree-container" 
-         x-data="{ expanded: false }" 
+         x-data="fileTreeComponent()" 
          :class="{ 'expanded': expanded }">
         <h5 class="left-sidebar-item-title" @click="expanded = !expanded">Explorer</h5>
         <div class="left-sidebar-item-content">
           <nav class="file-tree">
-            {{template "file_tree" .FileTree}}
+            <template x-if="fileTreeData">
+              <div x-html="renderTree(fileTreeData)"></div>
+            </template>
           </nav>
         </div>
     </div>

@@ -2,12 +2,18 @@
 
 <script>
   window.graphData = JSON.parse(`{{.Graph}}`);
+  window.fileTreeData = JSON.parse(`{{.FileTreeJSON}}`);
+  console.log("FILE TREE DATA", window.fileTreeData);
+ 
 </script>
 
 <script src="/js/vis-network.min.js"></script>
 <script src="/js/previews.js" defer></script>
 <script src="/js/graph.js" defer></script>
 <script src="/js/live-reload.js" defer></script>
+<script src="/js/file-tree.js" defer></script>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 <script defer src="/js/alpine.min.js"></script>
 
 {{end}}

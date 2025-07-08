@@ -68,6 +68,7 @@ type BaseTemplateData struct {
 	FileTree     *models.Folder
 	Graph        template.JS
 	Tags         []models.Tag
+	FileTreeJSON template.JS
 }
 
 func NewStaticSiteGenerator(
@@ -128,7 +129,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	})
 
 	graphStep := terminal.Step{Name: "Built graph", Icon: "🔗"}
-	graphTime, graph := graphGenerator.Generate(notesByPath, notesRepository)
+	graphTime, graphJSON := graphGenerator.Generate(notesByPath, notesRepository)
 
 	reporter.ReportStep(graphStep, terminal.StepResult{
 		Duration: graphTime,
@@ -146,7 +147,16 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	})
 
 	treeStep := terminal.Step{Name: "Built folder tree", Icon: "📁"}
-	buildTreeTime, fileTree, numberOfFolders := g.buildFolderTree(notesByPath)
+	buildTreeTime, fileTree, numberOfFolders, fileTreeJSON, err := g.buildFolderTree(notesByPath)
+
+	if err != nil {
+		reporter.ReportStep(treeStep, terminal.StepResult{
+			Duration: buildTreeTime,
+			Count:    numberOfFolders,
+			Error:    err,
+		})
+		return fmt.Errorf("failed to build folder tree: %w", err)
+	}
 
 	reporter.ReportStep(treeStep, terminal.StepResult{
 		Duration: buildTreeTime,
@@ -157,7 +167,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	templateStep := terminal.Step{Name: "Executed templates", Icon: "🎨"}
 	templateStart := time.Now()
 	sortedNotes := g.sortNotes(notesSlice)
-	templateExecTime, numberOfTags, err := g.executeTemplatesBatch(sortedNotes, fileTree, graph)
+	templateExecTime, numberOfTags, err := g.executeTemplatesBatch(sortedNotes, fileTree, graphJSON, fileTreeJSON)
 	if err != nil {
 		reporter.ReportStep(templateStep, terminal.StepResult{
 			Duration: time.Since(templateStart),
@@ -174,7 +184,7 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	})
 
 	assetsStep := terminal.Step{Name: "Copied assets", Icon: "📦"}
-	assetCopyTime := g.copyAssets(notesByPath, graph)
+	assetCopyTime := g.copyAssets(notesByPath, graphJSON, fileTreeJSON)
 	g.generateSyntaxHighlighterCSS()
 
 	reporter.ReportStep(assetsStep, terminal.StepResult{
@@ -353,9 +363,55 @@ func (g *StaticSiteGenerator) applyTransformationsConcurrently(
 	return time.Since(start), nil
 }
 
+// File represents a note within the JSON file tree.
+type File struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+// FolderNode represents a folder in the JSON file tree.
+type FolderNode struct {
+	Name     string        `json:"name"`
+	Path     string        `json:"path"`
+	Children []*FolderNode `json:"children"`
+	Files    []*File       `json:"files"`
+}
+
+func convertFolderToNode(folder *models.Folder) *FolderNode {
+	node := &FolderNode{
+		Name:     folder.Name,
+		Path:     folder.Path,
+		Children: make([]*FolderNode, 0),
+		Files:    make([]*File, 0),
+	}
+
+	for _, post := range folder.Posts {
+		node.Files = append(node.Files, &File{
+			Name: post.Title,
+			URL:  post.URL,
+		})
+	}
+	sort.Slice(node.Files, func(i, j int) bool {
+		return node.Files[i].Name < node.Files[j].Name
+	})
+
+	childKeys := make([]string, 0, len(folder.Children))
+	for key := range folder.Children {
+		childKeys = append(childKeys, key)
+	}
+	sort.Strings(childKeys)
+
+	for _, key := range childKeys {
+		childFolder := folder.Children[key]
+		node.Children = append(node.Children, convertFolderToNode(childFolder))
+	}
+
+	return node
+}
+
 func (g *StaticSiteGenerator) buildFolderTree(
 	notes map[string]*models.ParsedNote,
-) (time.Duration, *models.Folder, int) {
+) (time.Duration, *models.Folder, int, []byte, error) {
 	start := time.Now()
 	root := &models.Folder{
 		Name:     "Home",
@@ -400,7 +456,14 @@ func (g *StaticSiteGenerator) buildFolderTree(
 	}
 
 	sortFolderTree(root)
-	return time.Since(start), root, numberOfFolders
+
+	jsonTree := convertFolderToNode(root)
+	jsonBytes, err := json.Marshal(jsonTree)
+	if err != nil {
+		return time.Since(start), nil, 0, nil, fmt.Errorf("failed to marshal folder tree to JSON: %w", err)
+	}
+
+	return time.Since(start), root, numberOfFolders, jsonBytes, nil
 }
 
 func sortFolderTree(folder *models.Folder) {
@@ -424,12 +487,13 @@ func (g *StaticSiteGenerator) executeTemplatesBatch(
 	notes []*models.ParsedNote,
 	fileTree *models.Folder,
 	graph []byte,
+	fileTreeJSON []byte,
 ) (time.Duration, int, error) {
 	start := time.Now()
 	batchWriter := executors.NewBatchWriter(g.SiteConfig.OutputDirectory, g.Logger, g.Templates)
 
 	tags, postsByTag := g.computeTags(notes)
-	baseData := g.createBaseTemplateData(fileTree, graph, tags)
+	baseData := g.createBaseTemplateData(fileTree, graph, tags, fileTreeJSON)
 
 	for _, note := range notes {
 		data := struct {
@@ -441,6 +505,7 @@ func (g *StaticSiteGenerator) executeTemplatesBatch(
 			FileTree     *models.Folder
 			Graph        template.JS
 			Tags         []models.Tag
+			FileTreeJSON template.JS
 		}{
 			ParsedNote:   *note,
 			SiteTitle:    baseData.SiteTitle,
@@ -450,6 +515,7 @@ func (g *StaticSiteGenerator) executeTemplatesBatch(
 			FileTree:     baseData.FileTree,
 			Graph:        baseData.Graph,
 			Tags:         baseData.Tags,
+			FileTreeJSON: baseData.FileTreeJSON,
 		}
 
 		filePath := note.URL
@@ -710,7 +776,7 @@ func (g *StaticSiteGenerator) paginateFolderPages(
 	return nil
 }
 
-func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote, graph []byte) time.Duration {
+func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote, graph []byte, fileTreeJSON []byte) time.Duration {
 	start := time.Now()
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
@@ -733,6 +799,18 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 				errorChan <- fmt.Errorf("image %s: %w", name, err)
 			}
 		}(name, path)
+	}
+
+	if len(fileTreeJSON) > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			destPath := filepath.Join(g.SiteConfig.OutputDirectory, "file-tree.json")
+			g.Logger.Debug("Writing file-tree.json 🌲")
+			if err := os.WriteFile(destPath, fileTreeJSON, 0644); err != nil {
+				errorChan <- fmt.Errorf("file-tree.json: %w", err)
+			}
+		}()
 	}
 
 	for _, dir := range []string{"assets", "css", "js"} {
@@ -760,6 +838,7 @@ func (g *StaticSiteGenerator) createBaseTemplateData(
 	fileTree *models.Folder,
 	graph []byte,
 	tags []models.Tag,
+	fileTreeJSON []byte,
 ) BaseTemplateData {
 	return BaseTemplateData{
 		SiteTitle:    g.SiteConfig.SiteTitle,
@@ -769,6 +848,7 @@ func (g *StaticSiteGenerator) createBaseTemplateData(
 		FileTree:     fileTree,
 		Graph:        template.JS(graph),
 		Tags:         tags,
+		FileTreeJSON: template.JS(fileTreeJSON),
 	}
 }
 
