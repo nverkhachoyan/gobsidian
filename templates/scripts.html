@@ -1,0 +1,13 @@
+{{define "scripts"}}
+
+<script>
+  window.graphData = JSON.parse(`{{.Graph}}`);
+</script>
+
+<script src="/js/vis-network.min.js"></script>
+<script src="/js/previews.js" defer></script>
+<script src="/js/graph.js" defer></script>
+<script src="/js/live-reload.js" defer></script>
+<script defer src="/js/alpine.min.js"></script>
+
+{{end}}

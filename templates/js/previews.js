@@ -1,71 +1,49 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const internalLinks = document.querySelectorAll('a[href^="/"]');
-  let previewCard = null;
-  let showTimeout;
-  let hideTimeout;
+const internalLinks = document.querySelectorAll('a[href^="/"]');
+let previewCard = null;
+let showTimeout;
+let hideTimeout;
 
-  const hidePreview = (useTimeout = true) => {
-    clearTimeout(showTimeout);
-    hideTimeout = setTimeout(
-      () => {
-        if (previewCard) {
-          previewCard.remove();
-          previewCard = null;
-        }
-      },
-      useTimeout ? 300 : 0
-    );
-  };
-
-  const showPreview = async (e, link) => {
-    clearTimeout(hideTimeout);
-
-    const href = link.getAttribute("href");
-
-    showTimeout = setTimeout(async () => {
+const hidePreview = (useTimeout = true) => {
+  clearTimeout(showTimeout);
+  hideTimeout = setTimeout(
+    () => {
       if (previewCard) {
         previewCard.remove();
+        previewCard = null;
       }
+    },
+    useTimeout ? 300 : 0
+  );
+};
 
-      previewCard = document.createElement("div");
-      previewCard.classList.add("link-preview");
-      document.body.appendChild(previewCard);
+const showPreview = async (e, link) => {
+  clearTimeout(hideTimeout);
 
-      // When the mouse enters the card, cancel the hide timer
-      previewCard.addEventListener("mouseenter", () =>
-        clearTimeout(hideTimeout)
-      );
-      // When the mouse leaves the card, hide it
-      previewCard.addEventListener("mouseleave", hidePreview);
+  const href = link.getAttribute("href");
 
-      // Construct preview URL
-      const previewUrl = `/previews${href}`;
+  showTimeout = setTimeout(async () => {
+    if (previewCard) {
+      previewCard.remove();
+    }
 
-      previewCard.innerHTML = "Loading...";
-      updateCardPosition(e);
+    previewCard = document.createElement("div");
+    previewCard.classList.add("link-preview");
+    document.body.appendChild(previewCard);
 
-      try {
-        const response = await fetch(previewUrl);
-        if (!response.ok) {
-          previewCard.innerHTML = "";
-          previewCard.classList.add("broken-link");
+    // When the mouse enters the card, cancel the hide timer
+    previewCard.addEventListener("mouseenter", () => clearTimeout(hideTimeout));
+    // When the mouse leaves the card, hide it
+    previewCard.addEventListener("mouseleave", hidePreview);
 
-          const newChildElement = document.createElement("p");
-          newChildElement.textContent = "Oh no! This link is broken.";
-          newChildElement.classList.add("broken-link-text");
-          previewCard.appendChild(newChildElement);
-          updateCardPosition(e);
-          return;
-        }
-        const content = await response.text();
-        previewCard.innerHTML = content;
-        updateCardPosition(e);
-        const closeBtn = previewCard.querySelector(".close-preview-btn");
-        if (closeBtn) {
-          closeBtn.addEventListener("click", () => hidePreview(false));
-        }
-      } catch (err) {
-        console.error("Failed to load preview", err);
+    // Construct preview URL
+    const previewUrl = `/previews${href}`;
+
+    previewCard.innerHTML = "Loading...";
+    updateCardPosition(e);
+
+    try {
+      const response = await fetch(previewUrl);
+      if (!response.ok) {
         previewCard.innerHTML = "";
         previewCard.classList.add("broken-link");
 
@@ -74,37 +52,55 @@ document.addEventListener("DOMContentLoaded", () => {
         newChildElement.classList.add("broken-link-text");
         previewCard.appendChild(newChildElement);
         updateCardPosition(e);
+        return;
       }
-    }, 500);
-  };
+      const content = await response.text();
+      previewCard.innerHTML = content;
+      updateCardPosition(e);
+      const closeBtn = previewCard.querySelector(".close-preview-btn");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => hidePreview(false));
+      }
+    } catch (err) {
+      console.error("Failed to load preview", err);
+      previewCard.innerHTML = "";
+      previewCard.classList.add("broken-link");
 
-  internalLinks.forEach((link) => {
-    // We only want previews for post pages
-    if (
-      !link.href.endsWith(".html") ||
-      link.closest(".post-meta") ||
-      link.closest("h1")
-    ) {
-      return;
+      const newChildElement = document.createElement("p");
+      newChildElement.textContent = "Oh no! This link is broken.";
+      newChildElement.classList.add("broken-link-text");
+      previewCard.appendChild(newChildElement);
+      updateCardPosition(e);
     }
+  }, 500);
+};
 
-    link.addEventListener("mouseenter", (e) => showPreview(e, link));
-    link.addEventListener("mouseleave", hidePreview);
-  });
-
-  function updateCardPosition(e) {
-    if (!previewCard) return;
-
-    const cardWidth = 300;
-    previewCard.style.width = `${cardWidth}px`;
-    previewCard.style.position = "absolute";
-    previewCard.style.top = `${e.pageY + 15}px`;
-
-    let leftPosition = e.pageX + 15;
-    // if it overflows the viewport, position it to the left of the cursor
-    if (leftPosition + cardWidth > window.innerWidth) {
-      leftPosition = e.pageX - cardWidth - 15;
-    }
-    previewCard.style.left = `${leftPosition}px`;
+internalLinks.forEach((link) => {
+  // We only want previews for post pages
+  if (
+    !link.href.endsWith(".html") ||
+    link.closest(".post-meta") ||
+    link.closest("h1")
+  ) {
+    return;
   }
+
+  link.addEventListener("mouseenter", (e) => showPreview(e, link));
+  link.addEventListener("mouseleave", hidePreview);
 });
+
+function updateCardPosition(e) {
+  if (!previewCard) return;
+
+  const cardWidth = 300;
+  previewCard.style.width = `${cardWidth}px`;
+  previewCard.style.position = "absolute";
+  previewCard.style.top = `${e.pageY + 15}px`;
+
+  let leftPosition = e.pageX + 15;
+  // if it overflows the viewport, position it to the left of the cursor
+  if (leftPosition + cardWidth > window.innerWidth) {
+    leftPosition = e.pageX - cardWidth - 15;
+  }
+  previewCard.style.left = `${leftPosition}px`;
+}

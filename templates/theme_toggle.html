@@ -1,0 +1,29 @@
+{{define "theme_switcher"}}
+<div
+  x-data="{
+    theme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    init() {
+      this.setTheme(this.theme);
+    },
+    toggleTheme() {
+      const newTheme = this.theme === 'light' ? 'dark' : 'light';
+      this.setTheme(newTheme);
+    },
+    setTheme(newTheme) {
+      this.theme = newTheme;
+      localStorage.setItem('theme', newTheme);
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+    }
+  }"
+  x-init="init()"
+>
+  <button @click="toggleTheme()" class="theme-switcher" title="Toggle theme">
+    <span x-show="theme === 'light'"><i class="fa-solid fa-sun"></i></span>
+    <span x-show="theme === 'dark'"><i class="fa-solid fa-moon"></i></span>
+  </button>
+</div>
+{{end}}

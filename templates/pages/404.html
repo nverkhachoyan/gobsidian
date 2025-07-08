@@ -11,10 +11,7 @@
       <header>
         <h1>{{.SiteTitle}}</h1>
         <p class="subtitle">{{.SiteSubtitle}}</p>
-        <button id="theme-switcher" class="theme-switcher" title="Toggle theme">
-          <span class="sun">☀️</span>
-          <span class="moon">🌙</span>
-        </button>
+        {{template "theme_switcher" .}}
       </header>
 
       <main>
