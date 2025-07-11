@@ -8,31 +8,17 @@
         "type": "tabs",
         "children": [
           {
-            "id": "314ebccc3b854d9b",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Programming/Exploring Go.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Exploring Go"
-            }
-          },
-          {
             "id": "0d78f0a0f14e63f7",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Programming/Exploring Go.md",
+                "file": "Map of Content.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Exploring Go"
+              "title": "Map of Content"
             }
           }
         ]
@@ -182,28 +168,28 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "314ebccc3b854d9b",
+  "active": "0d78f0a0f14e63f7",
   "lastOpenFiles": [
     "Exploring Go.md",
-    "Sushy is gay.md",
-    "Markdown Syntax Guide.md",
-    "Programming/Exploring Go.md",
-    "Map of Content.md",
     "Oh boy.md",
+    "Map of Content.md",
+    "cigar-denver.png",
+    "index.md",
+    "Markdown Syntax Guide.md",
+    "Bugs.md",
+    "Reading Habits.md",
+    "What are threads anyway?.md",
+    "Programming/Exploring Go.md",
+    "Sushy is gay.md",
     "ayyyyo.md",
     "lock.toml",
     "Personal/Reading Habits.md",
     "Brother.md",
-    "Welcome to My Digital Garden.md",
-    "What are threads anyway?.md",
-    "Bugs.md",
     "ayyyoo.md",
     "gyyyy.md",
     "bruhhh.md",
-    "Reading Habits.md",
     "Personal/Tomfoolery And Stuff/What are threads anyway?.md",
     "Habit of Lifelong Learning.md",
-    "cigar-denver.png",
     "Personal/Tomfoolery And Stuff",
     "Let's see what markdown can do aa.md",
     "MOC a.md",
@@ -214,7 +200,6 @@
     "Personal",
     "Programming",
     "One Folder/Hey what are you doing.md",
-    "One Folder/Sub Folder/Final test guy.md",
     "One Folder/Sub Folder",
     "One Folder",
     "Untitled.canvas",

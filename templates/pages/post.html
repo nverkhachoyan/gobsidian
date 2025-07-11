@@ -3,55 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.Title}} | {{.SiteTitle}}</title>
+    <title>{{.Note.Title}} | {{.SiteTitle}}</title>
     {{template "styles" .}}
   </head>
   <body>
     <div class="container">
       <header>
-        <a href="/" class="back-link">
+        <a href="/" class="go-back-button">
           <i class="fa-solid fa-arrow-left"></i>
           Back to Home
         </a>
-        <h1>{{.Title}}</h1>
+        <h1>{{.Note.Title}}</h1>
         <div class="post-meta">
-          {{if .Author}}
-          <span class="author">By {{.Author}}</span>
+          {{if .Note.Author}}
+          <span class="author">By {{.Note.Author}}</span>
           {{end}}
           <span class="post-date"
-            >Published on {{.Date.Format "January 2, 2006"}}</span
+            >Published on {{.Note.Date.Format "January 2, 2006"}}</span
           >
-          {{if .UpdatedAt}}
+          {{if .Note.UpdatedAt}}
           <span class="post-date updated"
-            >Updated on {{.UpdatedAt.Format "January 2, 2006"}}</span
+            >Updated on {{.Note.UpdatedAt.Format "January 2, 2006"}}</span
           >
           {{end}}
         </div>
         <div class="header-tags-container">
-          {{range .Tags}}
+          {{range .Note.Tags}}
           <a href="/tag/{{.Slug}}/" class="tag-link"
             ><span class="tag">#{{.Name}}</span></a
           >
           {{end}}
         </div>
-        {{template "theme_switcher" .}}
+        {{template "theme_toggle" .}}
       </header>
 
       <div class="content-wrapper">
         {{template "left_sidebar" .}}
 
-        <main class="prose">
-          {{.HTMLContent}} {{if .LinkedFrom}}
-          <div class="backlinks">
-            <h3>Linked From</h3>
-            <ul>
-              {{range .LinkedFrom}}
-              <li><a href="{{.URL}}">{{.Title}}</a></li>
-              {{end}}
-            </ul>
-          </div>
-          {{end}}
+        <main class="prose {{range .Note.CssClasses}} {{.}} {{end}}">
+          {{.Note.HTMLContent}}
         </main>
+        {{template "sidebar_right_post" .}}
+
       </div>
 
       <footer>

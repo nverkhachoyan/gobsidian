@@ -9,9 +9,13 @@
   <body>
     <div class="container">
       <header>
+        <a href="/" class="go-back-button">
+          <i class="fa-solid fa-arrow-left"></i>
+          Back to Home
+        </a>
         <h1>{{.SiteTitle}}</h1>
         <p class="subtitle">{{.SiteSubtitle}}</p>
-        {{template "theme_switcher" .}}
+        {{template "theme_toggle" .}}
       </header>
 
       <main>

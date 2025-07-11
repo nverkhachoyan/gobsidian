@@ -120,10 +120,6 @@
   justify-content: center;
 }
 
-.file-tree__item--folder {
- 
-}
-
 /* Default state: show closed, hide open */
 .file-tree__item--folder > .file-tree__folder-header .file-tree__icon--open {
   display: none;
@@ -160,7 +156,8 @@
 
 /* Styles for folder page content */
 .folder-subtitle {
-  font-family: "Lora", serif;
+  font-family: var(--font-primary);
+  font-weight: 700;
   font-size: 1.5rem;
   margin-top: 2rem;
   margin-bottom: 1rem;

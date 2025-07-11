@@ -21,6 +21,7 @@ type WikilinkTransformer struct {
 	wikilinkRegex    *regexp.Regexp
 	imageLinkRegex   *regexp.Regexp
 	hashtagRegex     *regexp.Regexp
+	calloutRegex     *regexp.Regexp
 	markdownRenderer *html.Renderer
 }
 
@@ -28,6 +29,7 @@ func NewWikilinkTransformer(
 	wikilinkRegexp *regexp.Regexp,
 	imageLinkRegex *regexp.Regexp,
 	hashtagRegex *regexp.Regexp,
+	calloutRegex *regexp.Regexp,
 	logger *log.Logger,
 	markdownRenderer *html.Renderer,
 ) *WikilinkTransformer {
@@ -36,6 +38,7 @@ func NewWikilinkTransformer(
 		logger:           logger,
 		imageLinkRegex:   imageLinkRegex,
 		hashtagRegex:     hashtagRegex,
+		calloutRegex:     calloutRegex,
 		markdownRenderer: markdownRenderer,
 	}
 }
@@ -107,10 +110,11 @@ func (wt *WikilinkTransformer) renderPostContent(
 	parentCtx.setRenderingInProgress(post.URL, true)
 
 	pipeline := NewPipeline(
-		NewSyntaxHighlighter(true),
 		NewImageProcessor(wt.imageLinkRegex),
 		NewHashtagEnricher(wt.hashtagRegex),
-		NewWikilinkTransformer(wt.wikilinkRegex, wt.imageLinkRegex, wt.hashtagRegex, wt.logger, wt.markdownRenderer),
+		NewCalloutTransformer(wt.calloutRegex),
+		NewWikilinkTransformer(wt.wikilinkRegex, wt.imageLinkRegex, wt.hashtagRegex, wt.calloutRegex, wt.logger, wt.markdownRenderer),
+		NewSyntaxHighlighter(true),
 	)
 
 	result, err := pipeline.Transform(string(post.RawBody), post, parentCtx)

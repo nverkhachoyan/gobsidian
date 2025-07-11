@@ -1,13 +1,108 @@
 {{define "scripts"}}
 
+<!-- DATA -->
 <script>
   window.graphData = JSON.parse(`{{.Graph}}`);
+  console.log(window.graphData);
+  window.fileTreeData = JSON.parse(`{{.FileTreeJSON}}`); 
+  window.tagsData = JSON.parse(`{{.AllTags}}`);
 </script>
 
-<script src="/js/vis-network.min.js"></script>
-<script src="/js/previews.js" defer></script>
-<script src="/js/graph.js" defer></script>
+<!-- INTERNAL SCRIPTS -->
+
+<script src="/assets/libs/d3-graph.min.js"></script>
+
+
 <script src="/js/live-reload.js" defer></script>
-<script defer src="/js/alpine.min.js"></script>
+<script src="/js/file-tree.js" defer></script>
+<script src="/js/previews.js" defer></script>
+
+
+<!-- EXTERNAL LIBS -->
+
+<!-- Alpine Stores (must load before Alpine) -->
+<script src="/js/store.js"></script>
+
+<!-- Alpine -->
+<script defer src="/assets/libs/alpine/alpine-collapse.min.js"></script>
+<script defer src="/assets/libs/alpine/alpine.min.js"></script>
+
+
+
+<!-- KaTeX JavaScript -->
+<script src="/assets/libs/katex/katex.min.js"></script>
+<script src="/assets/libs/katex/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\[", right: "\\]", display: true},
+        {left: "\\(", right: "\\)", display: false}
+      ]
+    });
+  });
+</script>
+<script src="/assets/libs/katex/contrib/copy-tex.min.js"></script>
+<script src="/assets/libs/katex/contrib/render-a11y-string.min.js"></script>
+
+<!-- Mermaid -->
+<script src="/assets/libs/mermaid.min.js"></script>
+<script>
+  let mermaidInitialized = false;
+  const originalMermaidContent = new Map();
+  
+  function initializeMermaid(theme) {
+    // Convert theme to Mermaid theme
+    const mermaidTheme = theme === 'dark' ? 'dark' : 'neutral';
+    
+    mermaid.initialize({
+      startOnLoad: false, // We'll handle this manually
+      theme: mermaidTheme,
+    });
+    
+    // Find all Mermaid diagrams
+    const diagrams = document.querySelectorAll('.mermaid');
+    
+    diagrams.forEach((diagram, index) => {
+      // Store original content on first initialization
+      if (!mermaidInitialized) {
+        const originalContent = diagram.textContent.trim();
+        originalMermaidContent.set(diagram, originalContent);
+      }
+      
+      // For re-initialization, restore original content
+      if (mermaidInitialized) {
+        const originalContent = originalMermaidContent.get(diagram);
+        if (originalContent) {
+          diagram.innerHTML = originalContent;
+          diagram.removeAttribute('data-processed');
+        }
+      }
+    });
+    
+    // Render all diagrams
+    if (diagrams.length > 0) {
+      mermaid.run({
+        nodes: diagrams
+      });
+    }
+    
+    mermaidInitialized = true;
+  }
+  
+  // Initialize Mermaid when Alpine is ready
+  document.addEventListener('alpine:init', () => {
+    const currentTheme = Alpine.store('theme').current;
+    initializeMermaid(currentTheme);
+  });
+  
+  // Listen for theme changes and re-initialize Mermaid
+  window.addEventListener('theme-changed', (event) => {
+    initializeMermaid(event.detail.theme);
+  });
+</script>
+
 
 {{end}}

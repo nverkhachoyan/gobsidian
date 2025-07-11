@@ -4,7 +4,6 @@ import (
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 	"maps"
-	"strings"
 	"sync"
 )
 
@@ -12,6 +11,7 @@ type NoteRepository struct {
 	NotesByPath        map[string]*models.ParsedNote
 	NotesByFilename    map[string]*models.ParsedNote
 	DuplicateFilenames map[string][]*models.ParsedNote
+	LandingPage        *models.ParsedNote
 	IdToNote           map[int64]*models.ParsedNote
 	mu                 sync.RWMutex
 }
@@ -67,7 +67,7 @@ func (wr *NoteRepository) AddBacklink(targetNote *models.ParsedNote, sourceNote 
 		}
 	}
 
-	htmlFileName := utils.Slugify(strings.TrimSuffix(sourceNote.FileName, ".md")) + ".html"
+	htmlFileName := utils.Slugify(sourceNote.FileName) + ".html"
 	targetNote.LinkedFrom = append(targetNote.LinkedFrom, models.Link{
 		Title:       sourceNote.Title,
 		URL:         sourceNote.URL,
@@ -78,11 +78,11 @@ func (wr *NoteRepository) AddBacklink(targetNote *models.ParsedNote, sourceNote 
 }
 
 func (tc *NoteRepository) ResolveWikilink(linkText string) (*models.ParsedNote, bool) {
-	if note, ok := tc.GetByPath(linkText + ".md"); ok {
+	if note, ok := tc.GetByPath(linkText); ok {
 		return note, true
 	}
 
-	if note, ok := tc.GetByFilename(linkText + ".md"); ok {
+	if note, ok := tc.GetByFilename(linkText); ok {
 		return note, true
 	}
 

@@ -1,19 +1,30 @@
-const internalLinks = document.querySelectorAll('a[href^="/"]');
-let previewCard = null;
+let previewStack = [];
 let showTimeout;
 let hideTimeout;
 
-const hidePreview = (useTimeout = true) => {
+const hideCardsFromIndex = (startIndex, useTimeout = true, force = false) => {
   clearTimeout(showTimeout);
-  hideTimeout = setTimeout(
-    () => {
-      if (previewCard) {
-        previewCard.remove();
-        previewCard = null;
+
+  const performHide = () => {
+    // Before hiding, check if the mouse is over any card that is a candidate for removal.
+    // If so, it means the user moved into a child card, so we shouldn't hide.
+    for (let i = startIndex; i < previewStack.length; i++) {
+      if (previewStack[i].matches(":hover")) {
+        return; // Abort hide
       }
-    },
-    useTimeout ? 300 : 0
-  );
+    }
+
+    // Iterate backwards to safely remove items from the stack
+    for (let i = previewStack.length - 1; i >= startIndex; i--) {
+      const card = previewStack[i];
+      if (force || !card.dataset.pinned) {
+        card.remove();
+        previewStack.splice(i, 1);
+      }
+    }
+  };
+
+  hideTimeout = setTimeout(performHide, useTimeout ? 500 : 0);
 };
 
 const showPreview = async (e, link) => {
@@ -22,24 +33,27 @@ const showPreview = async (e, link) => {
   const href = link.getAttribute("href");
 
   showTimeout = setTimeout(async () => {
-    if (previewCard) {
-      previewCard.remove();
-    }
-
-    previewCard = document.createElement("div");
+    const previewCard = document.createElement("div");
     previewCard.classList.add("link-preview");
     document.body.appendChild(previewCard);
 
     // When the mouse enters the card, cancel the hide timer
     previewCard.addEventListener("mouseenter", () => clearTimeout(hideTimeout));
-    // When the mouse leaves the card, hide it
-    previewCard.addEventListener("mouseleave", hidePreview);
+    // When the mouse leaves the card, hide it and any "child" previews
+    previewCard.addEventListener("mouseleave", () => {
+      const cardIndex = previewStack.indexOf(previewCard);
+      if (cardIndex !== -1) {
+        hideCardsFromIndex(cardIndex, true);
+      }
+    });
+
+    previewStack.push(previewCard);
 
     // Construct preview URL
     const previewUrl = `/previews${href}`;
 
     previewCard.innerHTML = "Loading...";
-    updateCardPosition(e);
+    updateCardPosition(e, previewCard);
 
     try {
       const response = await fetch(previewUrl);
@@ -51,15 +65,43 @@ const showPreview = async (e, link) => {
         newChildElement.textContent = "Oh no! This link is broken.";
         newChildElement.classList.add("broken-link-text");
         previewCard.appendChild(newChildElement);
-        updateCardPosition(e);
+        updateCardPosition(e, previewCard);
         return;
       }
       const content = await response.text();
       previewCard.innerHTML = content;
-      updateCardPosition(e);
+      Alpine.initTree(previewCard);
+
+      const dragHandle = previewCard.querySelector(".drag-handle");
+      if (dragHandle) {
+        makeDraggable(previewCard, dragHandle);
+      }
+
+      const resizeHandle = previewCard.querySelector(".resize-handle");
+      if (resizeHandle) {
+        makeResizable(previewCard, resizeHandle);
+      }
+
+      updateCardPosition(e, previewCard);
+      const cardIndex = previewStack.indexOf(previewCard);
+      initPreviews(previewCard, cardIndex); // Recursively enable previews
+
       const closeBtn = previewCard.querySelector(".close-preview-btn");
       if (closeBtn) {
-        closeBtn.addEventListener("click", () => hidePreview(false));
+        closeBtn.addEventListener("click", () => {
+          const cardIndex = previewStack.indexOf(previewCard);
+          if (cardIndex !== -1) {
+            hideCardsFromIndex(cardIndex, false, true); // Force close
+          }
+        });
+      }
+      const pinBtn = previewCard.querySelector(".pin-preview-btn");
+      if (pinBtn) {
+        pinBtn.addEventListener("click", () => {
+          const isPinned = previewCard.dataset.pinned === "true";
+          previewCard.dataset.pinned = isPinned ? "false" : "true";
+          pinBtn.classList.toggle("active", !isPinned);
+        });
       }
     } catch (err) {
       console.error("Failed to load preview", err);
@@ -70,37 +112,131 @@ const showPreview = async (e, link) => {
       newChildElement.textContent = "Oh no! This link is broken.";
       newChildElement.classList.add("broken-link-text");
       previewCard.appendChild(newChildElement);
-      updateCardPosition(e);
+      updateCardPosition(e, previewCard);
     }
-  }, 500);
+  }, 300);
 };
 
-internalLinks.forEach((link) => {
-  // We only want previews for post pages
-  if (
-    !link.href.endsWith(".html") ||
-    link.closest(".post-meta") ||
-    link.closest("h1")
-  ) {
-    return;
-  }
+const initPreviews = (scope, parentCardIndex = -1) => {
+  const internalLinks = scope.querySelectorAll('a[href^="/"]');
+  internalLinks.forEach((link) => {
+    if (link.dataset.previewInitialized) {
+      return;
+    }
+    if (
+      !link.href.endsWith(".html") ||
+      link.closest(".post-meta") ||
+      link.closest("h1")
+    ) {
+      return;
+    }
+    link.dataset.previewInitialized = "true";
 
-  link.addEventListener("mouseenter", (e) => showPreview(e, link));
-  link.addEventListener("mouseleave", hidePreview);
-});
+    link.addEventListener("mouseenter", (e) => showPreview(e, link));
+    const indexToHideFrom = parentCardIndex + 1;
+    link.addEventListener("mouseleave", () =>
+      hideCardsFromIndex(indexToHideFrom, true)
+    );
+  });
+};
 
-function updateCardPosition(e) {
-  if (!previewCard) return;
+function updateCardPosition(e, card) {
+  if (!card) return;
 
   const cardWidth = 300;
-  previewCard.style.width = `${cardWidth}px`;
-  previewCard.style.position = "absolute";
-  previewCard.style.top = `${e.pageY + 15}px`;
+  card.style.width = `${cardWidth}px`;
+  card.style.position = "absolute";
 
-  let leftPosition = e.pageX + 15;
+  const level = Math.max(0, previewStack.indexOf(card));
+  const offset = level * 15;
+  card.style.zIndex = 100 + level;
+
+  card.style.top = `${e.pageY + offset}px`;
+
+  let leftPosition = e.pageX + offset;
   // if it overflows the viewport, position it to the left of the cursor
   if (leftPosition + cardWidth > window.innerWidth) {
-    leftPosition = e.pageX - cardWidth - 15;
+    leftPosition = e.pageX - cardWidth - offset;
   }
-  previewCard.style.left = `${leftPosition}px`;
+  card.style.left = `${leftPosition}px`;
 }
+
+function makeResizable(element, handle) {
+  let isResizing = false;
+  let startX, startY, startWidth, startHeight;
+
+  const onMouseDown = (e) => {
+    e.preventDefault();
+    isResizing = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = element.getBoundingClientRect();
+    startWidth = rect.width;
+    startHeight = rect.height;
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
+
+  const onMouseMove = (e) => {
+    if (!isResizing) return;
+    const newWidth = startWidth + (e.clientX - startX);
+    const newHeight = startHeight + (e.clientY - startY);
+    element.style.width = `${newWidth}px`;
+    element.style.height = `${newHeight}px`;
+  };
+
+  const onMouseUp = () => {
+    isResizing = false;
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+
+  handle.addEventListener("mousedown", onMouseDown);
+}
+
+function makeDraggable(element, handle) {
+  let isDragging = false;
+  let offsetX, offsetY;
+
+  const onMouseDown = (e) => {
+    isDragging = true;
+
+    // Bring card to front when dragging starts
+    const allPreviews = document.querySelectorAll(".link-preview");
+    const maxZ = Math.max(
+      ...Array.from(allPreviews).map(
+        (el) => parseFloat(el.style.zIndex) || 100
+      )
+    );
+    element.style.zIndex = maxZ + 1;
+
+    const initialLeft = parseInt(element.style.left || 0, 10);
+    const initialTop = parseInt(element.style.top || 0, 10);
+
+    offsetX = e.clientX - initialLeft;
+    offsetY = e.clientY - initialTop;
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
+    // Prevent text selection
+    e.preventDefault();
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    element.style.left = `${e.clientX - offsetX}px`;
+    element.style.top = `${e.clientY - offsetY}px`;
+  };
+
+  const onMouseUp = () => {
+    isDragging = false;
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  };
+
+  handle.addEventListener("mousedown", onMouseDown);
+}
+
+initPreviews(document);

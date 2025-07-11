@@ -57,7 +57,7 @@ func (app *App) InitApp() error {
 		Regexes:        &app.Config.Regexes,
 	})
 	app.renderer = renderers.NewMarkdownRenderer()
-	app.Scanner = scanner.NewNoteScanner(app.Config.Logger, app.Config.SiteConfig.InputDirectory)
+	app.Scanner = scanner.NewNoteScanner(app.Config.Logger, &app.Config.SiteConfig)
 
 	gen, err := generators.NewStaticSiteGenerator(
 		app.Config.SiteConfig,

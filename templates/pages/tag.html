@@ -9,13 +9,16 @@
     <body>
         <div class="container">
             <header>
-                <a href="/" class="back-link">
+                <a href="/" class="go-back-button">
                     <i class="fa-solid fa-arrow-left"></i>
                     Back to Home</a
                 >
                 <h1 class="tag-title">Tag: <span>{{.Tag.Name}}</span></h1>
-                {{template "theme_switcher" .}}
+                {{template "theme_toggle" .}}
             </header>
+
+            <div class="content-wrapper">
+                {{template "left_sidebar" .}}
 
             <main>
                 {{if .Posts}}
@@ -38,6 +41,10 @@
                 <p>No posts found in this tag.</p>
                 {{end}}
             </main>
+
+            {{template "right_sidebar" .}}
+
+            </div>
 
             <footer>
                 <p>

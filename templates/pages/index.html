@@ -9,19 +9,24 @@
     <body>
         <div class="container">
             <header>
-                <h1>{{.SiteTitle}}</h1>
+                <a class="header-title" href="/">
+                 {{.SiteTitle}} 
+                </a>
                 <p class="subtitle">{{.SiteSubtitle}}</p>
-                {{template "theme_switcher" .}}
+                {{template "theme_toggle" .}}
             </header>
 
             <div class="content-wrapper">
                 {{template "left_sidebar" .}}
-
                 <main>
-                    {{if .Posts}}
+                    {{if .LandingPageNote}}
+                    {{template "landing-note" .LandingPageNote}}
+                    {{end}}
+
+                    {{if .Notes}}
                     <div class="latest-posts-title">Latest Posts</div>
                     <div class="post-grid">
-                        {{range .Posts}}
+                        {{range .Notes}}
                         <div class="post-card">
                             <h2><a href="{{.URL}}">{{.Title}}</a></h2>
                             <div class="post-card-meta">
@@ -43,6 +48,8 @@
                     <p>No blog posts found yet.</p>
                     {{end}}
                 </main>
+                {{template "right_sidebar" .}}
+
             </div>
 
             <footer>

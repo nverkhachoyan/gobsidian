@@ -15,6 +15,7 @@ var frontmatterRegex = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---`)
 var ObsidianImageRegex = regexp.MustCompile(`!\[\[([^|\]]+\.(?:png|jpg|jpeg|gif|bmp|svg))(?:\|(\d+)(?:x(\d+))?)?\]\]`)
 var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
+var obsidianCalloutRegex = regexp.MustCompile(`(?m)^>\[!(\w+)\]\s*\n((?:^>.*\n?)*)`)
 
 type Config struct {
 	SiteConfig SiteConfig
@@ -24,21 +25,26 @@ type Config struct {
 }
 
 type SiteConfig struct {
-	SiteTitle       string `toml:"site_title"`
-	SiteSubtitle    string `toml:"site_subtitle"`
-	BaseURL         string `toml:"base_url"`
-	NotesPerPage    int    `toml:"notes_per_page"`
-	InputDirectory  string `toml:"input_directory"`
-	OutputDirectory string `toml:"output_directory"`
-	Env             string `toml:"env"`
-	Theme           Theme  `toml:"theme"`
+	SiteTitle       string   `toml:"site_title"`
+	SiteSubtitle    string   `toml:"site_subtitle"`
+	BaseURL         string   `toml:"base_url"`
+	NotesPerPage    int      `toml:"notes_per_page"`
+	InputDirectory  string   `toml:"input_directory"`
+	OutputDirectory string   `toml:"output_directory"`
+	Env             string   `toml:"env"`
+	Theme           Theme    `toml:"theme"`
+	TemplateDir     string   `toml:"template_dir"`
+	ExcludeDirs     []string `toml:"exclude_dirs"`
+	LandingPage     string   `toml:"landing_page"`
+	SnippetsDir     string   `toml:"snippets_dir"`
 }
 
 type Regexes struct {
-	ObsidianImageRegex *regexp.Regexp
-	FrontmatterRegex   *regexp.Regexp
-	HashtagRegex       *regexp.Regexp
-	WikilinkRegex      *regexp.Regexp
+	ObsidianImageRegex   *regexp.Regexp
+	FrontmatterRegex     *regexp.Regexp
+	HashtagRegex         *regexp.Regexp
+	WikilinkRegex        *regexp.Regexp
+	ObsidianCalloutRegex *regexp.Regexp
 }
 
 type Theme struct {
@@ -47,10 +53,76 @@ type Theme struct {
 }
 
 func LoadConfig(filePath string) (Config, error) {
-	var templates *template.Template
 
-	templateDir := "templates"
-	templates = template.New("main")
+	yamlContent, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("Failed to read config file: %s", err)
+		log.Printf("Using default config")
+		return Config{
+			SiteConfig: SiteConfig{
+				InputDirectory:  "content",
+				OutputDirectory: "public",
+				SiteTitle:       "My Blog",
+				SiteSubtitle:    "A blog about my life",
+				BaseURL:         "/",
+				ExcludeDirs:     []string{},
+				LandingPage:     "index",
+				Theme: Theme{
+					SyntaxHighlighterLight: "github",
+					SyntaxHighlighterDark:  "monokai",
+				},
+				TemplateDir: "templates",
+			},
+			Regexes: Regexes{
+				ObsidianImageRegex:   ObsidianImageRegex,
+				FrontmatterRegex:     frontmatterRegex,
+				HashtagRegex:         hashtagRegex,
+				WikilinkRegex:        wikilinkRegex,
+				ObsidianCalloutRegex: obsidianCalloutRegex,
+			},
+		}, nil
+	}
+
+	var cfg Config
+	var siteConfig SiteConfig
+	if err := toml.Unmarshal(yamlContent, &siteConfig); err != nil {
+		return Config{}, err
+	}
+
+	cfg.SiteConfig = siteConfig
+
+	cfg.Regexes = Regexes{
+		ObsidianImageRegex:   ObsidianImageRegex,
+		FrontmatterRegex:     frontmatterRegex,
+		HashtagRegex:         hashtagRegex,
+		WikilinkRegex:        wikilinkRegex,
+		ObsidianCalloutRegex: obsidianCalloutRegex,
+	}
+
+	cfg.Templates = LoadTemplates(cfg.SiteConfig.TemplateDir)
+
+	loggerLevel := log.InfoLevel
+	if cfg.SiteConfig.Env == "development" {
+		loggerLevel = log.DebugLevel
+	}
+
+	logger := log.NewWithOptions(os.Stderr, log.Options{
+		TimeFormat:      time.Kitchen,
+		ReportTimestamp: true,
+		Level:           loggerLevel,
+	})
+
+	cfg.Logger = logger
+
+	return cfg, nil
+}
+
+func LoadTemplates(templateDir string) *template.Template {
+	if templateDir == "" {
+		templateDir = "templates"
+	}
+
+	templates := template.New("main")
 
 	err := filepath.WalkDir(templateDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -69,61 +141,5 @@ func LoadConfig(filePath string) (Config, error) {
 		log.Fatalf("Failed to parse templates: %s", err)
 	}
 
-	yamlContent, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Printf("Failed to read config file: %s", err)
-		log.Printf("Using default config")
-		return Config{
-			SiteConfig: SiteConfig{
-				InputDirectory:  "content",
-				OutputDirectory: "public",
-				SiteTitle:       "My Blog",
-				SiteSubtitle:    "A blog about my life",
-				BaseURL:         "/",
-				Theme: Theme{
-					SyntaxHighlighterLight: "github",
-					SyntaxHighlighterDark:  "monokai",
-				},
-			},
-			Regexes: Regexes{
-				ObsidianImageRegex: ObsidianImageRegex,
-				FrontmatterRegex:   frontmatterRegex,
-				HashtagRegex:       hashtagRegex,
-				WikilinkRegex:      wikilinkRegex,
-			},
-			Templates: templates,
-		}, nil
-	}
-
-	var cfg Config
-	var siteConfig SiteConfig
-	if err := toml.Unmarshal(yamlContent, &siteConfig); err != nil {
-		return Config{}, err
-	}
-
-	cfg.SiteConfig = siteConfig
-
-	cfg.Regexes = Regexes{
-		ObsidianImageRegex: ObsidianImageRegex,
-		FrontmatterRegex:   frontmatterRegex,
-		HashtagRegex:       hashtagRegex,
-		WikilinkRegex:      wikilinkRegex,
-	}
-
-	cfg.Templates = templates
-
-	loggerLevel := log.InfoLevel
-	if cfg.SiteConfig.Env == "development" {
-		loggerLevel = log.DebugLevel
-	}
-
-	logger := log.NewWithOptions(os.Stderr, log.Options{
-		TimeFormat:      time.Kitchen,
-		ReportTimestamp: true,
-		Level:           loggerLevel,
-	})
-
-	cfg.Logger = logger
-
-	return cfg, nil
+	return templates
 }

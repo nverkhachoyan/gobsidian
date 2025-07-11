@@ -20,6 +20,7 @@ type ScannedNote struct {
 	RelativePath   string
 	FullPath       string
 	IsInsideFolder bool
+	IsLandingPage  bool
 }
 
 type ParsedNote struct {
@@ -38,6 +39,7 @@ type ParsedNote struct {
 	URL          string
 	Warnings     []string
 	MissingFiles []string
+	CssClasses   []string
 }
 
 type EmbeddedPost struct {
@@ -61,8 +63,9 @@ type Link struct {
 }
 
 type Tag struct {
-	Name string
-	Slug string
+	Name  string `json:"name"`
+	Slug  string `json:"slug"`
+	Count int    `json:"count"`
 }
 
 type Folder struct {

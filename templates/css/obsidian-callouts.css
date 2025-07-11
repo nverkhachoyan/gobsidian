@@ -1,0 +1,184 @@
+/* Obsidian-style callouts */
+.obsidian-quote-info,
+.obsidian-quote-note,
+.obsidian-quote-warning,
+.obsidian-quote-danger,
+.obsidian-quote-success,
+.obsidian-quote-tip,
+.obsidian-quote-example {
+  border-left: 4px solid;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+/* Info callout */
+.obsidian-quote-info {
+  background-color: var(--callout-info-bg);
+  border-left-color: var(--callout-info-border);
+  color: var(--callout-info-text);
+}
+
+.obsidian-quote-info-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-info-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-info-title::before {
+  content: "\f05a";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-info-border);
+  margin-right: 0.5rem;
+}
+
+/* Note callout */
+.obsidian-quote-note {
+  background-color: var(--callout-note-bg);
+  border-left-color: var(--callout-note-border);
+  color: var(--callout-note-text);
+}
+
+.obsidian-quote-note-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-note-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-note-title::before {
+  content: "\f05a";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-note-border);
+  margin-right: 0.5rem;
+}
+
+/* Warning callout */
+.obsidian-quote-warning {
+  background-color: var(--callout-warning-bg);
+  border-left-color: var(--callout-warning-border);
+  color: var(--callout-warning-text);
+}
+
+.obsidian-quote-warning-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-warning-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-warning-title::before {
+  content: "\f071";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-warning-border);
+  margin-right: 0.5rem;
+  
+}
+
+/* Danger callout */
+.obsidian-quote-danger {
+  background-color: var(--callout-danger-bg);
+  border-left-color: var(--callout-danger-border);
+  color: var(--callout-danger-text);
+}
+
+.obsidian-quote-danger-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-danger-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-danger-title::before {
+  content: "\f071";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-danger-border);
+  margin-right: 0.5rem;
+}
+
+/* Success callout */
+.obsidian-quote-success {
+  background-color: var(--callout-success-bg);
+  border-left-color: var(--callout-success-border);
+  color: var(--callout-success-text);
+}
+
+.obsidian-quote-success-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-success-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-success-title::before {
+  content: "\f058";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-success-border);
+  margin-right: 0.5rem;
+}
+
+/* Tip callout */
+.obsidian-quote-tip {
+  background-color: var(--callout-tip-bg);
+  border-left-color: var(--callout-tip-border);
+  color: var(--callout-tip-text);
+}
+
+.obsidian-quote-tip-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-tip-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-tip-title::before {
+  content: "\f0eb";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-tip-border);
+  margin-right: 0.5rem;
+}
+
+/* Example callout */
+.obsidian-quote-example {
+  background-color: var(--callout-example-bg);
+  border-left-color: var(--callout-example-border);
+  color: var(--callout-example-text);
+}
+
+.obsidian-quote-example-title {
+  font-family: var(--font-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--callout-example-border);
+  margin-bottom: 0.5rem;
+}
+
+.obsidian-quote-example-title::before {
+  content: "\f0eb";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  color: var(--callout-example-border);
+  margin-right: 0.5rem;
+}

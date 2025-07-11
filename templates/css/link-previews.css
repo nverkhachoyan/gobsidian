@@ -9,7 +9,7 @@
   transition: opacity 0.2s ease-in-out;
   font-size: 0.9rem;
   overflow: hidden;
-  max-height: 280px;
+  height: 250px;
   padding-top: 1.8rem;
 }
 
@@ -20,10 +20,12 @@
   right: 0;
   display: flex;
   justify-content: flex-start;
-  gap: 0.5rem;
+  gap: 1rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--background-color);
+  cursor: move;
+  touch-action: none;
 }
 
 .preview-control-btn {
@@ -44,8 +46,8 @@
 }
 
 .link-preview .preview-card {
-  max-height: 250px;
-  overflow-y: auto;
+  height: 100%;
+  overflow-y: scroll;
   padding: 1rem; 
   overflow-x: hidden; /* Standard property */
 }

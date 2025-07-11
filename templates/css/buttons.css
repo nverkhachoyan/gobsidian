@@ -1,0 +1,18 @@
+.show-more-button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    border: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.show-more-button:hover {
+    background-color: var(--primary-color-hover);
+}
