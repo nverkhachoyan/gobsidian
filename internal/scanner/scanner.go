@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"gobsidian/internal/config"
 	"gobsidian/internal/models"
 	"os"
 	"path/filepath"
@@ -13,18 +14,18 @@ import (
 )
 
 type NoteScanner struct {
-	logger         *log.Logger
-	inputDirectory string
-	notesByPath    map[string]*models.ScannedNote
-	uniqueID       int64
-	mu             sync.RWMutex
+	logger      *log.Logger
+	siteConfig  *config.SiteConfig
+	notesByPath map[string]*models.ScannedNote
+	uniqueID    int64
+	mu          sync.RWMutex
 }
 
-func NewNoteScanner(logger *log.Logger, inputDirectory string) *NoteScanner {
+func NewNoteScanner(logger *log.Logger, siteConfig *config.SiteConfig) *NoteScanner {
 	return &NoteScanner{
-		logger:         logger,
-		inputDirectory: inputDirectory,
-		notesByPath:    make(map[string]*models.ScannedNote),
+		logger:      logger,
+		siteConfig:  siteConfig,
+		notesByPath: make(map[string]*models.ScannedNote),
 	}
 }
 
@@ -54,19 +55,28 @@ func (ns *NoteScanner) GetAllNotes() []*models.ScannedNote {
 
 func (ns *NoteScanner) ScanAllNotes() (time.Duration, error) {
 	start := time.Now()
-	err := filepath.WalkDir(ns.inputDirectory, func(path string, info os.DirEntry, err error) error {
+	err := filepath.WalkDir(ns.siteConfig.InputDirectory, func(path string, info os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
-			notePath := strings.TrimPrefix(path, ns.inputDirectory+"/")
+			isLandingPage := false
+			notePath := strings.TrimPrefix(path, ns.siteConfig.InputDirectory+"/")
+			notePath = strings.TrimSuffix(notePath, ".md")
 			isInsideFolder := strings.Contains(notePath, "/")
+			sanitizedName := strings.TrimSuffix(info.Name(), ".md")
+
+			if !isInsideFolder && sanitizedName == ns.siteConfig.LandingPage {
+				isLandingPage = true
+			}
+
 			note := &models.ScannedNote{
-				FileName:       info.Name(),
+				FileName:       sanitizedName,
 				FullPath:       path,
 				RelativePath:   notePath,
 				IsInsideFolder: isInsideFolder,
+				IsLandingPage:  isLandingPage,
 			}
 			ns.AddNote(note)
 
@@ -88,17 +98,13 @@ func (ns *NoteScanner) ScanNotesByPaths(paths []string) (time.Duration, error) {
 
 	for _, path := range paths {
 
-		if !strings.HasSuffix(path, ".md") {
-			continue
-		}
-
 		noteFile, err := os.Open(path)
 		if err != nil {
 			return time.Duration(0), fmt.Errorf("error opening note file: %w", err)
 		}
 		defer noteFile.Close()
 
-		notePath := strings.TrimPrefix(path, ns.inputDirectory+"/")
+		notePath := strings.TrimPrefix(path, ns.siteConfig.InputDirectory+"/")
 		isInsideFolder := strings.Contains(notePath, "/")
 
 		_, ok := ns.notesByPath[notePath]

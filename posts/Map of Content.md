@@ -18,11 +18,12 @@ This note serves as a starting point to navigate my digital garden.
   - [[Personal/Reading Habits]]
   - [[Reading Habits]]
   - [[Programming/Exploring Go]]
+  - [[Exploring Go]]
   - [[Exploring Go| BRAHH]]
 
 ## Key Concepts
 
-- [[Welcome to My Digital Garden]]
+- [[index]]
 
 This is an ever-evolving map that will grow as I add more to this space.
 
@@ -31,4 +32,4 @@ This is an ever-evolving map that will grow as I add more to this space.
 
 Here's an example of an embed
 
-![[Welcome to My Digital Garden]]
+![[index]]

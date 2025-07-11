@@ -2,32 +2,41 @@
 @import "./posts.css";
 @import "./folder.css";
 @import "./left-sidebar.css";
+@import "./right-sidebar.css";
 @import "./link-previews.css";
 @import "./markdown.css";
 @import "./pagination.css";
 @import "./tags.css";
 @import "./theme-switcher.css";
+@import "./buttons.css";
+@import "./landing-page.css";
 
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@500;700&family=Inter:wght@400;500&display=swap");
+/* Alpine.js x-cloak directive */
+[x-cloak] {
+  display: none !important;
+}
+
+* {
+  font-family: var(--font-primary);
+}
 
 /* General Body Styles */
 body {
-  font-family: "Inter", sans-serif;
+  font-weight: 400;
   background-color: var(--background-color);
   color: var(--text-color);
   padding: 0;
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
 .content-wrapper {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 2rem;
- 
+  grid-template-columns: 250px minmax(0, 1fr) 250px;
+  gap: 1rem;
 }
 
 /* Header */
@@ -36,25 +45,41 @@ header {
   flex-direction: column;
   position: relative;
   text-align: center;
-  margin: 1.5rem 0 1.5rem 0;
+  margin: 1.5rem 0 0 0;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-color);
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
-header a {
+header .header-title {
   display: block;
-  color: var(--primary-color);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3rem;
+  letter-spacing: 1px;
+  color: var(--text-color);
   text-decoration: none;
-  font-weight: 500;
   margin-top: 1.5rem;
 }
 
+header .go-back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--text-color);
+  text-decoration: none;
+  margin-top: 0.5rem;
+  color: var(--primary-color);
+  transition: all 0.2s ease;
+  gap: 0.2rem;
+}
+
+header .go-back-button:hover {
+  color: var(--text-color);
+}
+
 header h1 {
-  font-family: "Lora", serif;
   font-size: 2.5rem;
   font-weight: 700;
   color: var(--text-color);
@@ -68,8 +93,8 @@ header .subtitle {
 
 /* Footer */
 footer {
-  margin-top: 3rem;
   padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
   border-top: 1px solid var(--border-color);
   text-align: center;
   font-size: 0.9rem;
@@ -138,9 +163,9 @@ footer a:hover {
   height: 200px;  
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
   margin-top: 1rem;
   margin-bottom: 1rem;
+  overflow: hidden;
 }
 
 #graph-network {
@@ -151,13 +176,10 @@ footer a:hover {
 #graph-network-modal {
   height: 90%;
   width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
 }
 
 /* Modal Styles */
 .graph-modal-container {
-  display: none; /* Hidden by default */
   position: fixed;
   z-index: 1000; /* High z-index to ensure it's on top */
   left: 0;
@@ -171,15 +193,13 @@ footer a:hover {
 .graph-modal-content {
   position: relative;
   background-color: var(--surface-color);
-  margin: 2% auto;
+  margin: 0 auto;
+  margin-top: 2%;
   padding: 0;
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 20px 40px var(--shadow-color);
-  width: 95%;
+  width: 90%;
   height: 90%;
-  max-width: 1400px;
-  animation: modalSlideIn 0.3s ease-out;
 }
 
 @keyframes modalSlideIn {
@@ -205,7 +225,8 @@ footer a:hover {
 
 .graph-modal-header h2 {
   margin: 0;
-  font-family: "Lora", serif;
+  font-family: var(--font-primary);
+  font-weight: 700;
   font-size: 1.2rem;
   color: var(--text-color);
 }
@@ -234,7 +255,6 @@ footer a:hover {
 
 .graph-modal-body {
   height: 100%;
-  padding: 1rem;
   position: relative;
 }
 

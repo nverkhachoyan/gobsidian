@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"gobsidian/internal/config"
 	"gobsidian/internal/models"
+	"gobsidian/internal/repository"
 	"gobsidian/internal/utils"
 
 	"github.com/goccy/go-yaml"
 )
 
 type Parser interface {
-	ParseNote(filePath string, fileName string) (ParsedNote, error)
+	ParseNote(filePath string, fileName string) (models.ParsedNote, error)
+	ParseNotes(shallowNotes []*models.ScannedNote, notesRepository *repository.NoteRepository) time.Duration
 }
 
 type ObsidianParser struct {
@@ -31,6 +35,11 @@ func NewObsidianParser(c *ObsidianParser) *ObsidianParser {
 	}
 }
 
+type ParseResult struct {
+	Note *models.ParsedNote
+	Err  error
+}
+
 type YamlFrontmatter struct {
 	Title     string `yaml:"title"`
 	Date      string `yaml:"date"`
@@ -39,40 +48,28 @@ type YamlFrontmatter struct {
 }
 
 type Frontmatter struct {
-	title     string
-	author    string
-	date      time.Time
-	updatedAt *time.Time
-	warnings  []string
+	title      string
+	author     string
+	date       time.Time
+	updatedAt  *time.Time
+	warnings   []string
+	cssClasses []string
 }
 
-type ParsedNote struct {
-	Title        string
-	Author       string
-	RawBody      []byte
-	Date         time.Time
-	UpdatedAt    *time.Time
-	Images       []models.Image
-	Tags         []models.Tag
-	Wikilinks    []string
-	Warnings     []string
-	MissingFiles []string
-}
-
-func (p *ObsidianParser) ParseNote(filePath string, fileName string) (ParsedNote, error) {
+func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.ParsedNote, error) {
 	markdownInput, err := os.ReadFile(filePath)
 	if err != nil {
-		return ParsedNote{}, err
+		return models.ParsedNote{}, err
 	}
 
 	frontmatterBytes, bodyBytes, err := p.splitFrontmatterAndBody(markdownInput)
 	if err != nil {
-		return ParsedNote{}, fmt.Errorf("failed to extract content from %s: %w", filePath, err)
+		return models.ParsedNote{}, fmt.Errorf("failed to extract content from %s: %w", filePath, err)
 	}
 
 	frontmatter, err := p.parseFrontmatter(frontmatterBytes, filePath, fileName)
 	if err != nil {
-		return ParsedNote{}, fmt.Errorf("failed to parse frontmatter from %s: %w", filePath, err)
+		return models.ParsedNote{}, fmt.Errorf("failed to parse frontmatter from %s: %w", filePath, err)
 	}
 
 	wikilinks := p.extractWikilinks(bodyBytes)
@@ -93,7 +90,7 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (ParsedNote
 		}
 	}
 
-	return ParsedNote{
+	return models.ParsedNote{
 		Title:        frontmatter.title,
 		Author:       frontmatter.author,
 		RawBody:      bodyBytes,
@@ -104,6 +101,7 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (ParsedNote
 		Wikilinks:    wikilinks,
 		Warnings:     warnings,
 		MissingFiles: missingFiles,
+		CssClasses:   frontmatter.cssClasses,
 	}, nil
 }
 
@@ -208,7 +206,7 @@ func (p *ObsidianParser) parseFrontmatter(frontmatterBytes []byte, filePath stri
 
 	title := frontmatter.Title
 	if title == "" {
-		title = strings.TrimSuffix(fileName, ".md")
+		title = fileName
 	}
 
 	var postDate time.Time
@@ -243,13 +241,138 @@ func (p *ObsidianParser) parseFrontmatter(frontmatterBytes []byte, filePath stri
 		}
 	}
 
+	cssClasses, cssWarnings := p.extractCssClasses(genericFrontmatter)
+	warnings = append(warnings, cssWarnings...)
+
 	return Frontmatter{
-		author:    frontmatter.Author,
-		title:     title,
-		date:      postDate,
-		updatedAt: updatedAt,
-		warnings:  warnings,
+		author:     frontmatter.Author,
+		title:      title,
+		date:       postDate,
+		updatedAt:  updatedAt,
+		cssClasses: cssClasses,
+		warnings:   warnings,
 	}, nil
+}
+
+func (p *ObsidianParser) extractCssClasses(genericFrontmatter map[string]any) ([]string, []string) {
+	var warnings []string
+	var cssClasses []string
+
+	rawClasses, ok := genericFrontmatter["cssclasses"]
+	if !ok {
+		return cssClasses, warnings
+	}
+
+	switch v := rawClasses.(type) {
+	case string:
+		cssClasses = append(cssClasses, v)
+	case []interface{}:
+		for _, item := range v {
+			if classStr, ok := item.(string); ok {
+				cssClasses = append(cssClasses, classStr)
+			} else {
+				warnings = append(warnings, fmt.Sprintf("cssclasses property contains a non-string item: %v", item))
+			}
+		}
+	case []string:
+		cssClasses = v
+	default:
+		warnings = append(warnings, fmt.Sprintf("cssclasses property has an unexpected type: %T", v))
+	}
+
+	return cssClasses, warnings
+}
+
+func (p *ObsidianParser) ParseNotes(
+	shallowNotes []*models.ScannedNote,
+	notesRepository *repository.NoteRepository,
+) time.Duration {
+	start := time.Now()
+	numWorkers := min(runtime.NumCPU(), len(shallowNotes))
+	notesChan := make(chan *models.ScannedNote, len(shallowNotes))
+	resultsChan := make(chan ParseResult, len(shallowNotes))
+
+	var wg sync.WaitGroup
+	for range numWorkers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for note := range notesChan {
+				result := p.parseNoteWorker(note)
+				resultsChan <- result
+			}
+		}()
+	}
+
+	for _, note := range shallowNotes {
+		notesChan <- note
+	}
+	close(notesChan)
+
+	wg.Wait()
+	close(resultsChan)
+
+	for result := range resultsChan {
+		if result.Err != nil {
+			continue
+		}
+
+		notesRepository.AddNote(result.Note)
+	}
+
+	return time.Since(start)
+}
+
+func (p *ObsidianParser) parseNoteWorker(
+	scannedNote *models.ScannedNote,
+) ParseResult {
+	if scannedNote == nil {
+		return ParseResult{
+			Note: nil,
+			Err:  fmt.Errorf("received nil scannedNote"),
+		}
+	}
+
+	parsedNoteFromParser, err := p.ParseNote(scannedNote.FullPath, scannedNote.FileName)
+
+	// passing as pointer is safe since each parseNoteWorker gets a different note
+	parsedNote := &models.ParsedNote{
+		ScannedNote: scannedNote,
+	}
+
+	if err != nil {
+		return ParseResult{
+			Note: parsedNote,
+			Err:  err,
+		}
+	}
+
+	if scannedNote.IsLandingPage {
+		parsedNote.URL = "/"
+	} else {
+		URL := strings.TrimPrefix(scannedNote.FullPath, p.InputDirectory)
+		URL = strings.TrimPrefix(URL, "/")
+		URL = strings.TrimSuffix(URL, ".md")
+
+		slugifiedURL := "/" + utils.Slugify(URL) + ".html"
+		parsedNote.URL = slugifiedURL
+	}
+
+	parsedNote.Title = parsedNoteFromParser.Title
+	parsedNote.Author = parsedNoteFromParser.Author
+	parsedNote.RawBody = parsedNoteFromParser.RawBody
+	parsedNote.Date = parsedNoteFromParser.Date
+	parsedNote.UpdatedAt = parsedNoteFromParser.UpdatedAt
+	parsedNote.Tags = parsedNoteFromParser.Tags
+	parsedNote.Images = parsedNoteFromParser.Images
+	parsedNote.Wikilinks = parsedNoteFromParser.Wikilinks
+	parsedNote.Warnings = parsedNoteFromParser.Warnings
+	parsedNote.MissingFiles = parsedNoteFromParser.MissingFiles
+	parsedNote.CssClasses = parsedNoteFromParser.CssClasses
+	return ParseResult{
+		Note: parsedNote,
+		Err:  nil,
+	}
 }
 
 type ParseError struct {
@@ -267,26 +390,4 @@ func (e ParseError) Error() string {
 
 func (e ParseError) Unwrap() error {
 	return e.Cause
-}
-
-func (p ParsedNote) HasWarnings() bool {
-	return len(p.Warnings) > 0
-}
-
-func (p ParsedNote) HasMissingFiles() bool {
-	return len(p.MissingFiles) > 0
-}
-
-func (p ParsedNote) GetWarningsString() string {
-	if !p.HasWarnings() {
-		return ""
-	}
-	return fmt.Sprintf("warnings: %s", strings.Join(p.Warnings, "; "))
-}
-
-func (p ParsedNote) GetMissingFilesString() string {
-	if !p.HasMissingFiles() {
-		return ""
-	}
-	return fmt.Sprintf("missing files: %s", strings.Join(p.MissingFiles, ", "))
 }

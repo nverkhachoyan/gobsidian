@@ -1,23 +1,97 @@
 :root {
-  --background-color: #f8f9fa;
+  --background-color: #ffffff;
   --surface-color: #ffffff;
   --text-color: #212529;
   --subtle-text-color: #6c757d;
   --primary-color: #0056b3;
+  --primary-color-hover: #004494;
   --border-color: #dee2e6;
   --shadow-color: rgba(0, 0, 0, 0.05);
   --chip-color: rgba(0, 0, 0, 0.05);
   --chip-color-hover: rgba(0, 0, 0, 0.1);
+  --light-blue: #9ebbda;
+  --dark-blue: #003366;
+  
+  /* Fonts */
+  --font-primary: "Lato", sans-serif;
+  --font-display: "Dancing Script", cursive;
+  --font-mono: "Menlo", "Consolas", monospace;
+
+  /* Callout colors */
+  --callout-info-bg: #e7f3ff;
+  --callout-info-border: #1e90ff;
+  --callout-info-text: #0d47a1;
+  
+  --callout-note-bg: #f0f4f8;
+  --callout-note-border: #64748b;
+  --callout-note-text: #334155;
+  
+  --callout-warning-bg: #fff8e1;
+  --callout-warning-border: #ff9800;
+  --callout-warning-text: #bf8700;
+  
+  --callout-danger-bg: #ffebee;
+  --callout-danger-border: #f44336;
+  --callout-danger-text: #c62828;
+  
+  --callout-success-bg: #e8f5e8;
+  --callout-success-border: #4caf50;
+  --callout-success-text: #2e7d32;
+  
+  --callout-tip-bg: #f3e5f5;
+  --callout-tip-border: #9c27b0;
+  --callout-tip-text: #7b1fa2;
+  
+  --callout-example-bg: #e0f2f1;
+  --callout-example-border: #00bcd4;
+  --callout-example-text: #00838f;
 }
 
 html.dark-mode {
-  --background-color: #121212;
-  --surface-color: #1e1e1e;
+  --background-color: #000000;
+  --surface-color: #0f0f0f;
   --text-color: #e0e0e0;
   --subtle-text-color: #a0a0a0;
   --primary-color: #bb86fc;
+  --primary-color-hover: #9a67c4;
   --border-color: #2c2c2c;
   --shadow-color: rgba(255, 255, 255, 0.05);
   --chip-color: rgba(255, 255, 255, 0.1);
   --chip-color-hover: rgba(255, 255, 255, 0.2);
+  --light-blue: #9ebbda;
+  --dark-blue: #003366;
+
+  /* Fonts */
+  --font-primary: "Lato", sans-serif;
+  --font-display: "Dancing Script", cursive;
+  --font-mono: "Menlo", "Consolas", monospace;
+  
+  /* Callout colors - Dark mode */
+  --callout-info-bg: #0d1929;
+  --callout-info-border: #1e90ff;
+  --callout-info-text: #87ceeb;
+  
+  --callout-note-bg: #1e293b;
+  --callout-note-border: #64748b;
+  --callout-note-text: #cbd5e1;
+  
+  --callout-warning-bg: #2d1b00;
+  --callout-warning-border: #ff9800;
+  --callout-warning-text: #ffb74d;
+  
+  --callout-danger-bg: #2d0a0a;
+  --callout-danger-border: #f44336;
+  --callout-danger-text: #ef5350;
+  
+  --callout-success-bg: #0d2818;
+  --callout-success-border: #4caf50;
+  --callout-success-text: #81c784;
+  
+  --callout-tip-bg: #2d1b2d;
+  --callout-tip-border: #9c27b0;
+  --callout-tip-text: #ce93d8;
+  
+  --callout-example-bg: #0d2328;
+  --callout-example-border: #00bcd4;
+  --callout-example-text: #4dd0e1;
 }

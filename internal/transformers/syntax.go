@@ -42,6 +42,10 @@ func (s *SyntaxHighlighter) Transform(content string, note *models.ParsedNote, c
 		language := parts[1]
 		code := parts[2]
 
+		if language == "mermaid" {
+			return fmt.Sprintf("<div class='mermaid'>%s</div>", code)
+		}
+
 		return s.highlightCode(code, language)
 
 	}), nil
@@ -58,7 +62,11 @@ func (*SyntaxHighlighter) highlightCode(code, language string) string {
 	}
 	lexer = chroma.Coalesce(lexer)
 
-	formatter := html.New(html.WithClasses(true))
+	formatter := html.New(
+		html.WithClasses(true),
+		html.WithLineNumbers(true),
+		html.LineNumbersInTable(false),
+	)
 
 	iterator, err := lexer.Tokenise(nil, code)
 	if err != nil {

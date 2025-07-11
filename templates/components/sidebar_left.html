@@ -1,0 +1,40 @@
+{{define "left_sidebar"}}
+<aside class="left-sidebar">
+    <div class="left-sidebar-item file-tree-container" 
+         x-data="fileTreeComponent()" 
+         x-show="$store.fileTree.data"
+         :class="{ 'expanded': $store.fileTree.expanded }">
+        <div class="left-sidebar-item-content">
+          <input type="text" class="left-sidebar-search" placeholder="Search" />
+          <nav class="file-tree">
+            <template x-if="$store.fileTree.data">
+              <div x-html="renderTree($store.fileTree.data)"></div>
+            </template>
+          </nav>
+        </div>
+    </div>
+ 
+    <div class="left-sidebar-item" x-data x-show="$store.tags.data.length > 0">
+      <h5 class="left-sidebar-item-title">All Tags</h5>
+      <div class="left-sidebar-item-content">
+        <nav class="tags-nav">
+          <ul>
+            <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
+              <li>
+                <a :href="'/tag/' + tag.slug + '/'" class="tag">
+                  <span x-text="tag.name"></span>
+                  <span x-text="`(${tag.count})`"></span>
+                </a>
+              </li>
+            </template>
+          </ul>
+          <template x-if="$store.tags.hasMore()">
+            <button @click="$store.tags.toggle()" class="show-more-button">
+              <span x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"></span>
+            </button>
+          </template>
+        </nav>
+      </div>
+    </div>
+</aside>
+{{end}}
