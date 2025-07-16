@@ -26,20 +26,28 @@ type ScannedNote struct {
 type ParsedNote struct {
 	*ScannedNote
 
-	Title        string
-	RawBody      []byte
-	HTMLContent  template.HTML
-	Date         time.Time
-	Author       string
-	UpdatedAt    *time.Time
-	Images       []Image
-	Tags         []Tag
-	LinkedFrom   []Link
-	Wikilinks    []string
-	URL          string
-	Warnings     []string
-	MissingFiles []string
-	CssClasses   []string
+	Title             string
+	RawBody           []byte
+	HTMLContent       template.HTML
+	Date              time.Time
+	Author            string
+	UpdatedAt         *time.Time
+	Images            []Image
+	Tags              []Tag
+	LinkedFrom        []Link
+	Wikilinks         []string
+	URL               string
+	Warnings          []string
+	MissingFiles      []string
+	CssClasses        []string
+	Footnotes         []Footnote
+	EmbeddedFootnotes []Footnote
+}
+
+type Footnote struct {
+	ID     string
+	Number int
+	Text   string
 }
 
 type EmbeddedPost struct {

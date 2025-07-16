@@ -16,6 +16,7 @@ import (
 	"gobsidian/internal/utils"
 
 	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 )
 
 type Parser interface {
@@ -75,6 +76,7 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.Par
 	wikilinks := p.extractWikilinks(bodyBytes)
 	images := p.extractObsidianImages(bodyBytes)
 	tags := p.extractTags(bodyBytes)
+	// footnotes := p.extractFootnotes(bodyBytes)
 
 	var warnings []string
 	var missingFiles []string
@@ -102,6 +104,7 @@ func (p *ObsidianParser) ParseNote(filePath string, fileName string) (models.Par
 		Warnings:     warnings,
 		MissingFiles: missingFiles,
 		CssClasses:   frontmatter.cssClasses,
+		// Footnotes:    footnotes,
 	}, nil
 }
 
@@ -283,6 +286,26 @@ func (p *ObsidianParser) extractCssClasses(genericFrontmatter map[string]any) ([
 	return cssClasses, warnings
 }
 
+func (p *ObsidianParser) extractFootnotes(markdownInput []byte) []models.Footnote {
+	markdownInputString := string(markdownInput)
+	var footnotes []models.Footnote
+	count := 1
+
+	parts := p.Regexes.FootnoteRegex.FindAllStringSubmatch(markdownInputString, -1)
+	for _, part := range parts {
+		text := part[1]
+		footnoteID := uuid.New().String()
+		footnotes = append(footnotes, models.Footnote{
+			ID:     footnoteID,
+			Number: count,
+			Text:   text,
+		})
+		count++
+	}
+
+	return footnotes
+}
+
 func (p *ObsidianParser) ParseNotes(
 	shallowNotes []*models.ScannedNote,
 	notesRepository *repository.NoteRepository,
@@ -369,6 +392,8 @@ func (p *ObsidianParser) parseNoteWorker(
 	parsedNote.Warnings = parsedNoteFromParser.Warnings
 	parsedNote.MissingFiles = parsedNoteFromParser.MissingFiles
 	parsedNote.CssClasses = parsedNoteFromParser.CssClasses
+	// parsedNote.Footnotes = parsedNoteFromParser.Footnotes
+
 	return ParseResult{
 		Note: parsedNote,
 		Err:  nil,

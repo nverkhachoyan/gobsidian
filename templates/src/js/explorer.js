@@ -27,29 +27,29 @@ function fileTreeComponent() {
     renderTree(node) {
       if (!node) return '';
       
-      let html = '<ul class="file-tree__list">';
+      let html = '<ul class="explorer__list">';
       
       // Render folders (children)
       if (node.children && node.children.length > 0) {
         node.children.forEach(child => {
           const isExpanded = this.isExpanded(child.path);
           html += `
-            <li class="file-tree__item file-tree__item--folder ${isExpanded ? 'expanded' : ''}">
-              <div class="file-tree__folder-header">
-                <span onclick="window.fileTreeInstance.toggleNode('${child.path}')" class="file-tree__toggle">
-                  <i class="fas fa-folder file-tree__icon file-tree__icon--closed"></i>
-                  <i class="fas fa-folder-open file-tree__icon file-tree__icon--open"></i>
+            <li class="explorer__item explorer__item--folder ${isExpanded ? 'expanded' : ''}">
+              <div class="explorer__folder-header">
+                <span onclick="window.fileTreeInstance.toggleNode('${child.path}')" class="explorer__toggle">
+                  <i class="fas fa-folder explorer__icon explorer__icon--closed"></i>
+                  <i class="fas fa-folder-open explorer__icon explorer__icon--open"></i>
                 </span>
                 
-                <span onclick="window.fileTreeInstance.toggleNode('${child.path}')" class="file-tree__file_name file-tree__toggle">
+                <span onclick="window.fileTreeInstance.toggleNode('${child.path}')" class="explorer__file_name explorer__toggle">
                   ${child.name}
                 </span>
 
-                <a href="/${child.path}/" class="file-tree__link file-tree__folder-icon" title="Go to folder">
+                <a href="/${child.path}/" class="explorer__link explorer__folder-icon" title="Go to folder">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
               </div>
-              <div class="file-tree__children">
+              <div class="explorer__children">
                 ${isExpanded ? this.renderTree(child) : ''}
               </div>
             </li>
@@ -61,9 +61,9 @@ function fileTreeComponent() {
       if (node.files && node.files.length > 0) {
         node.files.forEach(file => {
           html += `
-            <li class="file-tree__item file-tree__item--file">
-              <i class="far fa-file-alt file-tree__icon"></i>
-              <a href="${file.url}" class="file-tree__link">${file.name}</a>
+            <li class="explorer__item explorer__item--file">
+              <i class="far fa-file-alt explorer__icon"></i>
+              <a href="${file.url}" class="explorer__link">${file.name}</a>
             </li>
           `;
         });

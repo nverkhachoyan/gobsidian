@@ -1,63 +1,54 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{.SiteTitle}}</title>
-        {{template "styles" .}}
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <a class="header-title" href="/">
-                 {{.SiteTitle}} 
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.SiteTitle}}</title>
+    {{template "styles" .}}
+  </head>
+  <body>
+    <div class="gobsidian-container">
+      <div class="gobsidian-wrapper">
+        {{template "left_sidebar" .}}
+        <main>
+          {{if .LandingPageNote}}
+
+          <aside class="landing-page-note">
+            <h5 class="landing-title">{{.LandingPageNote.Title}}</h5>
+            <div class="landing-content">{{.LandingPageNote.HTMLContent}}</div>
+          </aside>
+
+          {{end}} {{if .Notes}}
+          <div class="latest-posts-title">Latest Posts</div>
+          <div class="post-grid">
+            {{range .Notes}}
+            <div class="post-card">
+              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+              <div class="post-card-meta">
+                {{range .Tags}}
+                <a href="/tag/{{.Slug}}/" class="tag-link">
+                  <span class="tag">{{.Name}}</span>
                 </a>
-                <p class="subtitle">{{.SiteSubtitle}}</p>
-                {{template "theme_toggle" .}}
-            </header>
-
-            <div class="content-wrapper">
-                {{template "left_sidebar" .}}
-                <main>
-                    {{if .LandingPageNote}}
-                    {{template "landing-note" .LandingPageNote}}
-                    {{end}}
-
-                    {{if .Notes}}
-                    <div class="latest-posts-title">Latest Posts</div>
-                    <div class="post-grid">
-                        {{range .Notes}}
-                        <div class="post-card">
-                            <h2><a href="{{.URL}}">{{.Title}}</a></h2>
-                            <div class="post-card-meta">
-                                {{range .Tags}}
-                                <a href="/tag/{{.Slug}}/" class="tag-link">
-                                    <span class="tag">{{.Name}}</span>
-                                </a>
-                                {{end}} {{if .Author}}
-                                <span class="author">{{.Author}}</span>
-                                {{end}}
-                                <span class="post-date"
-                                    >{{.Date.Format "January 2, 2006"}}</span
-                                >
-                            </div>
-                        </div>
-                        {{end}}
-                    </div>
-                    {{template "pagination" .Pagination}} {{else}}
-                    <p>No blog posts found yet.</p>
-                    {{end}}
-                </main>
-                {{template "right_sidebar" .}}
-
+                {{end}} {{if .Author}}
+                <span class="author">{{.Author}}</span>
+                {{end}}
+                <span class="post-date"
+                  >{{.Date.Format "January 2, 2006"}}</span
+                >
+              </div>
             </div>
-
-            <footer>
-                <p>
-                    &copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.
-                </p>
-            </footer>
-        </div>
-        {{template "scripts" .}}
-    </body>
+            {{end}}
+          </div>
+          {{template "pagination" .Pagination}} {{else}}
+          <p>No blog posts found yet.</p>
+          {{end}}
+        </main>
+        {{template "right_sidebar" .}}
+        <footer>
+          <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+        </footer>
+      </div>
+    </div>
+    {{template "scripts" .}}
+  </body>
 </html>

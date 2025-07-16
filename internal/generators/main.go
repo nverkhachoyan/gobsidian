@@ -43,7 +43,7 @@ type StaticSiteGenerator struct {
 const (
 	assetsDir        = "assets"
 	cssDir           = "css"
-	jsDir            = "js"
+	srcDir           = "src"
 	imagesDir        = "images"
 	fileTreeFilename = "file-tree.json"
 	chromaCSSPath    = "assets/chroma.css"
@@ -207,10 +207,12 @@ func (g *StaticSiteGenerator) newTransformationPipeline() *transformers.Pipeline
 			g.Regexes.ObsidianImageRegex,
 			g.Regexes.HashtagRegex,
 			g.Regexes.ObsidianCalloutRegex,
+			g.Regexes.FootnoteRegex,
 			g.Logger,
 			g.MarkdownRenderer,
 		),
 		transformers.NewSyntaxHighlighter(true),
+		transformers.NewFootnoteTransformer(g.Regexes.FootnoteRegex, g.Logger),
 	)
 }
 

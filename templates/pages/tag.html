@@ -1,58 +1,46 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Tag: {{.Tag.Name}} | {{.SiteTitle}}</title>
-        {{template "styles" .}}
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <a href="/" class="go-back-button">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    Back to Home</a
-                >
-                <h1 class="tag-title">Tag: <span>{{.Tag.Name}}</span></h1>
-                {{template "theme_toggle" .}}
-            </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tag: {{.Tag.Name}} | {{.SiteTitle}}</title>
+    {{template "styles" .}}
+  </head>
+  <body>
+    <div class="gobsidian-container">
+      <div class="gobsidian-wrapper">
+        {{template "left_sidebar" .}}
 
-            <div class="content-wrapper">
-                {{template "left_sidebar" .}}
-
-            <main>
-                {{if .Posts}}
-                <div class="post-grid">
-                    {{range .Posts}}
-                    <div class="post-card">
-                        <h2><a href="{{.URL}}">{{.Title}}</a></h2>
-                        <div class="post-card-meta">
-                            {{if .Author}}
-                            <span class="author">{{.Author}}</span>
-                            {{end}}
-                            <span class="post-date"
-                                >{{.Date.Format "January 2, 2006"}}</span
-                            >
-                        </div>
-                    </div>
-                    {{end}}
-                </div>
-                {{template "pagination" .Pagination}} {{else}}
-                <p>No posts found in this tag.</p>
+        <main>
+          <h1 class="tag-title">Tag: <span>#{{.Tag.Name}}</span></h1>
+          {{if .Posts}}
+          <div class="post-grid">
+            {{range .Posts}}
+            <div class="post-card">
+              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+              <div class="post-card-meta">
+                {{if .Author}}
+                <span class="author">{{.Author}}</span>
                 {{end}}
-            </main>
-
-            {{template "right_sidebar" .}}
-
+                <span class="post-date"
+                  >{{.Date.Format "January 2, 2006"}}</span
+                >
+              </div>
             </div>
+            {{end}}
+          </div>
+          {{template "pagination" .Pagination}} {{else}}
+          <p>No posts found in this tag.</p>
+          {{end}}
+        </main>
 
-            <footer>
-                <p>
-                    &copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.
-                </p>
-                <p><a href="/">Back to Home</a></p>
-            </footer>
-        </div>
-        {{template "scripts" .}}
-    </body>
+        {{template "right_sidebar" .}}
+        <footer>
+          <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+          <p><a href="/">Back to Home</a></p>
+        </footer>
+      </div>
+    </div>
+    {{template "scripts" .}}
+  </body>
 </html>
