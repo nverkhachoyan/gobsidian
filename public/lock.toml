@@ -1,0 +1,70 @@
+hash_format = 'sha256'
+vault_name = 'posts'
+
+[[files]]
+path = 'posts/.obsidian/.DS_Store'
+hash = 'e4cab4c64372de5580a73a351f1d4ec97ce8178850cd2d99c4c263257e2ca0ed'
+
+[[files]]
+path = 'posts/.obsidian/app.json'
+hash = '4374eeac1712a41b47890b4ffff2a54ecce4223c02a1d83816087c03f1ba1ad8'
+
+[[files]]
+path = 'posts/.obsidian/appearance.json'
+hash = '8a0ed8c48f98c252c93024149992f24bddf342d1981e0fcd6fd65ed8f32c6001'
+
+[[files]]
+path = 'posts/.obsidian/core-plugins.json'
+hash = 'fa01ffebed2b842d6f9fcdf817d476114379043050dbd7ca9ccae68d14cb970a'
+
+[[files]]
+path = 'posts/.obsidian/graph.json'
+hash = '9f87f629cd79f89f31c5d06349c0617cfe3fc1885b988ec679ddc273bffbc937'
+
+[[files]]
+path = 'posts/.obsidian/snippets/img.css'
+hash = '439e599d681956c73a9ebdea0f7982fe615567daf8367eba58f28e59ac0a21de'
+
+[[files]]
+path = 'posts/.obsidian/snippets/note.css'
+hash = '4a78e3014c020d49745a1e1a7bf0b718337168809da6e857cf5943528a74f37c'
+
+[[files]]
+path = 'posts/.obsidian/workspace.json'
+hash = '1336b3974684eef6a622ac11310e20eae1a36381ebad5cb882ff946252aa6259'
+
+[[files]]
+path = 'posts/Map of Content.md'
+hash = '7c6797cbfa996a219c1ae310c5a48793e8c71b12f1548c4e2fe39c0955bb8cbc'
+
+[[files]]
+path = 'posts/Markdown Syntax Guide.md'
+hash = '0c093475ba0885c875292b12188907153b9d0cfb71af1a100887cbbfa46a97d8'
+
+[[files]]
+path = 'posts/Personal/Reading Habits.md'
+hash = '37410526b30472e841d5e9cbf434a360b3a8e455a77b47e38419d21d4bcfafd5'
+
+[[files]]
+path = 'posts/Personal/Tomfoolery And Stuff/What are threads anyway?.md'
+hash = '3398925972e3334549b1358cc5df25809686717fdadb0c43adedb068911ed796'
+
+[[files]]
+path = 'posts/Programming/Exploring Go.md'
+hash = '0d908de283d73fe88a3cf055c23b51eca6b44a918d3343800806bfce457c6f75'
+
+[[files]]
+path = 'posts/Showcase.md'
+hash = 'debc3aa9361cb54358fa70896503a56872c7d7c71ad3fc17bcc07a26d0e03803'
+
+[[files]]
+path = 'posts/cigar-denver.png'
+hash = '620d59e869926e519f81a5f940151d55807f73363a1356e15514b10890f46a5c'
+
+[[files]]
+path = 'posts/index.md'
+hash = 'd877bd966170add356ffbafc987c9cdeb89a9962dd9c7c9b2bcbcd75a917787b'
+
+[[files]]
+path = 'posts/wikilinks.md'
+hash = 'c56bdb712a5462c126118b4e8ee3bf20cc825643a7af455e28530130d5cc38ba'

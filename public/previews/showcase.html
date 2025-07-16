@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Showcase</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+  rel="stylesheet"
+/>
+
+
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+/>
+
+
+<link rel="stylesheet" href="/src/css/main.css" />
+<link rel="stylesheet" href="/assets/chroma.css" />
+
+
+<link rel="stylesheet" href="/assets/libs/katex/katex.min.css" />
+
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+  </head>
+  <body>
+    <div class="preview-card" x-data="{ pinned: false }" :data-pinned="pinned">
+      <div class="preview-controls drag-handle">
+        <i class="fa-solid fa-grip-lines"></i>
+        <button
+          class="preview-control-btn pin-preview-btn"
+          :title="pinned ? 'Unpin preview' : 'Pin preview'"
+          @click="pinned = !pinned"
+          :class="{ 'active': pinned }"
+        >
+          <i class="fa-solid" :class="pinned ? 'fa-lock' : 'fa-thumbtack'"></i>
+        </button>
+        <button
+          class="preview-control-btn close-preview-btn"
+          title="Close preview"
+        >
+          <i class="fa-solid fa-times"></i>
+        </button>
+        <a
+          href="/showcase.html"
+          class="preview-control-btn maximize-btn"
+          title="Go to post"
+          ><i class="fa-solid fa-arrow-up-right-from-square"></i
+        ></a>
+      </div>
+
+      <a class="preview-card-title" href="/showcase.html">Showcase</a>
+
+      <p>[X] Fix the issue where a link to a post inside nested folders doesn&rsquo;t resolve to the post if the link only contains the name like so</p>
+
+<p><a href="/personal/tomfoolery-and-stuff/what-are-threads-anyway.html">Personal/Tomfoolery And Stuff/What are threads anyway?</a></p>
+<p><span class="math display">\[ \frac{a}{b} \]</span></p><p><span class="math display">\[\int_0^1 x^2 dx\]</span></p>
+<div class='mermaid'>sequenceDiagram
+Alice->>John: Hello John, how are you?
+loop HealthCheck
+    John->>John: Fight against hypochondria
+end
+Note right of John: Rational thoughts!
+John-->>Alice: Great!
+John->>Bob: How about you?
+Bob-->>John: Jolly good!
+ 
+</div>
+
+<pre class="chroma"><code><span class="line"><span class="ln"> 1</span><span class="cl">{{if .Tags}}
+</span></span><span class="line"><span class="ln"> 2</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 3</span><span class="cl"><span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&#34;left-sidebar-item&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln"> 4</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 5</span><span class="cl"><span class="p">&lt;</span><span class="nt">h5</span> <span class="na">class</span><span class="o">=</span><span class="s">&#34;left-sidebar-item-title&#34;</span><span class="p">&gt;</span>Tags<span class="p">&lt;/</span><span class="nt">h5</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln"> 6</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 7</span><span class="cl"><span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&#34;left-sidebar-item-content&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln"> 8</span><span class="cl">
+</span></span><span class="line"><span class="ln"> 9</span><span class="cl"><span class="p">&lt;</span><span class="nt">nav</span> <span class="na">class</span><span class="o">=</span><span class="s">&#34;tags-nav&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">10</span><span class="cl">
+</span></span><span class="line"><span class="ln">11</span><span class="cl"><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">12</span><span class="cl">
+</span></span><span class="line"><span class="ln">13</span><span class="cl">{{range .Tags}}
+</span></span><span class="line"><span class="ln">14</span><span class="cl">
+</span></span><span class="line"><span class="ln">15</span><span class="cl"><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/tag/{{.Slug}}/&#34;</span><span class="p">&gt;</span>#{{.Name}}<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">16</span><span class="cl">
+</span></span><span class="line"><span class="ln">17</span><span class="cl">{{end}}
+</span></span><span class="line"><span class="ln">18</span><span class="cl">
+</span></span><span class="line"><span class="ln">19</span><span class="cl"><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">20</span><span class="cl">
+</span></span><span class="line"><span class="ln">21</span><span class="cl"><span class="p">&lt;/</span><span class="nt">nav</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">22</span><span class="cl">
+</span></span><span class="line"><span class="ln">23</span><span class="cl"><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">24</span><span class="cl">
+</span></span><span class="line"><span class="ln">25</span><span class="cl"><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="ln">26</span><span class="cl">
+</span></span><span class="line"><span class="ln">27</span><span class="cl">{{end}}
+</span></span></code></pre>
+
+<div class="obsidian-quote-info"><div class="obsidian-quote-info-title">info</div>This info callout is great. It is informative as heck!</div>
+  
+
+<div class="obsidian-quote-warning"><div class="obsidian-quote-warning-title">warning</div>This warning callout is warning you about the monster under your bed!</div>
+  
+
+<div class="obsidian-quote-success"><div class="obsidian-quote-success-title">success</div>Great success!
+
+**Lorem Ipsum** is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</div>
+
+      <div
+        class="resize-handle"
+        style="
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 12px;
+          height: 12px;
+          cursor: nwse-resize;
+          z-index: 10;
+        "
+      ></div>
+    </div>
+    
+
+
+<script>
+  window.graphData = JSON.parse(`\u007b\u0022nodes\u0022:[\u007b\u0022id\u0022:7,\u0022label\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022id\u0022:6,\u0022label\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022id\u0022:3,\u0022label\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d,\u007b\u0022id\u0022:4,\u0022label\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d,\u007b\u0022id\u0022:2,\u0022label\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022id\u0022:1,\u0022label\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022id\u0022:5,\u0022label\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d,\u007b\u0022id\u0022:8,\u0022label\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d],\u0022edges\u0022:[\u007b\u0022source\u0022:8,\u0022target\u0022:7\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:6\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:2,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d]\u007d`);
+  console.log(window.graphData);
+  window.fileTreeData = JSON.parse(`\u007b\u0022name\u0022:\u0022Home\u0022,\u0022path\u0022:\u0022\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022personal\u0022,\u0022path\u0022:\u0022personal\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022tomfoolery and stuff\u0022,\u0022path\u0022:\u0022personal\/tomfoolery and stuff\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d]\u007d,\u007b\u0022name\u0022:\u0022programming\u0022,\u0022path\u0022:\u0022programming\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022name\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d]\u007d`);
+  window.tagsData = JSON.parse(`[\u007b\u0022name\u0022:\u0022feels\u0022,\u0022slug\u0022:\u0022feels\u0022,\u0022count\u0022:1\u007d,\u007b\u0022name\u0022:\u0022golang\u0022,\u0022slug\u0022:\u0022golang\u0022,\u0022count\u0022:1\u007d]`);
+</script>
+
+
+
+<script src="/assets/libs/obsigraph.min.js"></script>
+<script src="/assets/libs/mermaid.min.js"></script>
+
+<script src="/src/js/live-reload.js" defer></script>
+<script src="/src/js/explorer.js" defer></script>
+<script src="/src/js/previews.js" defer></script>
+
+
+
+
+<script src="/src/js/store.js"></script>
+
+
+<script defer src="/assets/libs/alpine/alpine-collapse.min.js"></script>
+<script defer src="/assets/libs/alpine/alpine.min.js"></script>
+
+
+<script src="/assets/libs/katex/katex.min.js"></script>
+<script src="/assets/libs/katex/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "\\(", right: "\\)", display: false },
+      ],
+    });
+  });
+</script>
+<script src="/assets/libs/katex/contrib/copy-tex.min.js"></script>
+<script src="/assets/libs/katex/contrib/render-a11y-string.min.js"></script>
+
+
+<script src="/src/js/mermaid.js"></script>
+
+
+  </body>
+</html>
