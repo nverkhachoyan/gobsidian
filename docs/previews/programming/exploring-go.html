@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Exploring Go: My First Impressions</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+  rel="stylesheet"
+/>
+
+
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+/>
+
+
+<link rel="stylesheet" href="/src/css/main.css" />
+<link rel="stylesheet" href="/assets/chroma.css" />
+
+
+<link rel="stylesheet" href="/assets/libs/katex/katex.min.css" />
+
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+  </head>
+  <body>
+    <div class="preview-card" x-data="{ pinned: false }" :data-pinned="pinned">
+      <div class="preview-controls drag-handle">
+        <i class="fa-solid fa-grip-lines"></i>
+        <button
+          class="preview-control-btn pin-preview-btn"
+          :title="pinned ? 'Unpin preview' : 'Pin preview'"
+          @click="pinned = !pinned"
+          :class="{ 'active': pinned }"
+        >
+          <i class="fa-solid" :class="pinned ? 'fa-lock' : 'fa-thumbtack'"></i>
+        </button>
+        <button
+          class="preview-control-btn close-preview-btn"
+          title="Close preview"
+        >
+          <i class="fa-solid fa-times"></i>
+        </button>
+        <a
+          href="/programming/exploring-go.html"
+          class="preview-control-btn maximize-btn"
+          title="Go to post"
+          ><i class="fa-solid fa-arrow-up-right-from-square"></i
+        ></a>
+      </div>
+
+      <a class="preview-card-title" href="/programming/exploring-go.html">Exploring Go: My First Impressions</a>
+
+      <p>Heyy
+ I&rsquo;ve recently started learning Go, and it&rsquo;s been a fascinating journey so far. The language&rsquo;s simplicity, performance, and <a href="#fn-bc74d2cf-2e0d-4fe9-8831-386fedd0c0b2" class="footnote-ref" id="fnref-bc74d2cf-2e0d-4fe9-8831-386fedd0c0b2" role="doc-noteref"><sup>[1]</sup></a> strong focus on concurrency are compelling. <a href="#fn-64f33d0d-a0d6-4c2c-9d21-5e5543b1ffd4" class="footnote-ref" id="fnref-64f33d0d-a0d6-4c2c-9d21-5e5543b1ffd4" role="doc-noteref"><sup>[2]</sup></a></p>
+
+<h2>Key Features I&rsquo;m Enjoying</h2>
+
+<ul>
+<li><strong>Simplicity:</strong> Go&rsquo;s syntax is clean and easy to pick up, especially coming from other C-like languages. <a href="#fn-dee4f8f3-b3e5-4c54-bd31-b7458c4e7be4" class="footnote-ref" id="fnref-dee4f8f3-b3e5-4c54-bd31-b7458c4e7be4" role="doc-noteref"><sup>[3]</sup></a></li>
+<li><strong>Concurrency:</strong> Goroutines and channels are powerful constructs that make concurrent programming feel much more approachable.</li>
+<li><strong>Static Typing:</strong> The safety of a statically-typed language without the verbosity of others is a huge plus.</li>
+</ul>
+
+<p>Here&rsquo;s a simple &ldquo;Hello, World!&rdquo; to illustrate:</p>
+
+<pre class="chroma"><code><span class="line"><span class="ln">1</span><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="ln">2</span><span class="cl">
+</span></span><span class="line"><span class="ln">3</span><span class="cl"><span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="ln">4</span><span class="cl">
+</span></span><span class="line"><span class="ln">5</span><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="ln">6</span><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Hello, Go!&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="ln">7</span><span class="cl">    <span class="kd">var</span> <span class="nx">henlo</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="ln">8</span><span class="cl"><span class="p">}</span>
+</span></span></code></pre>
+
+<p>I&rsquo;m looking forward to diving deeper into web development with Go and exploring its rich standard library. I think I&rsquo;ll write a note about <a href="/the-power-of-concurrency.html">The Power of Concurrency</a> next.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum <a href="#fn-f5d3e6e1-513d-42d4-a4d7-61fa5601961a" class="footnote-ref" id="fnref-f5d3e6e1-513d-42d4-a4d7-61fa5601961a" role="doc-noteref"><sup>[4]</sup></a>.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><strong>Lorem Ipsum</strong> is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry&rsquo;s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+
+<p><a class="tag" href="/tag/golang">#golang</a></p>
+
+      <div
+        class="resize-handle"
+        style="
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 12px;
+          height: 12px;
+          cursor: nwse-resize;
+          z-index: 10;
+        "
+      ></div>
+    </div>
+    
+
+
+<script>
+  window.graphData = JSON.parse(`\u007b\u0022nodes\u0022:[\u007b\u0022id\u0022:5,\u0022label\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d,\u007b\u0022id\u0022:8,\u0022label\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d,\u007b\u0022id\u0022:6,\u0022label\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022id\u0022:4,\u0022label\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d,\u007b\u0022id\u0022:7,\u0022label\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022id\u0022:1,\u0022label\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022id\u0022:2,\u0022label\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022id\u0022:3,\u0022label\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d],\u0022edges\u0022:[\u007b\u0022source\u0022:4,\u0022target\u0022:6\u007d,\u007b\u0022source\u0022:8,\u0022target\u0022:7\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:2,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d]\u007d`);
+  console.log(window.graphData);
+  window.fileTreeData = JSON.parse(`\u007b\u0022name\u0022:\u0022Home\u0022,\u0022path\u0022:\u0022\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022personal\u0022,\u0022path\u0022:\u0022personal\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022tomfoolery and stuff\u0022,\u0022path\u0022:\u0022personal\/tomfoolery and stuff\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d]\u007d,\u007b\u0022name\u0022:\u0022programming\u0022,\u0022path\u0022:\u0022programming\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022name\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d]\u007d`);
+  window.tagsData = JSON.parse(`[\u007b\u0022name\u0022:\u0022feels\u0022,\u0022slug\u0022:\u0022feels\u0022,\u0022count\u0022:1\u007d,\u007b\u0022name\u0022:\u0022golang\u0022,\u0022slug\u0022:\u0022golang\u0022,\u0022count\u0022:1\u007d]`);
+</script>
+
+
+
+<script src="/assets/libs/obsigraph.min.js"></script>
+<script src="/assets/libs/mermaid.min.js"></script>
+
+<script src="/src/js/live-reload.js" defer></script>
+<script src="/src/js/explorer.js" defer></script>
+<script src="/src/js/previews.js" defer></script>
+
+
+
+
+<script src="/src/js/store.js"></script>
+
+
+<script defer src="/assets/libs/alpine/alpine-collapse.min.js"></script>
+<script defer src="/assets/libs/alpine/alpine.min.js"></script>
+
+
+<script src="/assets/libs/katex/katex.min.js"></script>
+<script src="/assets/libs/katex/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "\\(", right: "\\)", display: false },
+      ],
+    });
+  });
+</script>
+<script src="/assets/libs/katex/contrib/copy-tex.min.js"></script>
+<script src="/assets/libs/katex/contrib/render-a11y-string.min.js"></script>
+
+
+<script src="/src/js/mermaid.js"></script>
+
+
+  </body>
+</html>

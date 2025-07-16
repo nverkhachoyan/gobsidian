@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown Syntax Guide | Nver Khachoyan&#39;s Blog</title>
+    
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+  rel="stylesheet"
+/>
+
+
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+/>
+
+
+<link rel="stylesheet" href="/src/css/main.css" />
+<link rel="stylesheet" href="/assets/chroma.css" />
+
+
+<link rel="stylesheet" href="/assets/libs/katex/katex.min.css" />
+
+<link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+    <style>
+       
+      .footnote {
+        scroll-margin-top: 45vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="gobsidian-container">
+      <div class="gobsidian-wrapper">
+        
+<aside class="left-sidebar">
+  
+  <div>
+    <a class="site-title" href="/"> Nver Khachoyan&#39;s Blog </a>
+    <p class="site-description">My Personal Blog - Built with Go and Obsidian Notes</p>
+    <div
+      class="theme-switcher-container"
+      x-data="{
+    init() {
+      // Initialize the global theme store
+      $store.theme.init();
+    }}"
+      x-init="init()"
+    >
+      <button
+        @click="$store.theme.toggle()"
+        class="theme-switcher"
+        title="Toggle theme"
+      >
+        <span x-show="$store.theme.current === 'light'"
+          ><i class="fa-solid fa-sun"></i
+        ></span>
+        <span x-show="$store.theme.current === 'dark'"
+          ><i class="fa-solid fa-moon"></i
+        ></span>
+      </button>
+    </div>
+  </div>
+
+  
+  <div
+    class="explorer-container"
+    x-data="fileTreeComponent()"
+    x-show="$store.fileTree.data"
+    :class="{ 'expanded': $store.fileTree.expanded }"
+  >
+    <div>
+      <input type="text" class="search-bar" placeholder="Search" />
+      <nav class="explorer">
+        <template x-if="$store.fileTree.data">
+          <div x-html="renderTree($store.fileTree.data)"></div>
+        </template>
+      </nav>
+    </div>
+  </div>
+
+  
+  <div
+    x-data="{}"
+    x-init="$store.collapsible.init('tags', true)"
+    x-show="$store.tags.data.length > 0"
+    class="collapsible-container"
+  >
+    <h5 @click="$store.collapsible.toggle('tags')">
+      All Tags
+      <i
+        class="fa-solid"
+        :class="$store.collapsible.isExpanded('tags') ? 'fa-chevron-down' : 'fa-chevron-right'"
+      ></i>
+    </h5>
+    <div x-show="$store.collapsible.isExpanded('tags')" x-collapse>
+      <nav class="tags-nav">
+        <ul>
+          <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
+            <li>
+              <a :href="'/tag/' + tag.slug + '/'" class="tag">
+                <span x-text="tag.name"></span>
+                <span x-text="`(${tag.count})`"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+        <template x-if="$store.tags.hasMore()">
+          <button @click="$store.tags.toggle()" class="show-more-button">
+            <span
+              x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"
+            ></span>
+          </button>
+        </template>
+      </nav>
+    </div>
+  </div>
+</aside>
+
+
+        <main class="center ">
+          <div class="breadcrumbs">
+            <a href="/">Home</a>
+            <span class="breadcrumb-separator"
+              ><i class="fa-solid fa-chevron-right"></i
+            ></span>
+            
+            <a href="/markdown-syntax-guide.html">markdown syntax guide</a>
+             
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">Markdown Syntax Guide</h1>
+
+            
+            <span class="author">By Nver Khachoyan</span>
+            
+            <span class="post-date"
+              >June 29, 2025</span
+            >
+            
+          </div>
+
+          <article class="prose"><p>This file is just a list of common markdown patterns for demo.</p>
+
+<h2>Headers</h2>
+
+<h1>This is a Heading h1</h1>
+
+<h2>This is a Heading h2</h2>
+
+<h6>This is a Heading h6</h6>
+
+<h2>Emphasis</h2>
+
+<p><em>This text will be italic</em></p>
+
+<p><em>This will also be italic</em></p>
+
+<p><strong>This text will be bold</strong></p>
+
+<p><strong>This will also be bold</strong></p>
+
+<p><em>You <strong>can</strong> combine them</em></p>
+
+<p><a href="/welcome-to-my-blog-aaa.html">Welcome to my blog aaa</a></p>
+
+<h2>Lists</h2>
+
+<h3>Unordered</h3>
+
+<ul>
+<li><p>Item 1</p></li>
+
+<li><p>Item 2</p></li>
+
+<li><p>Item 2a</p></li>
+
+<li><p>Item 2b</p></li>
+
+<li><p>Item 3a</p></li>
+
+<li><p>Item 3b</p></li>
+</ul>
+
+<h3>Ordered</h3>
+
+<ol>
+<li><p>Item 1</p></li>
+
+<li><p>Item 2</p></li>
+
+<li><p>Item 3</p></li>
+
+<li><p>Item 3a</p></li>
+
+<li><p>Item 3b</p></li>
+</ol>
+
+<h2>Images</h2>
+
+<p><img src="/images/cigar-denver.png" alt="cigar-denver.png" width="200" height="" /></p>
+
+<h2>Links</h2>
+
+<p>You may be using <a href="https://markdownlivepreview.com/" target="_blank">Markdown Live Preview</a>.</p>
+
+<h2>Blockquotes</h2>
+
+<blockquote>
+<p>Markdown is a lightweight markup language with plain-text-formatting syntax, created in 2004 by John Gruber with Aaron Swartz.</p>
+
+<blockquote>
+<p>Markdown is often used to format readme files, for writing messages in online discussion forums, and to create rich text using a plain text editor.</p>
+</blockquote>
+</blockquote>
+
+<h2>Tables</h2>
+
+<p>| Left columns | Right columns |</p>
+
+<table>
+<tbody>
+</tbody>
+</table>
+<p>| left foo | right foo |</p>
+
+<p>| left bar | right bar |</p>
+
+<p>| left baz | right baz |</p>
+
+<h2>Blocks of code</h2>
+
+<pre class="chroma"><code><span class="line"><span class="ln">1</span><span class="cl">
+</span></span><span class="line"><span class="ln">2</span><span class="cl"><span class="kd">let</span> <span class="nx">message</span> <span class="o">=</span> <span class="s1">&#39;Hello world&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="ln">3</span><span class="cl">
+</span></span><span class="line"><span class="ln">4</span><span class="cl"><span class="nx">alert</span><span class="p">(</span><span class="nx">message</span><span class="p">);</span>
+</span></span><span class="line"><span class="ln">5</span><span class="cl">
+</span></span></code></pre>
+
+<h2>Inline code</h2>
+
+<p>This web site is using <code>markedjs/marked</code>.</p>
+</article>
+
+           
+          <div class="backlinks">
+            <h5>Linked From</h5>
+            <ul class="backlinks-list">
+              
+              <li><a href="/map-of-content.html" class="backlink">Map of Content</a></li>
+              
+            </ul>
+          </div>
+          
+        </main>
+
+        
+<aside class="right-sidebar">
+  
+  <div
+    x-data="{}"
+    x-init="$store.collapsible.init('graph', true)"
+    x-show="$store.graph.data"
+    class="collapsible-container"
+  >
+    <h5 @click="$store.collapsible.toggle('graph')">
+      Graph View
+      <i
+        class="fa-solid"
+        :class="$store.collapsible.isExpanded('graph') ? 'fa-chevron-down' : 'fa-chevron-right'"
+      ></i>
+    </h5>
+    <div
+      x-show="$store.collapsible.isExpanded('graph')"
+      x-collapse
+      class="graph-container"
+    >
+      <canvas id="graph-network-canvas"></canvas>
+      <div class="zoom-graph-button" @click="$store.graph.openModal()"></div>
+    </div>
+    
+    <div
+      id="graph-modal"
+      class="graph-modal-container"
+      x-show="$store.graph.modalOpen"
+      x-cloak
+      x-transition
+      @click.outside="$store.graph.closeModal()"
+    >
+      <div class="graph-modal-content">
+        <div class="graph-modal-header">
+          <h2>Graph View</h2>
+          <button class="graph-modal-close" @click="$store.graph.closeModal()">
+            &times;
+          </button>
+        </div>
+        <div class="graph-modal-body">
+          <canvas id="graph-network-modal-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+
+        <footer>
+          <p>&copy; 2025 Nver Khachoyan&#39;s Blog. All rights reserved.</p>
+          <p><a href="/">Back to Home</a></p>
+        </footer>
+      </div>
+    </div>
+
+    
+
+
+<script>
+  window.graphData = JSON.parse(`\u007b\u0022nodes\u0022:[\u007b\u0022id\u0022:5,\u0022label\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d,\u007b\u0022id\u0022:8,\u0022label\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d,\u007b\u0022id\u0022:6,\u0022label\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022id\u0022:4,\u0022label\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d,\u007b\u0022id\u0022:7,\u0022label\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022id\u0022:1,\u0022label\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022id\u0022:2,\u0022label\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022id\u0022:3,\u0022label\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d],\u0022edges\u0022:[\u007b\u0022source\u0022:4,\u0022target\u0022:6\u007d,\u007b\u0022source\u0022:8,\u0022target\u0022:7\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:2,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:3,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:5,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:4,\u0022target\u0022:1\u007d,\u007b\u0022source\u0022:7,\u0022target\u0022:1\u007d]\u007d`);
+  console.log(window.graphData);
+  window.fileTreeData = JSON.parse(`\u007b\u0022name\u0022:\u0022Home\u0022,\u0022path\u0022:\u0022\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022personal\u0022,\u0022path\u0022:\u0022personal\u0022,\u0022children\u0022:[\u007b\u0022name\u0022:\u0022tomfoolery and stuff\u0022,\u0022path\u0022:\u0022personal\/tomfoolery and stuff\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022What are threads anyway?\u0022,\u0022url\u0022:\u0022\/personal\/tomfoolery-and-stuff\/what-are-threads-anyway.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022On the Joy of Reading\u0022,\u0022url\u0022:\u0022\/personal\/reading-habits.html\u0022\u007d]\u007d,\u007b\u0022name\u0022:\u0022programming\u0022,\u0022path\u0022:\u0022programming\u0022,\u0022children\u0022:[],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Exploring Go: My First Impressions\u0022,\u0022url\u0022:\u0022\/programming\/exploring-go.html\u0022\u007d]\u007d],\u0022files\u0022:[\u007b\u0022name\u0022:\u0022Map of Content\u0022,\u0022url\u0022:\u0022\/map-of-content.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Markdown Syntax Guide\u0022,\u0022url\u0022:\u0022\/markdown-syntax-guide.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Showcase\u0022,\u0022url\u0022:\u0022\/showcase.html\u0022\u007d,\u007b\u0022name\u0022:\u0022Welcome to My Digital Garden\u0022,\u0022url\u0022:\u0022\/\u0022\u007d,\u007b\u0022name\u0022:\u0022wikilinks\u0022,\u0022url\u0022:\u0022\/wikilinks.html\u0022\u007d]\u007d`);
+  window.tagsData = JSON.parse(`[\u007b\u0022name\u0022:\u0022feels\u0022,\u0022slug\u0022:\u0022feels\u0022,\u0022count\u0022:1\u007d,\u007b\u0022name\u0022:\u0022golang\u0022,\u0022slug\u0022:\u0022golang\u0022,\u0022count\u0022:1\u007d]`);
+</script>
+
+
+
+<script src="/assets/libs/obsigraph.min.js"></script>
+<script src="/assets/libs/mermaid.min.js"></script>
+
+<script src="/src/js/live-reload.js" defer></script>
+<script src="/src/js/explorer.js" defer></script>
+<script src="/src/js/previews.js" defer></script>
+
+
+
+
+<script src="/src/js/store.js"></script>
+
+
+<script defer src="/assets/libs/alpine/alpine-collapse.min.js"></script>
+<script defer src="/assets/libs/alpine/alpine.min.js"></script>
+
+
+<script src="/assets/libs/katex/katex.min.js"></script>
+<script src="/assets/libs/katex/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "\\(", right: "\\)", display: false },
+      ],
+    });
+  });
+</script>
+<script src="/assets/libs/katex/contrib/copy-tex.min.js"></script>
+<script src="/assets/libs/katex/contrib/render-a11y-string.min.js"></script>
+
+
+<script src="/src/js/mermaid.js"></script>
+
+
+  </body>
+</html>
