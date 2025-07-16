@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"gobsidian/internal/scanner"
 	"gobsidian/internal/terminal"
 	"gobsidian/internal/transformers"
+	"gobsidian/internal/utils"
 
 	"github.com/gomarkdown/markdown/html"
 
@@ -142,6 +144,8 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		g.Templates,
 	)
 
+	g.generateBreadcrumbs(sortedNotes)
+
 	templateExecTime, numberOfTags, err := templateExecutor.Execute(sortedNotes, treeBuild.Root, graphJSON, treeBuild.JSON)
 	if err != nil {
 		reporter.ReportStep(
@@ -173,7 +177,6 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 			})
 		return err
 	}
-
 	reporter.ReportStep(
 		terminal.Step{Name: "Copied assets", Icon: "📦"},
 		terminal.StepResult{
@@ -281,4 +284,33 @@ func (g *StaticSiteGenerator) runTransformations(
 	}
 
 	return time.Since(start)
+}
+
+func (g *StaticSiteGenerator) generateBreadcrumbs(notes []*models.ParsedNote) {
+	for _, note := range notes {
+		breadcrumbs := []models.Breadcrumb{}
+		parts := strings.Split(note.URL, "/")
+		noteURL := ""
+
+		for i, part := range parts {
+			if part == "" {
+				continue
+			}
+
+			noteURL += "/" + part
+
+			part = strings.ReplaceAll(part, ".html", "")
+			part = utils.Deslugify(part)
+
+			isLast := i == len(parts)-1
+
+			breadcrumbs = append(breadcrumbs, models.Breadcrumb{
+				Title:  part,
+				URL:    noteURL,
+				IsLast: isLast,
+			})
+		}
+
+		note.Breadcrumbs = breadcrumbs
+	}
 }

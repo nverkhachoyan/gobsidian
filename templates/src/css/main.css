@@ -144,7 +144,47 @@ body {
 
 @media (max-width: 1150px) {
   .gobsidian-wrapper {
+    grid-template-columns: 250px minmax(0, 1fr) 250px;
     gap: 0.5rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .gobsidian-wrapper {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "center"
+      "left"
+      "right";
+  }
+
+  .left-sidebar,
+  .right-sidebar {
+    position: static;
+    height: auto;
+    overflow-y: visible;
+    border: none;
+    padding: 1rem;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .left-sidebar {
+    grid-area: left;
+    border-top: 1px solid var(--border-color);
+    padding-top: 2rem;
+  }
+
+  .right-sidebar {
+    grid-area: right;
+    border-top: 1px solid var(--border-color);
+    padding-top: 2rem;
+  }
+
+  .center {
+    grid-area: center;
+    padding: 1.5rem 1rem;
   }
 }
 
@@ -152,6 +192,18 @@ body {
   .gobsidian-wrapper {
     display: flex;
     flex-direction: column;
+  }
+
+  .center {
+    order: 0;
+  }
+
+  .left-sidebar {
+    order: 1;
+  }
+
+  .right-sidebar {
+    order: 2;
   }
 }
 
@@ -195,7 +247,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem 1rem 0 1rem;
+  padding: 1.5rem 1rem 0 1rem;
+}
+
+.collapsible-container h5 {
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .search-bar {
@@ -212,7 +272,6 @@ body {
   .left-sidebar {
     position: static;
     top: auto;
-    order: 2;
     height: auto;
     overflow-y: visible;
   }
@@ -235,18 +294,6 @@ body {
   }
 }
 
-@media (max-width: 1150px) {
-  .left-sidebar {
-    margin-left: 1rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .left-sidebar {
-    margin: 1rem 0rem;
-  }
-}
-
 .right-sidebar {
   position: sticky;
   top: 0;
@@ -257,7 +304,6 @@ body {
   border-left: 1px solid var(--border-color);
   padding-left: 1rem;
   padding-right: 1rem;
-  padding-top: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -276,10 +322,8 @@ body {
  * ==============================
  */
 
-@media (max-width: 768px) {
-  main {
-    order: 1;
-  }
+.center {
+  padding-top: 1.5rem;
 }
 
 /*
@@ -1046,6 +1090,7 @@ footer a:hover {
   transition: color 0.2s ease-in-out, background-color 0.2s ease;
   font-size: 0.8rem;
   display: inline-block;
+  text-transform: capitalize;
 }
 
 .explorer__file_name:hover {
@@ -1142,8 +1187,7 @@ footer a:hover {
 }
 
 .explorer__item--folder.expanded > .explorer__children {
-  max-height: 500px;
-  /* Adjust as needed */
+  max-height: 100%;
 }
 
 /*
@@ -1161,6 +1205,7 @@ footer a:hover {
   font-family: var(--font-primary);
   font-size: 1.5rem;
   font-weight: 700;
+  margin-top: 0;
   margin-bottom: 1rem;
 }
 
@@ -1348,6 +1393,7 @@ footer a:hover {
   position: absolute;
   z-index: 1000;
   width: 350px;
+  max-width: 90vw;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -1529,6 +1575,7 @@ html.dark-mode .theme-switcher .sun {
   transition: transform 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
   color: inherit;
+  border-radius: 8px;
 }
 
 .post-card:hover {
@@ -1637,6 +1684,7 @@ html.dark-mode .theme-switcher .sun {
 @media (max-width: 768px) {
   .post-card {
     margin: 0;
+    padding: 1.5rem;
   }
 
   .latest-posts {
@@ -1645,6 +1693,61 @@ html.dark-mode .theme-switcher .sun {
 
   .post-grid {
     gap: 1rem;
+  }
+}
+
+/*
+ * ==============================
+ * Breadcrumbs
+ * ==============================
+ */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--subtle-text-color);
+}
+
+.breadcrumbs a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-weight: 500;
+}
+
+.breadcrumbs a:hover {
+  color: var(--text-color);
+  text-decoration: underline;
+}
+
+.breadcrumbs a:last-child {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.breadcrumbs a:last-child:hover {
+  text-decoration: none;
+}
+
+.breadcrumb-separator {
+  color: var(--subtle-text-color);
+  font-size: 0.8rem;
+  margin: 0 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .breadcrumbs {
+    font-size: 0.85rem;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .breadcrumb-separator {
+    margin: 0 0.15rem;
   }
 }
 
@@ -1745,4 +1848,310 @@ html.dark-mode .theme-switcher .sun {
 
 .show-more-button:hover {
   background-color: var(--primary-color-hover);
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 768px) {
+  .left-sidebar {
+    padding: 1rem;
+    margin: 0;
+    border-right: none;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .right-sidebar {
+    padding: 1rem;
+    margin: 0;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .center {
+    padding: 1rem;
+  }
+
+  /* Improve touch targets */
+  .search-bar {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+
+  /* Better spacing for mobile */
+  .site-title {
+    font-size: 1.25rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .site-description {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  /* Improve tag display on mobile */
+  .tags-nav ul {
+    gap: 0.25rem;
+  }
+
+  .tags-nav li a {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  /* Better post card spacing */
+  .post-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .post-card h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  /* Improve breadcrumbs on mobile */
+  .breadcrumbs {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .breadcrumbs a {
+    font-size: 0.9rem;
+  }
+
+  /* Better graph container on mobile */
+  .graph-container {
+    margin: 0.5rem 0;
+  }
+
+  #graph-network-canvas {
+    height: 200px;
+  }
+
+  /* Improve theme switcher position */
+  .theme-switcher {
+    padding: 0.5rem;
+    margin-left: auto;
+  }
+
+  /* Better explorer on mobile */
+  .explorer__link,
+  .explorer__file_name {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  /* Improve collapsible headers */
+  .collapsible-container h5 {
+    font-size: 1rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Better prose typography on mobile */
+  .prose {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .prose h1 {
+    font-size: 1.5rem;
+  }
+
+  .prose h2 {
+    font-size: 1.25rem;
+  }
+
+  .prose h3 {
+    font-size: 1.125rem;
+  }
+
+  /* Improve code blocks on mobile */
+  .prose pre {
+    padding: 1rem;
+    font-size: 0.875rem;
+    overflow-x: auto;
+  }
+
+  .prose code:not(pre > code) {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Additional improvements for very small screens */
+@media (max-width: 480px) {
+  .gobsidian-container {
+    padding: 0.5rem;
+  }
+
+  .post-card {
+    padding: 0.75rem;
+  }
+
+  .post-card h2 {
+    font-size: 1.125rem;
+  }
+
+  .prose {
+    font-size: 0.95rem;
+  }
+
+  .tags-nav li a {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .link-preview {
+    width: 95vw;
+    height: 200px;
+  }
+
+  .graph-modal-content {
+    width: 95%;
+    height: 80%;
+    margin: 10% auto;
+  }
+}
+
+/* Mobile touch improvements */
+@media (max-width: 768px) {
+  /* Improve button and link touch targets */
+  .show-more-button {
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    min-height: 44px; /* iOS recommended minimum */
+  }
+
+  .preview-control-btn {
+    padding: 0.5rem;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Better spacing for content sections */
+  .landing-page-note {
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .landing-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Improve pagination on mobile */
+  .pagination-nav {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .pagination-link {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Better backlinks section */
+  .backlinks {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .backlinks h5 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .backlinks ul li a {
+    padding: 0.5rem 0;
+    display: block;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .backlinks ul li:last-child a {
+    border-bottom: none;
+  }
+
+  /* Improve folder list on mobile */
+  .folder-list ul li {
+    margin-bottom: 0.75rem;
+  }
+
+  .folder-list ul li a {
+    padding: 0.5rem 0;
+    display: block;
+    line-height: 1.4;
+  }
+
+  /* Better embedded posts on mobile */
+  .embedded-post {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 6px;
+  }
+
+  .embedded-post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .embedded-post-header h2 {
+    font-size: 1rem;
+  }
+
+  /* Improve obsidian callouts on mobile */
+  .obsidian-quote-info,
+  .obsidian-quote-note,
+  .obsidian-quote-warning,
+  .obsidian-quote-danger,
+  .obsidian-quote-success,
+  .obsidian-quote-tip,
+  .obsidian-quote-example {
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 6px;
+  }
+
+  /* Better table of contents if present */
+  .toc {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .toc ul {
+    margin-left: 1rem;
+  }
+
+  .toc li {
+    margin-bottom: 0.25rem;
+  }
+
+  .toc a {
+    display: block;
+    padding: 0.25rem 0;
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .toc a:hover {
+    text-decoration: underline;
+  }
 }

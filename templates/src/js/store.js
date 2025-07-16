@@ -209,6 +209,25 @@ document.addEventListener("alpine:init", () => {
     },
   });
 
+  Alpine.store("collapsible", {
+    states: {},
+    init(id, initialState = false) {
+      if (this.states[id] === undefined) {
+        const storedState = localStorage.getItem(`collapsible_${id}`);
+        this.states[id] =
+          storedState !== null ? JSON.parse(storedState) : initialState;
+      }
+    },
+    toggle(id) {
+      if (this.states[id] !== undefined) {
+        this.states[id] = !this.states[id];
+        localStorage.setItem(`collapsible_${id}`, JSON.stringify(this.states[id]));
+      }
+    },
+    isExpanded(id) {
+      return this.states[id] === true;
+    },
+  });
 
   window.addEventListener("theme-initialized", (e) => {
     const isInitialized = e.detail;

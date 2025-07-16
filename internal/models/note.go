@@ -42,6 +42,13 @@ type ParsedNote struct {
 	CssClasses        []string
 	Footnotes         []Footnote
 	EmbeddedFootnotes []Footnote
+	Breadcrumbs       []Breadcrumb
+}
+
+type Breadcrumb struct {
+	Title  string
+	URL    string
+	IsLast bool
 }
 
 type Footnote struct {

@@ -46,25 +46,40 @@
   </div>
 
   <!-- Tags -->
-  <div x-data x-show="$store.tags.data.length > 0">
-    <h5>All Tags</h5>
-    <nav class="tags-nav">
-      <ul>
-        <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
-          <li>
-            <a :href="'/tag/' + tag.slug + '/'" class="tag">
-              <span x-text="tag.name"></span>
-              <span x-text="`(${tag.count})`"></span>
-            </a>
-          </li>
+  <div
+    x-data="{}"
+    x-init="$store.collapsible.init('tags', true)"
+    x-show="$store.tags.data.length > 0"
+    class="collapsible-container"
+  >
+    <h5 @click="$store.collapsible.toggle('tags')">
+      All Tags
+      <i
+        class="fa-solid"
+        :class="$store.collapsible.isExpanded('tags') ? 'fa-chevron-down' : 'fa-chevron-right'"
+      ></i>
+    </h5>
+    <div x-show="$store.collapsible.isExpanded('tags')" x-collapse>
+      <nav class="tags-nav">
+        <ul>
+          <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
+            <li>
+              <a :href="'/tag/' + tag.slug + '/'" class="tag">
+                <span x-text="tag.name"></span>
+                <span x-text="`(${tag.count})`"></span>
+              </a>
+            </li>
+          </template>
+        </ul>
+        <template x-if="$store.tags.hasMore()">
+          <button @click="$store.tags.toggle()" class="show-more-button">
+            <span
+              x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"
+            ></span>
+          </button>
         </template>
-      </ul>
-      <template x-if="$store.tags.hasMore()">
-        <button @click="$store.tags.toggle()" class="show-more-button">
-          <span x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"></span>
-        </button>
-      </template>
-    </nav>
+      </nav>
+    </div>
   </div>
 </aside>
 {{end}}

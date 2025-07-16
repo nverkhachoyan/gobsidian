@@ -44,3 +44,7 @@ func Slugify(s string) string {
 
 	return s
 }
+
+func Deslugify(s string) string {
+	return strings.ReplaceAll(s, "-", " ")
+}
