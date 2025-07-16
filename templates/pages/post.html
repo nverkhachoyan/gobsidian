@@ -17,7 +17,20 @@
       <div class="gobsidian-wrapper">
         {{template "left_sidebar" .}}
 
-        <main class=" {{range .Note.CssClasses}} {{.}} {{end}}">
+        <main class="center {{range .Note.CssClasses}} {{.}} {{end}}">
+          <div class="breadcrumbs">
+            <a href="{{.BaseURL}}">Home</a>
+            <span class="breadcrumb-separator"
+              ><i class="fa-solid fa-chevron-right"></i
+            ></span>
+            {{range .Note.Breadcrumbs}}
+            <a href="{{.URL}}">{{.Title}}</a>
+            {{if not .IsLast}}
+            <span class="breadcrumb-separator"
+              ><i class="fa-solid fa-chevron-right"></i
+            ></span>
+            {{end}} {{end}}
+          </div>
           <div class="post-meta">
             <h1 class="post-title">{{.Note.Title}}</h1>
 

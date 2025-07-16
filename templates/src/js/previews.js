@@ -8,16 +8,18 @@ const hideCardsFromIndex = (startIndex, useTimeout = true, force = false) => {
   const performHide = () => {
     // Before hiding, check if the mouse is over any card that is a candidate for removal.
     // If so, it means the user moved into a child card, so we shouldn't hide.
-    for (let i = startIndex; i < previewStack.length; i++) {
-      if (previewStack[i].matches(":hover")) {
-        return; // Abort hide
+    if (!force) {
+      for (let i = startIndex; i < previewStack.length; i++) {
+        if (previewStack[i].matches(":hover")) {
+          return; // Abort hide
+        }
       }
     }
 
     // Iterate backwards to safely remove items from the stack
     for (let i = previewStack.length - 1; i >= startIndex; i--) {
       const card = previewStack[i];
-      if (force || !card.dataset.pinned) {
+      if (force || card.dataset.pinned !== "true") {
         card.remove();
         previewStack.splice(i, 1);
       }

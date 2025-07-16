@@ -1,9 +1,24 @@
 {{define "sidebar_right_post"}}
 <aside class="right-sidebar">
   <!-- Graph View -->
-  <div x-data x-show="$store.graph.data">
-    <h5>Graph View</h5>
-    <div class="graph-container">
+  <div
+    x-data="{}"
+    x-init="$store.collapsible.init('graph', true)"
+    x-show="$store.graph.data"
+    class="collapsible-container"
+  >
+    <h5 @click="$store.collapsible.toggle('graph')">
+      Graph View
+      <i
+        class="fa-solid"
+        :class="$store.collapsible.isExpanded('graph') ? 'fa-chevron-down' : 'fa-chevron-right'"
+      ></i>
+    </h5>
+    <div
+      x-show="$store.collapsible.isExpanded('graph')"
+      x-collapse
+      class="graph-container"
+    >
       <canvas id="graph-network-canvas"></canvas>
       <div class="zoom-graph-button" @click="$store.graph.openModal()"></div>
     </div>

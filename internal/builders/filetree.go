@@ -55,6 +55,7 @@ func (ft *FileTreeBuilder) Build(
 			if part == "" {
 				continue
 			}
+			part = utils.Deslugify(part)
 			lowercasePart := strings.ToLower(part)
 
 			if _, ok := currentNode.Children[lowercasePart]; !ok {
