@@ -16,6 +16,7 @@ var ObsidianImageRegex = regexp.MustCompile(`!\[\[([^|\]]+\.(?:png|jpg|jpeg|gif|
 var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
 var obsidianCalloutRegex = regexp.MustCompile(`(?m)^>\[!(\w+)\]\s*\n((?:^>.*\n?)*)`)
+var footnotesRegex = regexp.MustCompile(`(?m)\^\[([\d\s\w-]+)\]`)
 
 type Config struct {
 	SiteConfig SiteConfig
@@ -45,6 +46,7 @@ type Regexes struct {
 	HashtagRegex         *regexp.Regexp
 	WikilinkRegex        *regexp.Regexp
 	ObsidianCalloutRegex *regexp.Regexp
+	FootnoteRegex        *regexp.Regexp
 }
 
 type Theme struct {
@@ -79,6 +81,7 @@ func LoadConfig(filePath string) (Config, error) {
 				HashtagRegex:         hashtagRegex,
 				WikilinkRegex:        wikilinkRegex,
 				ObsidianCalloutRegex: obsidianCalloutRegex,
+				FootnoteRegex:        footnotesRegex,
 			},
 		}, nil
 	}
@@ -97,6 +100,7 @@ func LoadConfig(filePath string) (Config, error) {
 		HashtagRegex:         hashtagRegex,
 		WikilinkRegex:        wikilinkRegex,
 		ObsidianCalloutRegex: obsidianCalloutRegex,
+		FootnoteRegex:        footnotesRegex,
 	}
 
 	cfg.Templates = LoadTemplates(cfg.SiteConfig.TemplateDir)

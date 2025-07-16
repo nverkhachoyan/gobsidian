@@ -23,8 +23,8 @@ type Node struct {
 }
 
 type Edge struct {
-	From int64 `json:"from"`
-	To   int64 `json:"to"`
+	From int64 `json:"source"`
+	To   int64 `json:"target"`
 }
 
 type Graph struct {

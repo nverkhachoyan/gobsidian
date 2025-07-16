@@ -5,53 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{.Note.Title}} | {{.SiteTitle}}</title>
     {{template "styles" .}}
+    <style>
+      /* Add scroll-margin-top to position footnotes in middle of viewport */
+      .footnote {
+        scroll-margin-top: 45vh;
+      }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <header>
-        <a href="/" class="go-back-button">
-          <i class="fa-solid fa-arrow-left"></i>
-          Back to Home
-        </a>
-        <h1>{{.Note.Title}}</h1>
-        <div class="post-meta">
-          {{if .Note.Author}}
-          <span class="author">By {{.Note.Author}}</span>
-          {{end}}
-          <span class="post-date"
-            >Published on {{.Note.Date.Format "January 2, 2006"}}</span
-          >
-          {{if .Note.UpdatedAt}}
-          <span class="post-date updated"
-            >Updated on {{.Note.UpdatedAt.Format "January 2, 2006"}}</span
-          >
-          {{end}}
-        </div>
-        <div class="header-tags-container">
-          {{range .Note.Tags}}
-          <a href="/tag/{{.Slug}}/" class="tag-link"
-            ><span class="tag">#{{.Name}}</span></a
-          >
-          {{end}}
-        </div>
-        {{template "theme_toggle" .}}
-      </header>
-
-      <div class="content-wrapper">
+    <div class="gobsidian-container">
+      <div class="gobsidian-wrapper">
         {{template "left_sidebar" .}}
 
-        <main class="prose {{range .Note.CssClasses}} {{.}} {{end}}">
-          {{.Note.HTMLContent}}
+        <main class=" {{range .Note.CssClasses}} {{.}} {{end}}">
+          <div class="post-meta">
+            <h1 class="post-title">{{.Note.Title}}</h1>
+
+            {{if .Note.Author}}
+            <span class="author">By {{.Note.Author}}</span>
+            {{end}}
+            <span class="post-date"
+              >{{.Note.Date.Format "January 2, 2006"}}</span
+            >
+            {{if .Note.UpdatedAt}}
+            <span class="post-date updated"
+              >Updated on {{.Note.UpdatedAt.Format "January 2, 2006"}}</span
+            >
+            {{end}}
+          </div>
+
+          <article class="prose">{{.Note.HTMLContent}}</article>
+
+          {{if .Note.Footnotes}}
+          <div class="footnotes">
+            {{range .Note.Footnotes}}
+            <div class="footnote" id="fn-{{.ID}}">
+              <span class="footnote-number">{{.Number}}.</span>
+              <span class="footnote-text">{{.Text}}</span>
+              <a href="#fnref-{{.ID}}" class="footnote-backref">↩</a>
+            </div>
+            {{end}}
+          </div>
+          {{end}} {{if .Note.LinkedFrom}}
+          <div class="backlinks">
+            <h5>Linked From</h5>
+            <ul class="backlinks-list">
+              {{range .Note.LinkedFrom}}
+              <li><a href="{{.URL}}" class="backlink">{{.Title}}</a></li>
+              {{end}}
+            </ul>
+          </div>
+          {{end}}
         </main>
+
         {{template "sidebar_right_post" .}}
 
+        <footer>
+          <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+          <p><a href="{{.BaseURL}}">Back to Home</a></p>
+        </footer>
       </div>
-
-      <footer>
-        <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
-        <p><a href="{{.BaseURL}}">Back to Home</a></p>
-      </footer>
     </div>
+
     {{template "scripts" .}}
   </body>
 </html>

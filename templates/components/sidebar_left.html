@@ -1,40 +1,70 @@
 {{define "left_sidebar"}}
 <aside class="left-sidebar">
-    <div class="left-sidebar-item file-tree-container" 
-         x-data="fileTreeComponent()" 
-         x-show="$store.fileTree.data"
-         :class="{ 'expanded': $store.fileTree.expanded }">
-        <div class="left-sidebar-item-content">
-          <input type="text" class="left-sidebar-search" placeholder="Search" />
-          <nav class="file-tree">
-            <template x-if="$store.fileTree.data">
-              <div x-html="renderTree($store.fileTree.data)"></div>
-            </template>
-          </nav>
-        </div>
+  <!-- Site Title and Theme Switcher -->
+  <div>
+    <a class="site-title" href="/"> {{.SiteTitle}} </a>
+    <p class="site-description">{{.SiteSubtitle}}</p>
+    <div
+      class="theme-switcher-container"
+      x-data="{
+    init() {
+      // Initialize the global theme store
+      $store.theme.init();
+    }}"
+      x-init="init()"
+    >
+      <button
+        @click="$store.theme.toggle()"
+        class="theme-switcher"
+        title="Toggle theme"
+      >
+        <span x-show="$store.theme.current === 'light'"
+          ><i class="fa-solid fa-sun"></i
+        ></span>
+        <span x-show="$store.theme.current === 'dark'"
+          ><i class="fa-solid fa-moon"></i
+        ></span>
+      </button>
     </div>
- 
-    <div class="left-sidebar-item" x-data x-show="$store.tags.data.length > 0">
-      <h5 class="left-sidebar-item-title">All Tags</h5>
-      <div class="left-sidebar-item-content">
-        <nav class="tags-nav">
-          <ul>
-            <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
-              <li>
-                <a :href="'/tag/' + tag.slug + '/'" class="tag">
-                  <span x-text="tag.name"></span>
-                  <span x-text="`(${tag.count})`"></span>
-                </a>
-              </li>
-            </template>
-          </ul>
-          <template x-if="$store.tags.hasMore()">
-            <button @click="$store.tags.toggle()" class="show-more-button">
-              <span x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"></span>
-            </button>
-          </template>
-        </nav>
-      </div>
+  </div>
+
+  <!-- File Explorer -->
+  <div
+    class="explorer-container"
+    x-data="fileTreeComponent()"
+    x-show="$store.fileTree.data"
+    :class="{ 'expanded': $store.fileTree.expanded }"
+  >
+    <div>
+      <input type="text" class="search-bar" placeholder="Search" />
+      <nav class="explorer">
+        <template x-if="$store.fileTree.data">
+          <div x-html="renderTree($store.fileTree.data)"></div>
+        </template>
+      </nav>
     </div>
+  </div>
+
+  <!-- Tags -->
+  <div x-data x-show="$store.tags.data.length > 0">
+    <h5>All Tags</h5>
+    <nav class="tags-nav">
+      <ul>
+        <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
+          <li>
+            <a :href="'/tag/' + tag.slug + '/'" class="tag">
+              <span x-text="tag.name"></span>
+              <span x-text="`(${tag.count})`"></span>
+            </a>
+          </li>
+        </template>
+      </ul>
+      <template x-if="$store.tags.hasMore()">
+        <button @click="$store.tags.toggle()" class="show-more-button">
+          <span x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"></span>
+        </button>
+      </template>
+    </nav>
+  </div>
 </aside>
 {{end}}

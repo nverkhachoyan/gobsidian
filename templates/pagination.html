@@ -1,19 +1,19 @@
 {{define "pagination"}} {{if gt .TotalPages 1}}
 <nav class="pagination-nav">
-    {{if .HasPrev}}
-    <a href="{{.PrevPageURL}}" class="pagination-link prev">« Newer Posts</a>
-    {{else}}
-    <span class="pagination-link disabled">« Newer Posts</span>
-    {{end}}
+  {{if .HasPrev}}
+  <a href="{{.PrevPageURL}}" class="pagination-link prev">« Newer Posts</a>
+  {{else}}
+  <span class="pagination-link disabled">« Newer Posts</span>
+  {{end}}
 
-    <span class="pagination-status"
-        >Page {{.CurrentPage}} of {{.TotalPages}}</span
-    >
+  <span class="pagination-status"
+    >Page {{.CurrentPage}} of {{.TotalPages}}</span
+  >
 
-    {{if .HasNext}}
-    <a href="{{.NextPageURL}}" class="pagination-link next">Older Posts »</a>
-    {{else}}
-    <span class="pagination-link disabled">Older Posts »</span>
-    {{end}}
+  {{if .HasNext}}
+  <a href="{{.NextPageURL}}" class="pagination-link next">Older Posts »</a>
+  {{else}}
+  <span class="pagination-link disabled">Older Posts »</span>
+  {{end}}
 </nav>
 {{end}} {{end}}

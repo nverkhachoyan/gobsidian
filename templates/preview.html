@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>{{.Note.Title}}</title>
@@ -7,33 +7,47 @@
     {{template "styles" .}}
   </head>
   <body>
-<div class="preview-card" x-data="{ pinned: false }" :data-pinned="pinned">
-  
-  <!-- <div class="drag-handle" title="Drag to move" style="cursor: move; padding: 0 8px; touch-action: none; display: inline-block;">
-</div>
-   -->
-  <div class="preview-controls drag-handle">
+    <div class="preview-card" x-data="{ pinned: false }" :data-pinned="pinned">
+      <div class="preview-controls drag-handle">
+        <i class="fa-solid fa-grip-lines"></i>
+        <button
+          class="preview-control-btn pin-preview-btn"
+          :title="pinned ? 'Unpin preview' : 'Pin preview'"
+          @click="pinned = !pinned"
+          :class="{ 'active': pinned }"
+        >
+          <i class="fa-solid" :class="pinned ? 'fa-lock' : 'fa-thumbtack'"></i>
+        </button>
+        <button
+          class="preview-control-btn close-preview-btn"
+          title="Close preview"
+        >
+          <i class="fa-solid fa-times"></i>
+        </button>
+        <a
+          href="{{.Note.URL}}"
+          class="preview-control-btn maximize-btn"
+          title="Go to post"
+          ><i class="fa-solid fa-arrow-up-right-from-square"></i
+        ></a>
+      </div>
 
-      <i class="fa-solid fa-grip-lines"></i>
-    <button class="preview-control-btn pin-preview-btn" :title="pinned ? 'Unpin preview' : 'Pin preview'" @click="pinned = !pinned" :class="{ 'active': pinned }">
-      <i class="fa-solid" :class="pinned ? 'fa-lock' : 'fa-thumbtack'"></i>
-    </button>
-    <button class="preview-control-btn close-preview-btn" title="Close preview">
-      <i class="fa-solid fa-times"></i>
-    </button>
-    <a
-      href="{{.Note.URL}}"
-      class="preview-control-btn maximize-btn"
-      title="Go to post"
-      ><i class="fa-solid fa-arrow-up-right-from-square"></i
-    ></a>
-  </div>
+      <a class="preview-card-title" href="{{.Note.URL}}">{{.Note.Title}}</a>
 
-  <a class="preview-card-title" href="{{.Note.URL}}">{{.Note.Title}}</a>
-
-  {{ .Note.HTMLContent }}
-  <div class="resize-handle" style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize; z-index: 10;"></div>
-</div>
-{{template "scripts" .}}
-</body>
+      {{ .Note.HTMLContent }}
+      <div
+        class="resize-handle"
+        style="
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 12px;
+          height: 12px;
+          cursor: nwse-resize;
+          z-index: 10;
+        "
+      ></div>
+    </div>
+    {{template "scripts" .}}
+  </body>
 </html>

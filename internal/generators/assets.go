@@ -54,7 +54,7 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 		}()
 	}
 
-	for _, dir := range []string{assetsDir, cssDir, jsDir} {
+	for _, dir := range []string{assetsDir, cssDir, srcDir} {
 		wg.Add(1)
 		go func(dir string) {
 			defer wg.Done()
