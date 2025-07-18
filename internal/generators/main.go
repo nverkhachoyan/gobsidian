@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -43,13 +44,16 @@ type StaticSiteGenerator struct {
 }
 
 const (
-	assetsDir        = "assets"
-	cssDir           = "css"
-	srcDir           = "src"
-	imagesDir        = "images"
-	fileTreeFilename = "file-tree.json"
-	chromaCSSPath    = "assets/chroma.css"
-	diagnosticsFile  = "vault-diagnostics.json"
+	assetsDir           = "assets"
+	generatedDir        = "generated"
+	srcDir              = "src"
+	imagesDir           = "images"
+	fileTreeFilename    = "explorer.json"
+	graphFilename       = "graph.json"
+	searchIndexFilename = "search-index.json"
+	tagsFilename        = "tags.json"
+	chromaCSSPath       = "chroma.css"
+	diagnosticsFile     = "vault-diagnostics.json"
 )
 
 func NewStaticSiteGenerator(
@@ -78,65 +82,44 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 	start := time.Now()
 
 	printer := terminal.NewPrettyPrinter()
-	reporter := terminal.NewProgressReporter(printer)
+
 	fileTreeBuilder := builders.NewFileTreeBuilder(g.Logger)
 	notesRepository := repository.NewNoteRepository()
-	graphBuilder := builders.NewGraphBuilder(g.Logger)
+	graphBuilder := builders.NewGraphBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, graphFilename, notesRepository)
+	tagsBuilder := builders.NewTagsBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, tagsFilename)
+	searchIndexBuilder := builders.NewSearchIndexBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, searchIndexFilename)
 	transformCtx := transformers.NewTransformContext(g.SiteConfig.BaseURL, g.SiteConfig.OutputDirectory, notesRepository)
 
 	pipeline := g.newTransformationPipeline()
 
-	// Start of the pipeline
-
+	// Parse notes and get all notes by path
 	parseTime := g.Parser.ParseNotes(scannedNotes, notesRepository)
 	notesByPath := notesRepository.GetAllByPath()
 	notesSlice := notesRepository.GetAllNotesSlice()
-	reporter.ReportStep(
-		terminal.Step{Name: "Parsing notes", Icon: "📝"},
-		terminal.StepResult{
-			Duration: parseTime,
-			Count:    len(notesSlice),
-			Error:    nil,
-		})
+	fmt.Println(printer.Print("Parsed notes", "count", len(scannedNotes), "duration", parseTime))
 
+	// Run transformations
 	transformTime := g.runTransformations(pipeline, transformCtx, notesSlice)
-	reporter.ReportStep(
-		terminal.Step{Name: "Transformed content", Icon: "✨"},
-		terminal.StepResult{
-			Duration: transformTime,
-			Count:    len(notesSlice),
-			Error:    nil,
-		})
+	fmt.Println(printer.Print("Transformed content", "count", len(notesSlice), "duration", transformTime))
 
-	graphTime, graphJSON := graphBuilder.Build(notesByPath, notesRepository)
-	reporter.ReportStep(
-		terminal.Step{Name: "Built graph", Icon: "🔗"},
-		terminal.StepResult{
-			Duration: graphTime,
-			Count:    len(notesByPath),
-			Error:    nil,
-		})
+	// Build graph
+	graphTime := graphBuilder.Build(notesByPath)
+	fmt.Println(printer.Print("Built graph", "count", len(notesByPath), "duration", graphTime))
+	if err := graphBuilder.ExportAndSaveAsJSON(); err != nil {
+		fmt.Println(printer.Error("Failed to export and save graph", "error", err))
+		return err
+	}
+	fmt.Println(printer.Success("Exported graph"))
 
+	// Build folder tree
 	treeBuild, err := fileTreeBuilder.Build(notesByPath)
 	if err != nil {
-		reporter.ReportStep(
-			terminal.Step{Name: "Failed to build folder tree", Icon: "📁"},
-			terminal.StepResult{
-				Duration: treeBuild.Duration,
-				Count:    treeBuild.NumberOfFolders,
-				Error:    err,
-			})
+		fmt.Println(printer.Error("Failed to build folder tree", "error", err))
 		return fmt.Errorf("failed to build folder tree: %w", err)
 	}
-	reporter.ReportStep(
-		terminal.Step{Name: "Built folder tree", Icon: "📁"},
-		terminal.StepResult{
-			Duration: treeBuild.Duration,
-			Count:    treeBuild.NumberOfFolders,
-			Error:    nil,
-		})
+	fmt.Println(printer.Print("Built folder tree", "count", treeBuild.NumberOfFolders, "duration", treeBuild.Duration))
 
-	templateStart := time.Now()
+	// Sort notes
 	sortedNotes := g.sortNotes(notesSlice)
 	templateExecutor := executors.NewTemplateExecutor(
 		&g.SiteConfig,
@@ -144,51 +127,50 @@ func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error
 		g.Templates,
 	)
 
+	// Generate breadcrumbs
 	g.generateBreadcrumbs(sortedNotes)
 
-	templateExecTime, numberOfTags, err := templateExecutor.Execute(sortedNotes, treeBuild.Root, graphJSON, treeBuild.JSON)
+	// Execute templates
+	templateExecTime, numberOfTags, err := templateExecutor.Execute(sortedNotes, treeBuild.Root)
 	if err != nil {
-		reporter.ReportStep(
-			terminal.Step{Name: "Failed to execute templates", Icon: "🎨"},
-			terminal.StepResult{
-				Duration: time.Since(templateStart),
-				Count:    0,
-				Error:    err,
-			})
+		fmt.Println(printer.Error("Failed to execute templates", "error", err))
 		return err
 	}
-	reporter.ReportStep(
-		terminal.Step{Name: "Executed templates", Icon: "🎨"},
-		terminal.StepResult{
-			Duration: templateExecTime,
-			Count:    len(sortedNotes),
-			Error:    nil,
-		})
+	fmt.Println(printer.Print("Executed templates", "count", len(sortedNotes), "duration", templateExecTime))
 
+	// Build tags
+	tagsTime := tagsBuilder.Build(sortedNotes)
+	fmt.Println(printer.Print("Built tags", "count", "duration", tagsTime))
+	if err := tagsBuilder.ExportAndSaveAsJSON(); err != nil {
+		fmt.Println(printer.Error("Failed to export and save tags", "error", err))
+		return err
+	}
+	fmt.Println(printer.Success("Exported tags"))
+
+	// Build search index
+	searchIndexTime := searchIndexBuilder.Build(sortedNotes)
+	fmt.Println(printer.Print("Built search index", "count", len(sortedNotes), "duration", searchIndexTime))
+	if err := searchIndexBuilder.ExportAndSaveAsJSON(); err != nil {
+		fmt.Println(printer.Error("Failed to export and save search index", "error", err))
+		return err
+	}
+	fmt.Println(printer.Success("Exported search index"))
+
+	// Copy assets
 	assetCopyTime := g.copyAssets(notesByPath, treeBuild.JSON)
 	err = g.generateSyntaxHighlighterCSS()
 	if err != nil {
-		reporter.ReportStep(
-			terminal.Step{Name: "Failed to generate syntax highlighter CSS", Icon: "🎨"},
-			terminal.StepResult{
-				Duration: time.Since(templateStart),
-				Count:    0,
-				Error:    err,
-			})
+		fmt.Println(printer.Error("Failed to generate syntax highlighter CSS", "error", err))
 		return err
 	}
-	reporter.ReportStep(
-		terminal.Step{Name: "Copied assets", Icon: "📦"},
-		terminal.StepResult{
-			Duration: assetCopyTime,
-			Count:    len(notesByPath),
-			Error:    nil,
-		})
+	fmt.Println(printer.Print("Copied assets", "count", len(notesByPath), "duration", assetCopyTime))
 
+	// Print diagnostics summary
 	if g.shouldPrintVaultHealth {
 		g.printDiagnosticsSummary(notesSlice, printer)
 	}
 
+	// Log summary
 	g.Logger.Debug("Site generation complete!",
 		"duration", time.Since(start),
 		"notes", len(notesByPath),
@@ -313,4 +295,35 @@ func (g *StaticSiteGenerator) generateBreadcrumbs(notes []*models.ParsedNote) {
 
 		note.Breadcrumbs = breadcrumbs
 	}
+}
+
+func (g *StaticSiteGenerator) computeTags(
+	notes []*models.ParsedNote,
+) ([]models.Tag, map[string][]*models.ParsedNote) {
+	tagsMap := make(map[string]*models.Tag)
+	for _, note := range notes {
+		for _, tag := range note.Tags {
+			tagsMap[tag.Slug] = &tag
+			tagsMap[tag.Slug].Count++
+		}
+	}
+
+	tags := make([]models.Tag, 0, len(tagsMap))
+	for _, tag := range tagsMap {
+		tags = append(tags, *tag)
+	}
+
+	sort.Slice(tags, func(i, j int) bool {
+		return tags[i].Name < tags[j].Name
+	})
+
+	postsByTag := make(map[string][]*models.ParsedNote, len(tags))
+
+	for _, note := range notes {
+		for _, tag := range note.Tags {
+			postsByTag[tag.Slug] = append(postsByTag[tag.Slug], note)
+		}
+	}
+
+	return tags, postsByTag
 }

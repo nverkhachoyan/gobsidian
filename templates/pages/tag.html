@@ -7,7 +7,34 @@
     {{template "styles" .}}
   </head>
   <body>
-    <div class="gobsidian-container">
+    <div
+      class="gobsidian-container"
+      x-data="{}"
+      @keydown.escape.window="$store.sidebar.closeMobile()"
+    >
+      <div class="mobile-header">
+        <button
+          @click="$store.sidebar.toggleMobile()"
+          class="mobile-menu-button"
+          aria-label="Open menu"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a class="site-title" href="/"> {{.SiteTitle}} </a>
+        <button
+          @click="$store.theme.toggle()"
+          class="theme-switcher"
+          title="Toggle theme"
+        >
+          <span x-show="$store.theme.current === 'light'"
+            ><i class="fa-solid fa-sun"></i
+          ></span>
+          <span x-show="$store.theme.current === 'dark'"
+            ><i class="fa-solid fa-moon"></i
+          ></span>
+        </button>
+      </div>
+
       <div class="gobsidian-wrapper">
         {{template "left_sidebar" .}}
 

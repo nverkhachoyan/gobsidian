@@ -24,34 +24,23 @@ _This will also be italic_
 
 _You **can** combine them_
 
-[[Welcome to my blog aaa]]
-
 ## Lists
 
 ### Unordered
 
 - Item 1
-
 - Item 2
-
 - Item 2a
-
 - Item 2b
-
 - Item 3a
-
 - Item 3b
 
 ### Ordered
 
 1. Item 1
-
 2. Item 2
-
 3. Item 3
-
 4. Item 3a
-
 5. Item 3b
 
 ## Images
@@ -60,7 +49,7 @@ _You **can** combine them_
 
 ## Links
 
-You may be using [Markdown Live Preview](https://markdownlivepreview.com/).
+[[Exploring Go]]
 
 ## Blockquotes
 
@@ -73,13 +62,9 @@ You may be using [Markdown Live Preview](https://markdownlivepreview.com/).
 ## Tables
 
 | Left columns | Right columns |
-
-| ------------- |:-------------:|
-
+| ------------- |-------------|
 | left foo | right foo |
-
 | left bar | right bar |
-
 | left baz | right baz |
 
 ## Blocks of code

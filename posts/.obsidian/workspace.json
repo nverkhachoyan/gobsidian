@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "1a946567c0b37fac",
+        "id": "52b7316739ff08fd",
         "type": "tabs",
         "children": [
           {
-            "id": "0d78f0a0f14e63f7",
+            "id": "c2e836c427149241",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Brand new article.md",
+                "file": "index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Brand new article"
+              "title": "Backlinks for index"
             }
           },
           {
@@ -155,8 +155,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -168,16 +167,20 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "0d78f0a0f14e63f7",
+  "active": "c2e836c427149241",
   "lastOpenFiles": [
+    "Markdown Syntax Guide.md",
     "Map of Content.md",
+    "Habit of Lifelong Learning.md",
+    "Personal/Reading Habits.md",
+    "Personal/Tomfoolery And Stuff/What are threads anyway?.md",
     "Showcase.md",
-    "cigar-denver.png",
-    "cigar-denver.png",
     "index.md",
-    "cigar-denver.jpg",
     "wikilinks.md",
     "Programming/Exploring Go.md",
+    "cigar-denver.png",
+    "cigar-denver.png",
+    "cigar-denver.jpg",
     "What are threads anyway?.md",
     "Welcome to My Digital Garden.md",
     "Reading Habits.md",
@@ -185,16 +188,12 @@
     "Exploring Go.md",
     "Bugs.md",
     "Brother.md",
-    "Markdown Syntax Guide.md",
     "Sushy is gay.md",
     "ayyyyo.md",
     "lock.toml",
-    "Personal/Reading Habits.md",
     "ayyyoo.md",
     "gyyyy.md",
     "bruhhh.md",
-    "Personal/Tomfoolery And Stuff/What are threads anyway?.md",
-    "Habit of Lifelong Learning.md",
     "Personal/Tomfoolery And Stuff",
     "Let's see what markdown can do aa.md",
     "MOC a.md",

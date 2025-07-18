@@ -2,6 +2,9 @@ package builders
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"gobsidian/internal/models"
@@ -13,7 +16,12 @@ import (
 )
 
 type GraphBuilder struct {
-	Logger *log.Logger
+	Logger             *log.Logger
+	outputDirectory    string
+	generatedDirectory string
+	fileName           string
+	graph              *Graph
+	notesRepository    *repository.NoteRepository
 }
 
 type Node struct {
@@ -32,15 +40,20 @@ type Graph struct {
 	Edges []*Edge `json:"edges"`
 }
 
-func NewGraphBuilder(logger *log.Logger) *GraphBuilder {
+func NewGraphBuilder(logger *log.Logger, outputDirectory string, generatedDirectory string, fileName string, notesRepository *repository.NoteRepository) *GraphBuilder {
 	return &GraphBuilder{
-		Logger: logger,
+		Logger:             logger,
+		outputDirectory:    outputDirectory,
+		generatedDirectory: generatedDirectory,
+		fileName:           fileName,
+		graph:              &Graph{},
+		notesRepository:    notesRepository,
 	}
 }
 
-func (g *GraphBuilder) Build(notes map[string]*models.ParsedNote, notesRepository *repository.NoteRepository) (time.Duration, []byte) {
+func (g *GraphBuilder) Build(notes map[string]*models.ParsedNote) time.Duration {
 	start := time.Now()
-	notesByPath := notesRepository.GetAllByPath()
+	notesByPath := g.notesRepository.GetAllByPath()
 
 	nodes := make([]*Node, 0)
 	edges := make([]*Edge, 0)
@@ -61,18 +74,12 @@ func (g *GraphBuilder) Build(notes map[string]*models.ParsedNote, notesRepositor
 
 	}
 
-	json, err := json.Marshal(Graph{
-		Nodes: nodes,
-		Edges: edges,
-	})
+	g.graph.Nodes = nodes
+	g.graph.Edges = edges
 
 	endTime := time.Since(start)
-	if err != nil {
-		g.Logger.Print("Failed to generate JSON", "error", err)
-		return endTime, nil
-	}
 
-	return endTime, json
+	return endTime
 }
 
 func (g *GraphBuilder) handleLinksInsideFolders(relativePathText string, notesByPath map[string]*models.ParsedNote) int64 {
@@ -92,4 +99,21 @@ func (g *GraphBuilder) handleLinksInsideFolders(relativePathText string, notesBy
 		}
 	}
 	return 0
+}
+
+func (g *GraphBuilder) ExportAndSaveAsJSON() error {
+	json, err := json.Marshal(g.graph)
+
+	destPath := filepath.Join(g.outputDirectory, g.generatedDirectory, g.fileName)
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	if err := os.WriteFile(destPath, json, 0644); err != nil {
+		return fmt.Errorf("%s: %w", g.fileName, err)
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
