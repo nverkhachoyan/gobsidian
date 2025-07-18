@@ -1,11 +1,8 @@
-[X] Fix the issue where a link to a post inside nested folders doesn't resolve to the post if the link only contains the name like so
+## LaTex
 
-[[Personal/Tomfoolery And Stuff/What are threads anyway?]]
-
-
-$$ \frac{a}{b} $$
 
 $$\int_0^1 x^2 dx$$ 
+## Mermaid Diagrams
 
 ```mermaid
 sequenceDiagram
@@ -21,36 +18,21 @@ Bob-->>John: Jolly good!
 ```
 
 
-```html
-{{if .Tags}}
+## Code blocks
 
-<div class="left-sidebar-item">
+```go
+package main
 
-<h5 class="left-sidebar-item-title">Tags</h5>
+import "fmt"
 
-<div class="left-sidebar-item-content">
-
-<nav class="tags-nav">
-
-<ul>
-
-{{range .Tags}}
-
-<li><a href="/tag/{{.Slug}}/">#{{.Name}}</a></li>
-
-{{end}}
-
-</ul>
-
-</nav>
-
-</div>
-
-</div>
-
-{{end}}
+func main() {
+    fmt.Println("Hello, Go!")
+    var henlo string
+}
 ```
 
+
+## Callouts
 
 >[!info]
 >This info callout is great. It is informative as heck!
@@ -67,3 +49,21 @@ Bob-->>John: Jolly good!
 >
 >**Lorem Ipsum** is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.
 
+
+# Other markdown niceties 
+
+## Blockquotes
+
+> Markdown is a lightweight markup language with plain-text-formatting syntax, created in 2004 by John Gruber with Aaron Swartz.
+> 
+> > Markdown is often used to format readme files, for writing messages in online discussion forums, and to create rich text using a plain text editor.
+
+## Tables
+
+| Left columns | Right columns |
+| ------------ | ------------- |
+| left foo     | right foo     |
+| left bar     | right bar     |
+| left baz     | right baz     |
+
+And more...

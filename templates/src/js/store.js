@@ -2,12 +2,13 @@
 import ObsiGraph from "./libs/obsigraph.min.js";
 import { loadJsonData, graphConfig } from "./utils.js";
 import explorerComponent from "./explorer.js";
+import { Document, Charset } from "./libs/flexsearch.js";
 
 const graphCanvas = document.getElementById("graph-network-canvas");
 const modalGraphCanvas = document.getElementById("graph-network-modal-canvas");
 
 export function initializeStores(Alpine) {
-  Alpine.data('explorerComponent', explorerComponent);
+  Alpine.data("explorerComponent", explorerComponent);
   Alpine.store("theme", {
     themeInitialized: false,
     current:
@@ -58,7 +59,7 @@ export function initializeStores(Alpine) {
     expanded: localStorage.getItem("fileTreeExpanded") === "true",
 
     async init() {
-      this.data = await loadJsonData("/assets/explorer.json");
+      this.data = await loadJsonData("/generated/explorer.json");
     },
 
     toggle() {
@@ -77,7 +78,7 @@ export function initializeStores(Alpine) {
     showAll: localStorage.getItem("tagsShowAll") === "true",
 
     async init() {
-      this.data = await loadJsonData("/assets/tags.json");
+      this.data = await loadJsonData("/generated/tags.json");
     },
 
     toggle() {
@@ -102,7 +103,7 @@ export function initializeStores(Alpine) {
     graphModalObject: null,
 
     async init() {
-      this.data = await loadJsonData("../../assets/graph.json");
+      this.data = await loadJsonData("/generated/graph.json");
       this.initSmallGraph();
     },
 
@@ -136,15 +137,11 @@ export function initializeStores(Alpine) {
       if (!this.modalHasBeenInitialized) {
         const nodes = this.data.nodes.map((node) => ({ ...node }));
         const edges = this.data.edges.map((edge) => ({ ...edge }));
-        this.graphModalObject = new ObsiGraph(
-          modalGraphCanvas,
-          nodes,
-          edges,
-          {...graphConfig}
-        );
+        this.graphModalObject = new ObsiGraph(modalGraphCanvas, nodes, edges, {
+          ...graphConfig,
+        });
         this.graphModalObject.setTheme(Alpine.store("theme").current);
         this.modalHasBeenInitialized = true;
- 
 
         window.addEventListener("theme-changed", (e) => {
           this.graphModalObject.setTheme(e.detail.theme);
@@ -171,6 +168,86 @@ export function initializeStores(Alpine) {
     },
   });
 
+  Alpine.store("search", {
+    index: null,
+    results: [],
+    isOpen: false,
+    query: "",
+    loading: false,
+    data: [],
+
+    async init() {
+      const data = await loadJsonData("/generated/search-index.json");
+      this.data = data.notes;
+
+      this.index = new Document({
+        charset: Charset.LatinAdvanced,
+        tokenize: "forward",
+        resolution: 9,
+        document: {
+          id: "id",
+          store: ["title", "body", "img", "url"],
+          index: ["title", "body"],
+        },
+      });
+
+      for (const record of this.data) {
+        this.index.add(record);
+      }
+    },
+
+    async search(query) {
+      this.query = query;
+      if (!query) {
+        this.results = [];
+        this.isOpen = false;
+        return;
+      }
+
+      this.loading = true;
+      this.isOpen = true;
+      this.results = [];
+
+      const searchResults = await this.index.searchAsync(query, {
+        limit: 10,
+        enrich: true,
+      });
+
+      // Flatten results from different fields
+      const flatResults = {};
+      searchResults.forEach((fieldResult) => {
+        fieldResult.result.forEach((doc) => {
+          if (!flatResults[doc.id]) {
+            flatResults[doc.id] = { id: doc.id, ...doc.doc };
+          }
+        });
+      });
+
+      this.results = Object.values(flatResults);
+      this.loading = false;
+    },
+
+    highlight(text) {
+      if (!this.query || !text) {
+        return text;
+      }
+      const query = this.query.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const regex = new RegExp(`(${query})`, "gi");
+      return text.replace(regex, "<strong>$1</strong>");
+    },
+
+    open() {
+      this.isOpen = true;
+    },
+
+    close() {
+      this.isOpen = false;
+      this.query = "";
+      this.results = [];
+      this.loading = false;
+    },
+  });
+
   Alpine.store("collapsible", {
     states: {},
     init(id, initialState = false) {
@@ -183,7 +260,10 @@ export function initializeStores(Alpine) {
     toggle(id) {
       if (this.states[id] !== undefined) {
         this.states[id] = !this.states[id];
-        localStorage.setItem(`collapsible_${id}`, JSON.stringify(this.states[id]));
+        localStorage.setItem(
+          `collapsible_${id}`,
+          JSON.stringify(this.states[id])
+        );
         this.states = { ...this.states };
       }
     },

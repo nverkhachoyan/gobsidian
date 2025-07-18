@@ -59,8 +59,6 @@ func NewTemplateExecutor(
 func (te *TemplateExecutor) Execute(
 	notes []*models.ParsedNote,
 	fileTree *models.Folder,
-	graph []byte,
-	fileTreeJSON []byte,
 ) (time.Duration, int, error) {
 	start := time.Now()
 	batchWriter := NewBatchWriter(te.SiteConfig.OutputDirectory, te.Logger, te.Templates)
@@ -70,7 +68,7 @@ func (te *TemplateExecutor) Execute(
 	if err != nil {
 		return time.Since(start), 0, fmt.Errorf("failed to marshal tags to JSON: %w", err)
 	}
-	baseData := te.createBaseTemplateData(fileTree, graph, tags, tagsJSON, fileTreeJSON)
+	baseData := te.createBaseTemplateData(fileTree, tags)
 
 	for _, note := range notes {
 		data := struct {
@@ -365,10 +363,7 @@ func (te *TemplateExecutor) paginateFolderPages(
 
 func (te *TemplateExecutor) createBaseTemplateData(
 	fileTree *models.Folder,
-	graph []byte,
 	tags []models.Tag,
-	tagsJSON []byte,
-	fileTreeJSON []byte,
 ) BaseTemplateData {
 	return BaseTemplateData{
 		SiteTitle:    te.SiteConfig.SiteTitle,
@@ -376,10 +371,7 @@ func (te *TemplateExecutor) createBaseTemplateData(
 		BaseURL:      te.SiteConfig.BaseURL,
 		CurrentYear:  time.Now().Year(),
 		FileTree:     fileTree,
-		Graph:        template.JS(graph),
 		Tags:         tags,
-		AllTags:      template.JS(tagsJSON),
-		FileTreeJSON: template.JS(fileTreeJSON),
 	}
 }
 

@@ -9,21 +9,15 @@ This note serves as a starting point to navigate my digital garden.
 - **Technology & Programming:** Notes on software development, languages, and tools.
 
   - [[Programming/Exploring Go]]
-  - [[Markdown Syntax Guide]]
-  - [[Personal/Tomfoolery And Stuff/What are threads anyway?]]
-  - [[Personal/Tomfoolery And Stuff/What are threads anyway?]]
   - [[What are threads anyway?]]
  
 - **Personal Growth:** Thoughts on learning, habits, and life.
-  - [[Personal/Reading Habits]]
   - [[Reading Habits]]
-  - [[Programming/Exploring Go]]
   - [[Exploring Go]]
-  - [[Exploring Go| BRAHH]]
 
 ## Key Concepts
 
-- [[index]]
+- [[index | Home page]]
 
 This is an ever-evolving map that will grow as I add more to this space.
 

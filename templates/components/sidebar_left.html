@@ -32,8 +32,48 @@
     </button>
   </div>
 
-  <div class="search-bar-container">
-    <div id="search"></div>
+  <div class="search-bar-container" x-data="{}" x-init="$store.search.init()">
+    <input
+      type="text"
+      placeholder="Search..."
+      class="search-input"
+      @input.debounce.300ms="$store.search.search($event.target.value)"
+      @focus="$store.search.open()"
+      @click.away="$store.search.close()"
+    />
+    <div class="search-results-overlay" x-show="$store.search.isOpen">
+      <ul class="search-results-list">
+        <template x-if="$store.search.loading">
+          <li class="search-loading">Loading...</li>
+        </template>
+        <template x-if="!$store.search.loading">
+          <template x-for="result in $store.search.results" :key="result.id">
+            <li class="search-result-item">
+              <a :href="result.url">
+                <div class="search-result-item__content">
+                  <template x-if="result.img">
+                    <img
+                      :src="result.img"
+                      alt=""
+                      class="search-result-item__img"
+                    />
+                  </template>
+                  <div class="search-result-item__text">
+                    <h4 x-html="$store.search.highlight(result.title)"></h4>
+                    <p x-html="$store.search.highlight(result.body)"></p>
+                  </div>
+                </div>
+              </a>
+            </li>
+          </template>
+        </template>
+        <template
+          x-if="!$store.search.loading && $store.search.results.length === 0 && $store.search.query"
+        >
+          <li class="search-no-results">No results found.</li>
+        </template>
+      </ul>
+    </div>
   </div>
 
   <!-- Scrollable content -->

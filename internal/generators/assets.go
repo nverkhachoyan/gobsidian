@@ -43,18 +43,21 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 	}
 
 	if len(fileTreeJSON) > 0 {
+		g.Logger.Debug("Writing explorer.json 📊")
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			destPath := filepath.Join(g.SiteConfig.OutputDirectory, fileTreeFilename)
-			g.Logger.Debug("Writing file-tree.json 🌲")
+			destPath := filepath.Join(g.SiteConfig.OutputDirectory, generatedDir, fileTreeFilename)
+			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+				errorChan <- fmt.Errorf("failed to create directory: %w", err)
+			}
 			if err := os.WriteFile(destPath, fileTreeJSON, 0644); err != nil {
 				errorChan <- fmt.Errorf("%s: %w", fileTreeFilename, err)
 			}
 		}()
 	}
 
-	for _, dir := range []string{assetsDir, cssDir, srcDir} {
+	for _, dir := range []string{assetsDir, generatedDir, srcDir} {
 		wg.Add(1)
 		go func(dir string) {
 			defer wg.Done()
@@ -132,7 +135,7 @@ func (g *StaticSiteGenerator) generateSyntaxHighlighterCSS() error {
 
 	// combine light and dark themes
 	finalCSS := lightBuf.String() + "\n" + scopedDarkCSS
-	outputPath := filepath.Join(g.SiteConfig.OutputDirectory, chromaCSSPath)
+	outputPath := filepath.Join(g.SiteConfig.OutputDirectory, generatedDir, chromaCSSPath)
 
 	if err := os.WriteFile(outputPath, []byte(finalCSS), 0644); err != nil {
 		return fmt.Errorf("failed to write combined CSS file: %w", err)

@@ -14,7 +14,7 @@ Welcome to my little corner of the internet! This space is a digital garden, a p
 >[!info] 
 >Unlike a traditional blog, a digital garden is a more organic and evolving space. Notes are interconnected, updated over time, and reflect a journey of learning rather than a series of finished articles. You'll find a mix of half-formed ideas, polished essays, and everything in between.
 
-Feel free to explore the connections between notes using the [[wikilinks]]. You might discover some interesting paths!
+Feel free to explore the connections between notes using the [[Map of Content|wikilinks]]. You might discover some interesting paths!
 
 I'm excited to share this journey with you.
 

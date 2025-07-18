@@ -4,4 +4,4 @@ author: Nver Khachoyan
 date: 2025-06-30
 ---
 
-They're stuff      a  aahhh 
+They're ughhh, stuff 
