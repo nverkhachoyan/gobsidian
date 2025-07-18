@@ -1,52 +1,32 @@
-let mermaidInitialized = false;
-const originalMermaidContent = new Map();
+import mermaid from './libs/mermaid/mermaid.esm.min.mjs'
 
-function initializeMermaid(theme) {
-  // Convert theme to Mermaid theme
+mermaid.initialize({ 
+  startOnLoad: false
+});
+
+export async function initializeMermaid(theme) {
   const mermaidTheme = theme === "dark" ? "dark" : "neutral";
 
-  mermaid.initialize({
-    startOnLoad: false, // We'll handle this manually
-    theme: mermaidTheme,
+  mermaid.initialize({ 
+    startOnLoad: false,
+    theme: mermaidTheme 
   });
 
-  // Find all Mermaid diagrams
-  const diagrams = document.querySelectorAll(".mermaid");
-
-  diagrams.forEach((diagram, index) => {
-    // Store original content on first initialization
-    if (!mermaidInitialized) {
-      const originalContent = diagram.textContent.trim();
-      originalMermaidContent.set(diagram, originalContent);
+  const diagrams = document.querySelectorAll('.mermaid');
+  for (const diagram of diagrams) {
+    // Storing original content before rendering
+    // Since it breaks if theme is changed after render
+    if (!diagram.dataset.originalContent) {
+      diagram.dataset.originalContent = diagram.textContent.trim();
     }
-
-    // For re-initialization, restore original content
-    if (mermaidInitialized) {
-      const originalContent = originalMermaidContent.get(diagram);
-      if (originalContent) {
-        diagram.innerHTML = originalContent;
-        diagram.removeAttribute("data-processed");
-      }
+    
+    try {
+      const id = 'mermaid-' + Math.random().toString(36).substring(2);
+      const { svg } = await mermaid.render(id, diagram.dataset.originalContent);
+      diagram.innerHTML = svg;
+    } catch (err) {
+      console.error('Failed to render mermaid diagram:', err);
+      diagram.innerHTML = `<pre>Failed to render diagram: ${err.message}</pre>`;
     }
-  });
-
-  // Render all diagrams
-  if (diagrams.length > 0) {
-    mermaid.run({
-      nodes: diagrams,
-    });
   }
-
-  mermaidInitialized = true;
 }
-
-// Initialize Mermaid when Alpine is ready
-document.addEventListener("alpine:init", () => {
-  const currentTheme = Alpine.store("theme").current;
-  initializeMermaid(currentTheme);
-});
-
-// Listen for theme changes and re-initialize Mermaid
-window.addEventListener("theme-changed", (event) => {
-  initializeMermaid(event.detail.theme);
-});

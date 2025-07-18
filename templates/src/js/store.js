@@ -1,69 +1,15 @@
 // Global Alpine.js Stores
+import ObsiGraph from "./libs/obsigraph.min.js";
+import { loadJsonData, graphConfig } from "./utils.js";
+import explorerComponent from "./explorer.js";
+
 const graphCanvas = document.getElementById("graph-network-canvas");
 const modalGraphCanvas = document.getElementById("graph-network-modal-canvas");
-window.ObsiGraph = window.ObsiGraph.default || ObsiGraph.default;
 
-const graphConfig = {
-  initialZoomFactor: 0.7,
-  zoomToFit: false,
-  nodesHaveLinks: true,
-  colors: {
-    light: {
-      node: 'rgb(73 77 83)',
-      nodeHighlight: '#9165ea',
-      nodeDimmed: 'rgb(229 229 229)',
-      nodeStroke: '#b2b2b2',
-      nodeDimmedStroke: 'rgb(229 229 229)',
-      nodeHighlightStroke: '#9165ea',
-      nodeFont: '#3f3f3f',
-      edge: 'rgba(98, 98, 98, 1)',
-      edgeHighlight: '#9165ea',
-      background: '#ffffff',
-    },
-    dark: {
-      node: '#b2b2b2',
-      nodeHighlight: '#9165ea',
-      nodeDimmed: 'rgb(38, 40, 41)',
-      nodeStroke: '#b2b2b2',
-      nodeDimmedStroke: 'rgb(38, 40, 41)',
-      nodeHighlightStroke: '#9165ea',
-      nodeFont: '#e8f4f8',
-      edge: 'rgb(224, 224, 224)',
-      edgeHighlight: 'rgb(145, 101, 234)',
-      background: '#0d1117',
-    },
-  },
-  sizing: {
-    minNodeSize: 5,
-    maxNodeSize: 50,
-  },
-  simulation: {
-    linkDistance: 150,
-    linkStrength: 0.8,
-    chargeStrength: -300,
-    collisionStrength: 0.2,
-    alpha: 0.9,
-    finalAlpha: 0.005,
-    simulationDelay: 10000,
-  },
-  interaction: {
-    zoomMin: 0.01,
-    zoomMax: 5,
-    labelShowThreshold: 0.8,
-  },
-  culling: {
-    enabled: true,
-    margin: 100,
-    autoEnable: true,
-    nodeThreshold: 50,
-    edgeThreshold: 50,
-  },
-  font: 'sans-serif',
-  disableTransitions: true,
-}
-
-document.addEventListener("alpine:init", () => {
+export function initializeStores(Alpine) {
+  Alpine.data('explorerComponent', explorerComponent);
   Alpine.store("theme", {
+    themeInitialized: false,
     current:
       localStorage.getItem("theme") ||
       (window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -71,7 +17,13 @@ document.addEventListener("alpine:init", () => {
         : "light"),
 
     init() {
-      this.setTheme(this.current);
+      this.setTheme(this.current, false);
+      this.themeInitialized = true;
+      window.dispatchEvent(
+        new CustomEvent("theme-initialized", {
+          detail: { theme: this.current },
+        })
+      );
     },
 
     toggle() {
@@ -79,15 +31,17 @@ document.addEventListener("alpine:init", () => {
       this.setTheme(newTheme);
     },
 
-    setTheme(newTheme) {
+    setTheme(newTheme, updateDOM = true) {
       this.current = newTheme;
       localStorage.setItem("theme", newTheme);
 
       // Update DOM
-      if (newTheme === "dark") {
-        document.documentElement.classList.add("dark-mode");
-      } else {
-        document.documentElement.classList.remove("dark-mode");
+      if (updateDOM) {
+        if (newTheme === "dark") {
+          document.documentElement.classList.add("dark-mode");
+        } else {
+          document.documentElement.classList.remove("dark-mode");
+        }
       }
 
       // Trigger custom event for other components
@@ -96,18 +50,16 @@ document.addEventListener("alpine:init", () => {
           detail: { theme: newTheme },
         })
       );
-
-      window.dispatchEvent(
-        new CustomEvent("theme-initialized", {
-          detail: { theme: newTheme },
-        })
-      );
     },
   });
 
   Alpine.store("fileTree", {
-    data: window.fileTreeData || null,
+    data: null,
     expanded: localStorage.getItem("fileTreeExpanded") === "true",
+
+    async init() {
+      this.data = await loadJsonData("/assets/explorer.json");
+    },
 
     toggle() {
       this.expanded = !this.expanded;
@@ -121,8 +73,12 @@ document.addEventListener("alpine:init", () => {
   });
 
   Alpine.store("tags", {
-    data: window.tagsData || [],
+    data: [],
     showAll: localStorage.getItem("tagsShowAll") === "true",
+
+    async init() {
+      this.data = await loadJsonData("/assets/tags.json");
+    },
 
     toggle() {
       this.showAll = !this.showAll;
@@ -139,29 +95,40 @@ document.addEventListener("alpine:init", () => {
   });
 
   Alpine.store("graph", {
-    data: window.graphData || null,
+    data: null,
     modalOpen: false,
     modalHasBeenInitialized: false,
     graphObject: null,
     graphModalObject: null,
 
- 
-    initSmallGraph() {
-      if (this.graphObject) return;
-        const nodes = this.data.nodes.map((node) => ({ ...node }));
-        const edges = this.data.edges.map((edge) => ({ ...edge }));
-        
-        this.graphObject = new ObsiGraph(
-          graphCanvas,
-          nodes,
-          edges,
-          {...graphConfig}
-        );
-        this.graphObject.setTheme(Alpine.store("theme").current);
+    async init() {
+      this.data = await loadJsonData("../../assets/graph.json");
+      this.initSmallGraph();
+    },
 
-        window.addEventListener("theme-changed", (e) => {
-          this.graphObject.setTheme(e.detail.theme);
-        });
+    initSmallGraph() {
+      if (this.graphObject || !this.data) return;
+      if (!Alpine.store("theme").themeInitialized) {
+        // Defer initialization until theme is ready
+        window.addEventListener(
+          "theme-initialized",
+          () => this.initSmallGraph(),
+          { once: true }
+        );
+        return;
+      }
+
+      const nodes = this.data.nodes.map((node) => ({ ...node }));
+      const edges = this.data.edges.map((edge) => ({ ...edge }));
+
+      this.graphObject = new ObsiGraph(graphCanvas, nodes, edges, {
+        ...graphConfig,
+      });
+      this.graphObject.setTheme(Alpine.store("theme").current);
+
+      window.addEventListener("theme-changed", (e) => {
+        this.graphObject.setTheme(e.detail.theme);
+      });
     },
 
     openModal() {
@@ -195,17 +162,12 @@ document.addEventListener("alpine:init", () => {
   });
 
   Alpine.store("sidebar", {
-    leftCollapsed: localStorage.getItem("leftSidebarCollapsed") === "true",
-    rightCollapsed: localStorage.getItem("rightSidebarCollapsed") === "true",
-
-    toggleLeft() {
-      this.leftCollapsed = !this.leftCollapsed;
-      localStorage.setItem("leftSidebarCollapsed", this.leftCollapsed);
+    mobileOpen: false,
+    toggleMobile() {
+      this.mobileOpen = !this.mobileOpen;
     },
-
-    toggleRight() {
-      this.rightCollapsed = !this.rightCollapsed;
-      localStorage.setItem("rightSidebarCollapsed", this.rightCollapsed);
+    closeMobile() {
+      this.mobileOpen = false;
     },
   });
 
@@ -222,17 +184,11 @@ document.addEventListener("alpine:init", () => {
       if (this.states[id] !== undefined) {
         this.states[id] = !this.states[id];
         localStorage.setItem(`collapsible_${id}`, JSON.stringify(this.states[id]));
+        this.states = { ...this.states };
       }
     },
     isExpanded(id) {
       return this.states[id] === true;
     },
   });
-
-  window.addEventListener("theme-initialized", (e) => {
-    const isInitialized = e.detail;
-    if (isInitialized.theme) {
-      Alpine.store("graph").initSmallGraph();
-    }
-  });
-});
+}

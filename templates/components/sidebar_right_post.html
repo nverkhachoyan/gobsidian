@@ -3,7 +3,7 @@
   <!-- Graph View -->
   <div
     x-data="{}"
-    x-init="$store.collapsible.init('graph', true)"
+    x-init="$store.collapsible.init('graph', true); $store.graph.init()"
     x-show="$store.graph.data"
     class="collapsible-container"
   >

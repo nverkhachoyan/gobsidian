@@ -1,6 +1,34 @@
 let previewStack = [];
 let showTimeout;
 let hideTimeout;
+let hideTimeoutTime = 200;
+
+export const initPreviews = (scope, parentCardIndex = -1) => {
+  if (window.screen.width < 768) {
+    return;
+  }
+
+  const internalLinks = scope.querySelectorAll('a[href^="/"]');
+  internalLinks.forEach((link) => {
+    if (link.dataset.previewInitialized) {
+      return;
+    }
+    if (
+      !link.href.endsWith(".html") ||
+      link.closest(".post-meta") ||
+      link.closest("h1")
+    ) {
+      return;
+    }
+    link.dataset.previewInitialized = "true";
+
+    link.addEventListener("mouseenter", (e) => showPreview(e, link));
+    const indexToHideFrom = parentCardIndex + 1;
+    link.addEventListener("mouseleave", () =>
+      hideCardsFromIndex(indexToHideFrom, true)
+    );
+  });
+};
 
 const hideCardsFromIndex = (startIndex, useTimeout = true, force = false) => {
   clearTimeout(showTimeout);
@@ -26,7 +54,7 @@ const hideCardsFromIndex = (startIndex, useTimeout = true, force = false) => {
     }
   };
 
-  hideTimeout = setTimeout(performHide, useTimeout ? 500 : 0);
+  hideTimeout = setTimeout(performHide, useTimeout ? hideTimeoutTime : 0);
 };
 
 const showPreview = async (e, link) => {
@@ -51,7 +79,6 @@ const showPreview = async (e, link) => {
 
     previewStack.push(previewCard);
 
-    // Construct preview URL
     const previewUrl = `/previews${href}`;
 
     previewCard.innerHTML = "Loading...";
@@ -117,29 +144,6 @@ const showPreview = async (e, link) => {
       updateCardPosition(e, previewCard);
     }
   }, 300);
-};
-
-const initPreviews = (scope, parentCardIndex = -1) => {
-  const internalLinks = scope.querySelectorAll('a[href^="/"]');
-  internalLinks.forEach((link) => {
-    if (link.dataset.previewInitialized) {
-      return;
-    }
-    if (
-      !link.href.endsWith(".html") ||
-      link.closest(".post-meta") ||
-      link.closest("h1")
-    ) {
-      return;
-    }
-    link.dataset.previewInitialized = "true";
-
-    link.addEventListener("mouseenter", (e) => showPreview(e, link));
-    const indexToHideFrom = parentCardIndex + 1;
-    link.addEventListener("mouseleave", () =>
-      hideCardsFromIndex(indexToHideFrom, true)
-    );
-  });
 };
 
 function updateCardPosition(e, card) {
@@ -240,5 +244,3 @@ function makeDraggable(element, handle) {
 
   handle.addEventListener("mousedown", onMouseDown);
 }
-
-initPreviews(document);

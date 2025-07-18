@@ -1,84 +1,96 @@
 {{define "left_sidebar"}}
-<aside class="left-sidebar">
+<aside
+  class="left-sidebar"
+  :class="{ 'is-open': $store.sidebar.mobileOpen }"
+  x-data="{}"
+>
   <!-- Site Title and Theme Switcher -->
-  <div>
+  <div class="left-sidebar__top">
     <a class="site-title" href="/"> {{.SiteTitle}} </a>
     <p class="site-description">{{.SiteSubtitle}}</p>
-    <div
-      class="theme-switcher-container"
-      x-data="{
+  </div>
+  <div
+    class="theme-switcher-container"
+    x-data="{
     init() {
       // Initialize the global theme store
       $store.theme.init();
     }}"
-      x-init="init()"
+    x-init="init()"
+  >
+    <button
+      @click="$store.theme.toggle()"
+      class="theme-switcher"
+      title="Toggle theme"
     >
-      <button
-        @click="$store.theme.toggle()"
-        class="theme-switcher"
-        title="Toggle theme"
-      >
-        <span x-show="$store.theme.current === 'light'"
-          ><i class="fa-solid fa-sun"></i
-        ></span>
-        <span x-show="$store.theme.current === 'dark'"
-          ><i class="fa-solid fa-moon"></i
-        ></span>
-      </button>
-    </div>
+      <span x-show="$store.theme.current === 'light'"
+        ><i class="fa-solid fa-sun"></i
+      ></span>
+      <span x-show="$store.theme.current === 'dark'"
+        ><i class="fa-solid fa-moon"></i
+      ></span>
+    </button>
   </div>
 
-  <!-- File Explorer -->
-  <div
-    class="explorer-container"
-    x-data="fileTreeComponent()"
-    x-show="$store.fileTree.data"
-    :class="{ 'expanded': $store.fileTree.expanded }"
-  >
-    <div>
-      <input type="text" class="search-bar" placeholder="Search" />
+  <div class="search-bar-container">
+    <div id="search"></div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="left-sidebar__scrollable-content">
+    <!-- File Explorer -->
+    <div
+      class="explorer-container"
+      x-data="explorerComponent()"
+      x-init="$store.fileTree.init()"
+      x-show="$store.fileTree.data"
+      :class="{ 'expanded': $store.fileTree.expanded }"
+    >
       <nav class="explorer">
-        <template x-if="$store.fileTree.data">
-          <div x-html="renderTree($store.fileTree.data)"></div>
+        <template x-if="fileTreeData">
+          <div x-html="renderTree(fileTreeData)"></div>
         </template>
       </nav>
     </div>
-  </div>
 
-  <!-- Tags -->
-  <div
-    x-data="{}"
-    x-init="$store.collapsible.init('tags', true)"
-    x-show="$store.tags.data.length > 0"
-    class="collapsible-container"
-  >
-    <h5 @click="$store.collapsible.toggle('tags')">
-      All Tags
-      <i
-        class="fa-solid"
-        :class="$store.collapsible.isExpanded('tags') ? 'fa-chevron-down' : 'fa-chevron-right'"
-      ></i>
-    </h5>
-    <div x-show="$store.collapsible.isExpanded('tags')" x-collapse>
-      <nav class="tags-nav">
-        <ul>
-          <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
-            <li>
-              <a :href="'/tag/' + tag.slug + '/'" class="tag">
-                <span x-text="tag.name"></span>
-                <span x-text="`(${tag.count})`"></span>
-              </a>
-            </li>
+    <!-- Tags -->
+    <div
+      x-data="{}"
+      x-init="
+        $store.collapsible.init('tags', true);
+        $store.tags.init();
+      "
+      x-show="$store.tags.data.length > 0"
+      class="collapsible-container tags-container"
+    >
+      <h5 @click="$store.collapsible.toggle('tags')">
+        All Tags
+        <i
+          class="fa-solid"
+          :class="$store.collapsible.isExpanded('tags') ? 'fa-chevron-down' : 'fa-chevron-right'"
+        ></i>
+      </h5>
+      <div x-show="$store.collapsible.isExpanded('tags')" x-collapse>
+        <nav class="tags-nav">
+          <ul>
+            <template x-for="tag in $store.tags.getVisible()" :key="tag.slug">
+              <li>
+                <a :href="'/tag/' + tag.slug + '/'" class="tag">
+                  <span x-text="tag.name"></span>
+                  <span x-text="`(${tag.count})`"></span>
+                </a>
+              </li>
+            </template>
+          </ul>
+          <template x-if="$store.tags.hasMore()">
+            <button @click="$store.tags.toggle()" class="show-more-button">
+              <span
+                x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"
+              ></span>
+            </button>
           </template>
-        </ul>
-        <template x-if="$store.tags.hasMore()">
-          <button @click="$store.tags.toggle()" class="show-more-button">
-            <span
-              x-text="$store.tags.showAll ? 'Show Less' : 'Show More'"
-            ></span>
-          </button>
-        </template>
-      </nav>
+        </nav>
+      </div>
     </div>
   </div>
 </aside>

@@ -1,12 +1,13 @@
-function fileTreeComponent() {
+export default function explorerComponent() {
   return {
     expanded: false,
-    fileTreeData: window.fileTreeData,
+    fileTreeData: null,
     expandedNodes: new Set(),
     
     init() {
-      console.log('File tree component initialized', this.fileTreeData);
-      // Store reference to this component globally for click handlers
+      Alpine.effect(() => {
+        this.fileTreeData = Alpine.store('fileTree').data;
+      })
       window.fileTreeInstance = this;
     },
     

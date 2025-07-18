@@ -1,0 +1,105 @@
+import { Simulation } from 'd3-force';
+import { Node, Edge, ObsiGraphOptions } from './types';
+interface ObsiGraphType {
+    nodes: Node[];
+    edges: Edge[];
+    options: ObsiGraphOptions;
+    hoveredNode: Node | null;
+    draggedNode: Node | null;
+    simulation: Simulation<Node, Edge> | null;
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+    theme: 'light' | 'dark';
+    zoomToFit(): ObsiGraph;
+    zoomIn(factor?: number): ObsiGraph;
+    zoomOut(factor?: number): ObsiGraph;
+    updateData(nodes: any[], edges: any[]): ObsiGraph;
+    removeOrphanNodes(): ObsiGraph;
+    setTheme(theme: 'light' | 'dark'): ObsiGraph;
+    resize(): ObsiGraph;
+    destroy(): void;
+}
+export default class ObsiGraph implements ObsiGraphType {
+    nodes: Node[];
+    edges: Edge[];
+    options: ObsiGraphOptions;
+    hoveredNode: Node | null;
+    draggedNode: Node | null;
+    simulation: Simulation<Node, Edge> | null;
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+    theme: 'light' | 'dark';
+    private app;
+    private graphContainer;
+    private nodeContainer;
+    private labelContainer;
+    private edgeContainer;
+    private nodeGraphics;
+    private edgeGraphics;
+    private nodeLabels;
+    private dragStartTime;
+    private _tweenGroup;
+    private hasChanged;
+    private wheelHandler;
+    private adjacencyMap;
+    private previouslyHoveredNode;
+    private resizeObserver;
+    private viewportBounds;
+    private visibleNodes;
+    private visibleEdges;
+    private cullingEnabled;
+    private animationFrameId;
+    private degreeMap;
+    private linkForce;
+    private chargeForce;
+    constructor(canvas: HTMLCanvasElement, nodes: Node[], edges: Edge[], options?: ObsiGraphOptions);
+    private init;
+    private _initializeGraphComponents;
+    private setupCanvas;
+    private calculateNodeDegrees;
+    private calculateNodeSizes;
+    private createPixiGraph;
+    private drawNode;
+    private redrawEdges;
+    private addInteractionEvents;
+    private onNodeClick;
+    private animate;
+    private updateNodeAppearances;
+    private updateHoverStyles;
+    private startSimulation;
+    private updateNodePositions;
+    private updateEdgeReferences;
+    private areNodesConnected;
+    private buildAdjacencyMap;
+    zoomToFit(): ObsiGraph;
+    private autoEnableCulling;
+    private updateViewportBounds;
+    private isNodeInViewport;
+    private isEdgeInViewport;
+    /**
+     * Cohen-Sutherland line clipping algorithm
+     * https://en.wikipedia.org/wiki/Cohen-Sutherland_algorithm
+     */
+    private lineIntersectsViewport;
+    private updateVisibility;
+    removeOrphanNodes(): ObsiGraph;
+    zoomIn(factor?: number): ObsiGraph;
+    zoomOut(factor?: number): ObsiGraph;
+    updateData(nodes: any[], edges: any[]): ObsiGraph;
+    setTheme(theme?: 'light' | 'dark'): ObsiGraph;
+    private updateLabelColors;
+    resize: import("lodash").DebouncedFuncLeading<() => ObsiGraph>;
+    destroy(): void;
+    setCullingEnabled(enabled: boolean): ObsiGraph;
+    setCullingMargin(margin: number): ObsiGraph;
+    getCullingStats(): {
+        totalNodes: number;
+        visibleNodes: number;
+        totalEdges: number;
+        visibleEdges: number;
+        cullingEnabled: boolean;
+    };
+}
+export {};

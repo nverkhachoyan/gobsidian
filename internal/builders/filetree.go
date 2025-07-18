@@ -55,14 +55,15 @@ func (ft *FileTreeBuilder) Build(
 			if part == "" {
 				continue
 			}
-			part = utils.Deslugify(part)
+
 			lowercasePart := strings.ToLower(part)
+			name := utils.Deslugify(lowercasePart)
 
 			if _, ok := currentNode.Children[lowercasePart]; !ok {
 				childPath := filepath.ToSlash(filepath.Join(currentNode.Path, lowercasePart))
 
 				currentNode.Children[lowercasePart] = &models.Folder{
-					Name:     lowercasePart,
+					Name:     name,
 					Path:     childPath,
 					Posts:    []*models.ParsedNote{},
 					Children: make(map[string]*models.Folder),
