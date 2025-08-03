@@ -2,7 +2,7 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/models"
+	"gobsidian/internal/crawler"
 	"regexp"
 	"strings"
 
@@ -28,7 +28,11 @@ func (s *SyntaxHighlighter) Name() string {
 	return "syntax-highlighter"
 }
 
-func (s *SyntaxHighlighter) Transform(content string, note *models.ParsedNote, ctx *TransformContext) (string, error) {
+func (s *SyntaxHighlighter) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
+	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+		return content, nil
+	}
+
 	if !s.enabled {
 		return content, nil
 	}

@@ -4,28 +4,25 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"runtime"
-	"sort"
+	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
 
 	"gobsidian/internal/builders"
 	"gobsidian/internal/config"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/executors"
 	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
-	"gobsidian/internal/repository"
-	"gobsidian/internal/scanner"
 	"gobsidian/internal/terminal"
 	"gobsidian/internal/transformers"
 	"gobsidian/internal/utils"
 
-	"github.com/gomarkdown/markdown/html"
-
 	"github.com/gomarkdown/markdown"
+
+	"github.com/gomarkdown/markdown/html"
 )
 
 type Generator interface {
@@ -37,8 +34,8 @@ type StaticSiteGenerator struct {
 	Regexes                *config.Regexes
 	Logger                 *log.Logger
 	Templates              *template.Template
-	Parser                 parsers.Parser
-	Scanner                *scanner.NoteScanner
+	ParserManager          *parsers.Manager
+	Crawler                *crawler.VaultCrawler
 	MarkdownRenderer       *html.Renderer
 	shouldPrintVaultHealth bool
 }
@@ -54,15 +51,19 @@ const (
 	tagsFilename        = "tags.json"
 	chromaCSSPath       = "chroma.css"
 	diagnosticsFile     = "vault-diagnostics.json"
+	excalidrawsDir      = "excalidraws"
 )
+
+type ExcalidrawBase64 struct {
+	Data string `json:"data"`
+}
 
 func NewStaticSiteGenerator(
 	siteConfig config.SiteConfig,
 	regexes *config.Regexes,
 	logger *log.Logger,
 	templates *template.Template,
-	parser parsers.Parser,
-	scanner *scanner.NoteScanner,
+	crawler *crawler.VaultCrawler,
 	markdownRenderer *html.Renderer,
 	shouldPrintVaultHealth bool,
 ) (*StaticSiteGenerator, error) {
@@ -71,119 +72,113 @@ func NewStaticSiteGenerator(
 		Regexes:                regexes,
 		Logger:                 logger,
 		Templates:              templates,
-		Parser:                 parser,
-		Scanner:                scanner,
+		Crawler:                crawler,
 		MarkdownRenderer:       markdownRenderer,
 		shouldPrintVaultHealth: shouldPrintVaultHealth,
 	}, nil
 }
 
-func (g *StaticSiteGenerator) Generate(scannedNotes []*models.ScannedNote) error {
+func (g *StaticSiteGenerator) Generate() error {
 	start := time.Now()
-
 	printer := terminal.NewPrettyPrinter()
-
-	fileTreeBuilder := builders.NewFileTreeBuilder(g.Logger)
-	notesRepository := repository.NewNoteRepository()
-	graphBuilder := builders.NewGraphBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, graphFilename, notesRepository)
+	explorerBuilder := builders.NewExplorerBuilder(g.Logger)
+	graphBuilder := builders.NewGraphBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, graphFilename)
 	tagsBuilder := builders.NewTagsBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, tagsFilename)
 	searchIndexBuilder := builders.NewSearchIndexBuilder(g.Logger, g.SiteConfig.OutputDirectory, generatedDir, searchIndexFilename)
-	transformCtx := transformers.NewTransformContext(g.SiteConfig.BaseURL, g.SiteConfig.OutputDirectory, notesRepository)
 
-	pipeline := g.newTransformationPipeline()
+	// Crawl vault
+	rootNode, err := g.Crawler.Crawl()
+	if err != nil {
+		fmt.Println(printer.Error("Failed to crawl vault", err))
+	}
 
-	// Parse notes and get all notes by path
-	parseTime := g.Parser.ParseNotes(scannedNotes, notesRepository)
-	notesByPath := notesRepository.GetAllByPath()
-	notesSlice := notesRepository.GetAllNotesSlice()
-	fmt.Println(printer.Print("Parsed notes", "count", len(scannedNotes), "duration", parseTime))
+	fileIndex := g.Crawler.FileIndex
+	IDToNodeIndex := g.Crawler.IDToNodeIndex
 
-	// Run transformations
-	transformTime := g.runTransformations(pipeline, transformCtx, notesSlice)
-	fmt.Println(printer.Print("Transformed content", "count", len(notesSlice), "duration", transformTime))
+	// Run Transformations
+	transformTime := g.runTransformations(rootNode)
+	fmt.Println(printer.Success("Transformed files.", "duration", transformTime))
 
-	// Build graph
-	graphTime := graphBuilder.Build(notesByPath)
-	fmt.Println(printer.Print("Built graph", "count", len(notesByPath), "duration", graphTime))
+	// Build Graph
+	graphBuildTime := graphBuilder.Build(fileIndex, IDToNodeIndex)
+	fmt.Println(printer.Print("Built network graph", "duration", graphBuildTime))
 	if err := graphBuilder.ExportAndSaveAsJSON(); err != nil {
 		fmt.Println(printer.Error("Failed to export and save graph", "error", err))
 		return err
 	}
 	fmt.Println(printer.Success("Exported graph"))
 
-	// Build folder tree
-	treeBuild, err := fileTreeBuilder.Build(notesByPath)
-	if err != nil {
-		fmt.Println(printer.Error("Failed to build folder tree", "error", err))
-		return fmt.Errorf("failed to build folder tree: %w", err)
-	}
-	fmt.Println(printer.Print("Built folder tree", "count", treeBuild.NumberOfFolders, "duration", treeBuild.Duration))
-
-	// Sort notes
-	sortedNotes := g.sortNotes(notesSlice)
-	templateExecutor := executors.NewTemplateExecutor(
-		&g.SiteConfig,
-		g.Logger,
-		g.Templates,
-	)
-
-	// Generate breadcrumbs
-	g.generateBreadcrumbs(sortedNotes)
-
-	// Execute templates
-	templateExecTime, numberOfTags, err := templateExecutor.Execute(sortedNotes, treeBuild.Root)
-	if err != nil {
-		fmt.Println(printer.Error("Failed to execute templates", "error", err))
-		return err
-	}
-	fmt.Println(printer.Print("Executed templates", "count", len(sortedNotes), "duration", templateExecTime))
-
 	// Build tags
-	tagsTime := tagsBuilder.Build(sortedNotes)
-	fmt.Println(printer.Print("Built tags", "count", "duration", tagsTime))
+	tagsBuildTime := tagsBuilder.Build(fileIndex)
 	if err := tagsBuilder.ExportAndSaveAsJSON(); err != nil {
 		fmt.Println(printer.Error("Failed to export and save tags", "error", err))
 		return err
 	}
-	fmt.Println(printer.Success("Exported tags"))
+	fmt.Println(printer.Print("Built tags", "duration", tagsBuildTime))
 
-	// Build search index
-	searchIndexTime := searchIndexBuilder.Build(sortedNotes)
-	fmt.Println(printer.Print("Built search index", "count", len(sortedNotes), "duration", searchIndexTime))
+	// Build Search Index
+	searchIndexTime := searchIndexBuilder.Build(fileIndex)
 	if err := searchIndexBuilder.ExportAndSaveAsJSON(); err != nil {
-		fmt.Println(printer.Error("Failed to export and save search index", "error", err))
+		fmt.Println(printer.Error("Failed to export and save tags", "error", err))
 		return err
 	}
-	fmt.Println(printer.Success("Exported search index"))
+	fmt.Println(printer.Print("Built search index", "duration", searchIndexTime))
 
-	// Copy assets
-	assetCopyTime := g.copyAssets(notesByPath, treeBuild.JSON)
+	explorerResult := explorerBuilder.Build(rootNode)
+	g.exportFiletreeJSON(explorerResult.JSON)
+	fmt.Println(printer.Print("Built file tree", "duration", explorerResult.Duration))
+
 	err = g.generateSyntaxHighlighterCSS()
 	if err != nil {
 		fmt.Println(printer.Error("Failed to generate syntax highlighter CSS", "error", err))
 		return err
 	}
-	fmt.Println(printer.Print("Copied assets", "count", len(notesByPath), "duration", assetCopyTime))
 
+	// ASSETS
+	// TODO: fix issue where images don't exist and we try to copy
+	imagesCopyTime := g.copyImages(fileIndex)
+	fmt.Println(printer.Print("Copied assets", "duration", imagesCopyTime))
+
+	assetsDirCopyTime := g.copyAssetsDir()
+	fmt.Println(printer.Print("Copied assets", "duration", assetsDirCopyTime))
+
+	// Generate breadcrumbs
+	g.generateBreadcrumbs(fileIndex)
+	fmt.Println(printer.Print("Generated breadcrumbs"))
+
+	// TODO: impl
+	// // Copy excalidraws
+	// excalidrawCopyTime := g.createExcalidrawJSONs(notesByPath)
+	// fmt.Println(printer.Print("Copied excalidraws", "count", len(notesByPath), "duration", excalidrawCopyTime))
+
+	// TODO: impl
 	// Print diagnostics summary
-	if g.shouldPrintVaultHealth {
-		g.printDiagnosticsSummary(notesSlice, printer)
+	// if g.shouldPrintVaultHealth {
+	// 	g.printDiagnosticsSummary(notesSlice, printer)
+	// }
+
+	// Execute templates
+	templateExecutor := executors.NewTemplateExecutor(rootNode, fileIndex, &g.SiteConfig, g.Logger, g.Templates)
+	templateExecTime, _, err := templateExecutor.Execute()
+	if err != nil {
+		fmt.Println(printer.Error("Failed to execute templates", "error", err))
+		return err
 	}
+	fmt.Println(printer.Print("Executed templates", "duration", templateExecTime))
 
 	// Log summary
 	g.Logger.Debug("Site generation complete!",
 		"duration", time.Since(start),
-		"notes", len(notesByPath),
-		"notes/second", float64(len(notesByPath))/time.Since(start).Seconds(),
-		"tags", numberOfTags,
-		"preview pages", len(notesByPath),
-		"folders", treeBuild.NumberOfFolders,
+		"notes", len(fileIndex),
+		"notes/second", float64(len(fileIndex))/time.Since(start).Seconds(),
 	)
 	return nil
 }
 
-func (g *StaticSiteGenerator) newTransformationPipeline() *transformers.Pipeline {
-	return transformers.NewPipeline(
+func (g *StaticSiteGenerator) runTransformations(rootNode *crawler.VaultNode) time.Duration {
+	start := time.Now()
+	ctx := transformers.NewTransformContext(g.SiteConfig.BaseURL, g.SiteConfig.Port, g.SiteConfig.OutputDirectory)
+	pipeline := transformers.NewPipeline(
 		transformers.NewImageProcessor(g.Regexes.ObsidianImageRegex),
 		transformers.NewHashtagEnricher(g.Regexes.HashtagRegex),
 		transformers.NewCalloutTransformer(g.Regexes.ObsidianCalloutRegex),
@@ -197,81 +192,116 @@ func (g *StaticSiteGenerator) newTransformationPipeline() *transformers.Pipeline
 			g.MarkdownRenderer,
 		),
 		transformers.NewSyntaxHighlighter(true),
-		transformers.NewFootnoteTransformer(g.Regexes.FootnoteRegex, g.Logger),
+		// transformers.NewFootnoteTransformer(g.Regexes.FootnoteRegex, g.Logger),
+		// transformers.NewExcalidrawEnricher(),
 	)
-}
-
-func (g *StaticSiteGenerator) runTransformations(
-	pipeline *transformers.Pipeline,
-	ctx *transformers.TransformContext,
-	notes []*models.ParsedNote,
-) time.Duration {
-	start := time.Now()
-
-	numWorkers := min(runtime.NumCPU(), len(notes))
-	notesChan := make(chan *models.ParsedNote, len(notes))
-	errorsChan := make(chan error, len(notes))
-
-	var wg sync.WaitGroup
-	for range numWorkers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for note := range notesChan {
-				noteCtx := ctx.Clone()
-				postBody := string(note.RawBody)
-
-				transformedContent, err := pipeline.Transform(postBody, note, noteCtx)
-				if err != nil {
-					g.Logger.Warnf("failure to transform: %v", err)
-				}
-
-				finalHTMLBytes := markdown.ToHTML([]byte(transformedContent), nil, g.MarkdownRenderer)
-
-				for _, embeddedPost := range noteCtx.EmbeddedPosts {
-					finalHTMLBytes = bytes.Replace(
-						finalHTMLBytes,
-						[]byte(embeddedPost.ID),
-						[]byte(embeddedPost.Content),
-						1,
-					)
-				}
-
-				note.HTMLContent = template.HTML(finalHTMLBytes)
-				if err != nil {
-					errorsChan <- err
-				}
-			}
-		}()
-	}
-
-	for _, note := range notes {
-		notesChan <- note
-	}
-	close(notesChan)
-
-	wg.Wait()
-	close(errorsChan)
-
-	var errors []error
-	for err := range errorsChan {
-		errors = append(errors, err)
-	}
-
-	if len(errors) > 0 {
-		g.Logger.Warn("some transformations failed", "count", len(errors))
-		for _, err := range errors {
-			g.Logger.Error("transformation error", "error", err)
-		}
-	}
-
+	g.transformNode(pipeline, ctx, rootNode)
 	return time.Since(start)
 }
 
-func (g *StaticSiteGenerator) generateBreadcrumbs(notes []*models.ParsedNote) {
-	for _, note := range notes {
-		breadcrumbs := []models.Breadcrumb{}
-		parts := strings.Split(note.URL, "/")
+func (g *StaticSiteGenerator) transformNode(
+	pipeline *transformers.Pipeline,
+	ctx *transformers.TransformContext,
+	node *crawler.VaultNode,
+) {
+	if node.GetNoteType() == crawler.NoteTypeMarkdown {
+		nodeCtx := ctx.Clone()
+		transformedContent, err := pipeline.Transform(node.Markdown, node, nodeCtx)
+		if err != nil {
+			g.Logger.Warn("failure to transform", "error", err)
+			return
+		}
+		finalHTMLBytes := markdown.ToHTML([]byte(transformedContent), nil, g.MarkdownRenderer)
+
+		for _, embeddedPost := range nodeCtx.EmbeddedPosts {
+			finalHTMLBytes = bytes.Replace(
+				finalHTMLBytes,
+				[]byte(embeddedPost.ID),
+				[]byte(embeddedPost.Content),
+				1,
+			)
+		}
+
+		node.HTML = template.HTML(finalHTMLBytes)
+
+	}
+
+	for _, child := range node.Children {
+		g.transformNode(pipeline, ctx, child)
+	}
+}
+
+// func (g *StaticSiteGenerator) runTransformationsOld(
+// 	pipeline *transformers.Pipeline,
+// 	ctx *transformers.TransformContext,
+// 	notes []*models.ParsedNote,
+// ) time.Duration {
+// 	start := time.Now()
+
+// 	numWorkers := min(runtime.NumCPU(), len(notes))
+// 	notesChan := make(chan *models.ParsedNote, len(notes))
+// 	errorsChan := make(chan error, len(notes))
+
+// 	var wg sync.WaitGroup
+// 	for range numWorkers {
+// 		wg.Add(1)
+// 		go func() {
+// 			defer wg.Done()
+// 			for note := range notesChan {
+// 				noteCtx := ctx.Clone()
+// 				postBody := string(note.RawBody)
+
+// 				transformedContent, err := pipeline.Transform(postBody, note, noteCtx)
+// 				if err != nil {
+// 					g.Logger.Warnf("failure to transform: %v", err)
+// 				}
+
+// 				finalHTMLBytes := markdown.ToHTML([]byte(transformedContent), nil, g.MarkdownRenderer)
+
+// 				for _, embeddedPost := range noteCtx.EmbeddedPosts {
+// 					finalHTMLBytes = bytes.Replace(
+// 						finalHTMLBytes,
+// 						[]byte(embeddedPost.ID),
+// 						[]byte(embeddedPost.Content),
+// 						1,
+// 					)
+// 				}
+
+// 				note.HTMLContent = template.HTML(finalHTMLBytes)
+// 				if err != nil {
+// 					errorsChan <- err
+// 				}
+// 			}
+// 		}()
+// 	}
+
+// 	for _, note := range notes {
+// 		notesChan <- note
+// 	}
+// 	close(notesChan)
+
+// 	wg.Wait()
+// 	close(errorsChan)
+
+// 	var errors []error
+// 	for err := range errorsChan {
+// 		errors = append(errors, err)
+// 	}
+
+// 	if len(errors) > 0 {
+// 		g.Logger.Warn("some transformations failed", "count", len(errors))
+// 		for _, err := range errors {
+// 			g.Logger.Error("transformation error", "error", err)
+// 		}
+// 	}
+
+// 	return time.Since(start)
+// }
+
+func (g *StaticSiteGenerator) generateBreadcrumbs(fileIndex map[string]*crawler.VaultNode) {
+	for _, node := range fileIndex {
+		breadcrumbs := []crawler.Breadcrumb{}
+		parts := strings.Split(node.URL, string(filepath.Separator))
 		noteURL := ""
 
 		for i, part := range parts {
@@ -286,44 +316,40 @@ func (g *StaticSiteGenerator) generateBreadcrumbs(notes []*models.ParsedNote) {
 
 			isLast := i == len(parts)-1
 
-			breadcrumbs = append(breadcrumbs, models.Breadcrumb{
+			breadcrumbs = append(breadcrumbs, crawler.Breadcrumb{
 				Title:  part,
 				URL:    noteURL,
 				IsLast: isLast,
 			})
 		}
 
-		note.Breadcrumbs = breadcrumbs
+		node.Breadcrumbs = breadcrumbs
 	}
 }
 
-func (g *StaticSiteGenerator) computeTags(
-	notes []*models.ParsedNote,
-) ([]models.Tag, map[string][]*models.ParsedNote) {
-	tagsMap := make(map[string]*models.Tag)
-	for _, note := range notes {
-		for _, tag := range note.Tags {
-			tagsMap[tag.Slug] = &tag
-			tagsMap[tag.Slug].Count++
-		}
-	}
+// func (g *StaticSiteGenerator) createExcalidrawJSONs(fileIndex map[string]*crawler.VaultNode) time.Duration {
+// 	start := time.Now()
 
-	tags := make([]models.Tag, 0, len(tagsMap))
-	for _, tag := range tagsMap {
-		tags = append(tags, *tag)
-	}
+// 	for _, note := range fileIndex {
+// 		if note.NoteType != crawler.NoteTypeExcalidraw {
+// 			continue
+// 		}
 
-	sort.Slice(tags, func(i, j int) bool {
-		return tags[i].Name < tags[j].Name
-	})
+// 		slugifiedFileName := utils.Slugify(note.BaseName)
+// 		excalidrawPath := filepath.Join(g.SiteConfig.OutputDirectory, generatedDir, excalidrawsDir, slugifiedFileName+".json")
 
-	postsByTag := make(map[string][]*models.ParsedNote, len(tags))
+// 		excalidrawJSONBytes, err := json.Marshal(note.ExcalidrawPayload)
+// 		if err != nil {
+// 			fmt.Printf("failed to marshal excalidraw JSON: %v\n", err)
+// 			g.Logger.Error("failed to marshal excalidraw JSON", "error", err)
+// 			return time.Since(start)
+// 		}
+// 		if err := os.WriteFile(excalidrawPath, excalidrawJSONBytes, 0644); err != nil {
+// 			fmt.Printf("failed to write excalidraw JSON: %v\n", err)
+// 			g.Logger.Error("failed to write excalidraw JSON", "error", err)
+// 			return time.Since(start)
+// 		}
+// 	}
 
-	for _, note := range notes {
-		for _, tag := range note.Tags {
-			postsByTag[tag.Slug] = append(postsByTag[tag.Slug], note)
-		}
-	}
-
-	return tags, postsByTag
-}
+// 	return time.Since(start)
+// }

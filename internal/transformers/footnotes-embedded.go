@@ -1,13 +1,11 @@
 package transformers
 
 import (
-	"fmt"
 	"regexp"
 
-	"gobsidian/internal/models"
+	"gobsidian/internal/crawler"
 
 	"github.com/charmbracelet/log"
-	"github.com/google/uuid"
 )
 
 type FootnoteEmbeddedTransformer struct {
@@ -31,28 +29,32 @@ func (ft *FootnoteEmbeddedTransformer) Name() string {
 
 func (ft *FootnoteEmbeddedTransformer) Transform(
 	body string,
-	note *models.ParsedNote,
+	node *crawler.VaultNode,
 	ctx *TransformContext,
 ) (string, error) {
-	if note.EmbeddedFootnotes != nil || len(note.EmbeddedFootnotes) > 0 {
+	if node.GetNoteType() != crawler.NoteTypeMarkdown {
 		return body, nil
 	}
 
-	count := 1
+	// if node.EmbeddedFootnotes != nil || len(node.EmbeddedFootnotes) > 0 {
+	// 	return body, nil
+	// }
 
-	newBody := ft.footnotesRegex.ReplaceAllStringFunc(body, func(match string) string {
-		parts := ft.footnotesRegex.FindStringSubmatch(match)
-		footNoteNumber := parts[1]
-		footnoteID := uuid.New().String()
-		note.EmbeddedFootnotes = append(note.EmbeddedFootnotes, models.Footnote{
-			ID:     footnoteID,
-			Number: count,
-			Text:   footNoteNumber,
-		})
-		result := fmt.Sprintf("<a href=\"#fn-%s\" class=\"footnote-ref\" id=\"fnref-%s\" role=\"doc-noteref\"><sup>[%d]</sup></a>", footnoteID, footnoteID, count)
-		count++
-		return result
-	})
+	// count := 1
 
-	return newBody, nil
+	// newBody := ft.footnotesRegex.ReplaceAllStringFunc(body, func(match string) string {
+	// 	parts := ft.footnotesRegex.FindStringSubmatch(match)
+	// 	footNoteNumber := parts[1]
+	// 	footnoteID := uuid.New().String()
+	// 	node.EmbeddedFootnotes = append(node.EmbeddedFootnotes, models.Footnote{
+	// 		ID:     footnoteID,
+	// 		Number: count,
+	// 		Text:   footNoteNumber,
+	// 	})
+	// 	result := fmt.Sprintf("<a href=\"#fn-%s\" class=\"footnote-ref\" id=\"fnref-%s\" role=\"doc-noteref\"><sup>[%d]</sup></a>", footnoteID, footnoteID, count)
+	// 	count++
+	// 	return result
+	// })
+
+	return body, nil
 }

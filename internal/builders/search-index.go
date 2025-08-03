@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 
 	"github.com/charmbracelet/log"
@@ -32,29 +33,25 @@ func NewSearchIndexBuilder(logger *log.Logger, outputDirectory string, generated
 	}
 }
 
-func (s *SearchIndexBuilder) Build(notes []*models.ParsedNote) time.Duration {
+func (s *SearchIndexBuilder) Build(fileIndex map[string]*crawler.VaultNode) time.Duration {
 	start := time.Now()
 	s.searchIndex = &models.SearchIndex{
 		Notes: s.searchIndex.Notes,
 	}
 
-	for _, note := range notes {
-		tags := make([]string, 0)
-		for _, tag := range note.Tags {
-			tags = append(tags, tag.Name)
-		}
+	for _, node := range fileIndex {
 
-		shortBody := note.HTMLContent
+		shortBody := node.HTML
 		if len(shortBody) > 100 {
 			shortBody = shortBody[:100] + "..."
 		}
 
 		s.searchIndex.Notes = append(s.searchIndex.Notes, &models.SearchIndexNote{
-			ID:    note.ID,
-			URL:   note.URL,
-			Title: note.Title,
+			ID:    node.ID,
+			URL:   node.URL,
+			Title: node.Title,
 			Body:  string(shortBody),
-			Tags:  tags,
+			Tags:  node.Tags,
 		})
 	}
 

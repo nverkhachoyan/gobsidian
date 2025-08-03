@@ -3,6 +3,7 @@ package transformers
 import (
 	"bytes"
 	"fmt"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 	"html/template"
@@ -52,33 +53,45 @@ func (wt *WikilinkTransformer) Name() string {
 
 func (wt *WikilinkTransformer) Transform(
 	body string,
-	note *models.ParsedNote,
+	node *crawler.VaultNode,
 	ctx *TransformContext,
 ) (string, error) {
+	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+		return body, nil
+	}
+
 	return wt.wikilinkRegex.ReplaceAllStringFunc(body, func(match string) string {
 		parts := wt.wikilinkRegex.FindStringSubmatch(match)
-		matchedLinkText := parts[1]
-		pseudoName := matchedLinkText
+		wikilink := parts[1]
+		pseudoName := wikilink
 		isEmbedded := strings.HasPrefix(match, "!")
 
 		if len(parts) > 2 && parts[2] != "" {
 			pseudoName = parts[2]
 		}
 
-		if targetNote, found := ctx.notesRepository.ResolveWikilink(matchedLinkText); found {
-			ctx.notesRepository.AddBacklink(targetNote, note, pseudoName)
-			if isEmbedded {
-				return wt.handleEmbeddedPost(targetNote, ctx)
+		var foundNode *crawler.VaultNode
+
+		for _, link := range node.Links {
+			if (link.Target == wikilink || link.Display == pseudoName) && link.TargetNode != nil {
+				foundNode = link.TargetNode
 			}
-			return fmt.Sprintf(`<a href="%s">%s</a>`, targetNote.URL, pseudoName)
 		}
 
-		return fmt.Sprintf(`<a href="/%s">%s</a>`, utils.Slugify(matchedLinkText)+".html", pseudoName)
+		if isEmbedded && foundNode != nil {
+			return wt.handleEmbeddedPost(foundNode, ctx)
+		}
+
+		if foundNode != nil {
+			return fmt.Sprintf(`<a class="foundLink" href="%s">%s</a>`, foundNode.URL, pseudoName)
+		}
+
+		return fmt.Sprintf(`<a class="did-not" href="/%s">%s</a>`, utils.Slugify(wikilink), pseudoName)
 	}), nil
 }
 
 func (wt *WikilinkTransformer) handleEmbeddedPost(
-	embeddedPost *models.ParsedNote,
+	embeddedPost *crawler.VaultNode,
 	ctx *TransformContext,
 ) string {
 	var uniqueID string
@@ -97,7 +110,7 @@ func (wt *WikilinkTransformer) handleEmbeddedPost(
 }
 
 func (wt *WikilinkTransformer) renderPostContent(
-	post *models.ParsedNote,
+	post *crawler.VaultNode,
 	embeddedPosts map[string]models.EmbeddedPost,
 	parentCtx *TransformContext,
 ) template.HTML {
@@ -121,7 +134,7 @@ func (wt *WikilinkTransformer) renderPostContent(
 		NewFootnoteEmbeddedTransformer(wt.footnotesRegex, wt.logger),
 	)
 
-	result, err := pipeline.Transform(string(post.RawBody), post, parentCtx)
+	result, err := pipeline.Transform(string(post.Markdown), post, parentCtx)
 	if err != nil {
 		wt.logger.Error("pipeline transform failed", "error", err)
 		return template.HTML(fmt.Sprintf(`<div class="error">Failed to render: %s</div>`, post.Title))

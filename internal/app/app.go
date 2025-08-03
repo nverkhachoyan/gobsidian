@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"gobsidian/internal/config"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/diff"
 	"gobsidian/internal/generators"
 	"gobsidian/internal/models"
 	"gobsidian/internal/parsers"
 	"gobsidian/internal/renderers"
-	"gobsidian/internal/scanner"
 	"gobsidian/internal/server"
 	"gobsidian/internal/terminal"
 
@@ -22,11 +22,13 @@ type App struct {
 	Printer   *terminal.PrettyPrinter
 	Config    *config.Config
 	Flags     *models.CmdArgs
-	Scanner   *scanner.NoteScanner
+	Crawler   *crawler.VaultCrawler
 	Generator *generators.StaticSiteGenerator
 
-	parser   *parsers.ObsidianParser
-	renderer *html.Renderer
+	obsidianParser   *parsers.ObsidianParser
+	excalidrawParser *parsers.ExcalidrawParser
+	parserManager    *parsers.Manager
+	renderer         *html.Renderer
 }
 
 func NewApp() *App {
@@ -52,20 +54,35 @@ func (app *App) InitApp() error {
 		app.Config.SiteConfig.OutputDirectory = app.Flags.OutputDirectory
 	}
 
-	app.parser = parsers.NewObsidianParser(&parsers.ObsidianParser{
+	app.obsidianParser = parsers.NewObsidianParser(&parsers.ObsidianParser{
 		InputDirectory: app.Config.SiteConfig.InputDirectory,
 		Regexes:        &app.Config.Regexes,
 	})
+	app.excalidrawParser = parsers.NewExcalidrawParser(
+		app.Config.SiteConfig.InputDirectory,
+		app.Config.SiteConfig.OutputDirectory,
+		app.Config.SiteConfig.BaseURL,
+		app.Config.SiteConfig.Port,
+		&app.Config.Regexes,
+	)
+
+	app.parserManager = parsers.NewManager(
+		app.Config.SiteConfig,
+		map[models.NoteType]parsers.Parser{
+			models.NoteTypeMarkdown:   app.obsidianParser,
+			models.NoteTypeExcalidraw: app.excalidrawParser,
+		},
+	)
 	app.renderer = renderers.NewMarkdownRenderer()
-	app.Scanner = scanner.NewNoteScanner(app.Config.Logger, &app.Config.SiteConfig)
+
+	app.Crawler = crawler.NewVaultCrawler(app.Config.SiteConfig.InputDirectory, app.Config.SiteConfig.LandingPage, &app.Config.Regexes)
 
 	gen, err := generators.NewStaticSiteGenerator(
 		app.Config.SiteConfig,
 		&app.Config.Regexes,
 		app.Config.Logger,
 		app.Config.Templates,
-		app.parser,
-		app.Scanner,
+		app.Crawler,
 		app.renderer,
 		app.Flags.VaultHealth,
 	)
@@ -130,13 +147,13 @@ func (app *App) DetectChanges() ([]string, error) {
 		return nil, fmt.Errorf("failed to get changed files: %w", err)
 	}
 
-	diffs, err := diffTracker.UpdateLockFile()
+	_, err = diffTracker.UpdateLockFile()
 	if err != nil {
 		return nil, fmt.Errorf("failed to update lock file: %w", err)
 	}
 
-	fmt.Println(app.Printer.PrintDiffsSummary(diffs))
-	fmt.Println(app.Printer.PrintDiffsDetailed(diffs))
+	// fmt.Println(app.Printer.PrintDiffsSummary(diffs))
+	// fmt.Println(app.Printer.PrintDiffsDetailed(diffs))
 	return changedFiles, nil
 }
 

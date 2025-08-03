@@ -2,11 +2,11 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/models"
+	"gobsidian/internal/crawler"
 )
 
 type Transformer interface {
-	Transform(content string, note *models.ParsedNote, ctx *TransformContext) (string, error)
+	Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error)
 	Name() string
 }
 
@@ -20,12 +20,12 @@ func NewPipeline(transformers ...Transformer) *Pipeline {
 	}
 }
 
-func (p *Pipeline) Transform(content string, note *models.ParsedNote, ctx *TransformContext) (string, error) {
+func (p *Pipeline) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
 	result := content
 	var err error
 
 	for _, transformer := range p.transformers {
-		result, err = transformer.Transform(result, note, ctx)
+		result, err = transformer.Transform(result, node, ctx)
 		if err != nil {
 			return "", fmt.Errorf("transformer %s failed: %w", transformer.Name(), err)
 		}

@@ -32,7 +32,7 @@ func CopyFile(src, dst string) error {
 }
 
 func CopyStaticDirectory(assetType, outputDir string) error {
-	sourceDir := filepath.Join("templates", assetType)
+	sourceDir := filepath.Join("templatesv2", assetType)
 	destDir := filepath.Join(outputDir, assetType)
 
 	// It's not an error if the source directory doesn't exist.

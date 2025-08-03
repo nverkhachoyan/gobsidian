@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.19.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
+	github.com/daku10/go-lz-string v0.0.6
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gomarkdown/markdown v0.0.0-20250311123330-531bef5e742b
 	github.com/google/uuid v1.6.0

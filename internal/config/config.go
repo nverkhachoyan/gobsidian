@@ -38,6 +38,7 @@ type SiteConfig struct {
 	ExcludeDirs     []string `toml:"exclude_dirs"`
 	LandingPage     string   `toml:"landing_page"`
 	SnippetsDir     string   `toml:"snippets_dir"`
+	Port            int      `toml:"port"`
 }
 
 type Regexes struct {
@@ -66,7 +67,8 @@ func LoadConfig(filePath string) (Config, error) {
 				OutputDirectory: "public",
 				SiteTitle:       "My Blog",
 				SiteSubtitle:    "A blog about my life",
-				BaseURL:         "/",
+				BaseURL:         "localhost",
+				Port:            8000,
 				ExcludeDirs:     []string{},
 				LandingPage:     "index",
 				Theme: Theme{

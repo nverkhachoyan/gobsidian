@@ -7,3 +7,5 @@ school
 *.prof
 node_modules
 mytheme
+docs
+public

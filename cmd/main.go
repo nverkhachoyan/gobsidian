@@ -12,8 +12,6 @@ import (
 )
 
 func main() {
-	startAppTime := time.Now()
-
 	app := app.NewApp()
 	if err := app.InitApp(); err != nil {
 		fmt.Println(app.Printer.Error("Failed to initialize app", "error", err))
@@ -51,52 +49,10 @@ func main() {
 		}
 	}
 
-	changedFiles, err := app.DetectChanges()
-	if err != nil {
-		fmt.Println(app.Printer.Error("Failed to detect changes", "error", err))
+	if err := app.Generator.Generate(); err != nil {
+		fmt.Println(app.Printer.Error("Failed to run generator", "error", err))
 		os.Exit(1)
 	}
-
-	scanStart := time.Now()
-	var scanDuration time.Duration
-
-	if !isOutputDirectoryExists {
-		fmt.Println(app.Printer.Info("Output directory does not exist, scanning all notes"))
-		scanDuration, err = app.Scanner.ScanAllNotes()
-	} else if len(changedFiles) > 0 {
-		fmt.Println(app.Printer.Info("Changes detected, scanning notes"))
-		scanDuration, err = app.Scanner.ScanNotesByPaths(changedFiles)
-	} else {
-		fmt.Println(app.Printer.Info("No changes detected"))
-	}
-
-	scanStep := terminal.Step{Name: "Scanned files", Icon: "📄"}
-	if err != nil {
-		reporter.ReportStep(scanStep, terminal.StepResult{
-			Duration: time.Since(scanStart),
-			Count:    0,
-			Error:    err,
-		})
-		fmt.Println(app.Printer.Error("Failed to scan notes", "error", err))
-		os.Exit(1)
-	}
-
-	scannedNotes := app.Scanner.GetAllNotes()
-
-	if len(scannedNotes) > 0 {
-		reporter.ReportStep(scanStep, terminal.StepResult{
-			Duration: scanDuration,
-			Count:    len(scannedNotes),
-			Error:    nil,
-		})
-		if err := app.Generator.Generate(scannedNotes); err != nil {
-			fmt.Println(app.Printer.Error("Failed to run generator", "error", err))
-			os.Exit(1)
-		}
-	}
-
-	timeToGenerate := time.Since(startAppTime)
-	fmt.Println(app.Printer.Success("Site generated successfully", "duration", timeToGenerate))
 
 	if app.Flags.Serve {
 		app.ServeSite()

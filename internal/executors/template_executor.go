@@ -1,17 +1,16 @@
 package executors
 
 import (
-	"encoding/json"
 	"fmt"
+	"path"
 	"path/filepath"
-	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"html/template"
 
 	"gobsidian/internal/config"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 
 	"github.com/charmbracelet/log"
@@ -42,336 +41,231 @@ type TemplateExecutor struct {
 	SiteConfig *config.SiteConfig
 	Logger     *log.Logger
 	Templates  *template.Template
+	rootNode   *crawler.VaultNode
+	fileIndex  map[string]*crawler.VaultNode
 }
 
 func NewTemplateExecutor(
+	rootNode *crawler.VaultNode,
+	fileIndex map[string]*crawler.VaultNode,
 	siteConfig *config.SiteConfig,
 	logger *log.Logger,
 	templates *template.Template,
 ) *TemplateExecutor {
 	return &TemplateExecutor{
+		rootNode:   rootNode,
+		fileIndex:  fileIndex,
 		SiteConfig: siteConfig,
 		Logger:     logger,
 		Templates:  templates,
 	}
 }
 
-func (te *TemplateExecutor) Execute(
-	notes []*models.ParsedNote,
-	fileTree *models.Folder,
-) (time.Duration, int, error) {
+func (te *TemplateExecutor) Execute() (time.Duration, int, error) {
 	start := time.Now()
+	rootNode := te.rootNode
+	fileIndex := te.fileIndex
 	batchWriter := NewBatchWriter(te.SiteConfig.OutputDirectory, te.Logger, te.Templates)
+	var landingPage *crawler.VaultNode
+	var markdownNodesSlice []*crawler.VaultNode
+	var folderNodesSlice []*crawler.VaultNode
 
-	tags, postsByTag := te.computeTags(notes)
-	tagsJSON, err := json.Marshal(tags)
-	if err != nil {
-		return time.Since(start), 0, fmt.Errorf("failed to marshal tags to JSON: %w", err)
-	}
-	baseData := te.createBaseTemplateData(fileTree, tags)
-
-	for _, note := range notes {
-		data := struct {
-			Note         models.ParsedNote
-			SiteTitle    string
-			SiteSubtitle string
-			BaseURL      string
-			CurrentYear  int
-			FileTree     *models.Folder
-			Graph        template.JS
-			AllTags      template.JS
-			FileTreeJSON template.JS
-		}{
-			Note:         *note,
-			SiteTitle:    baseData.SiteTitle,
-			SiteSubtitle: baseData.SiteSubtitle,
-			BaseURL:      baseData.BaseURL,
-			CurrentYear:  baseData.CurrentYear,
-			FileTree:     baseData.FileTree,
-			Graph:        baseData.Graph,
-			AllTags:      template.JS(tagsJSON),
-			FileTreeJSON: baseData.FileTreeJSON,
+	for _, node := range fileIndex {
+		if node.IsLandingPageNote {
+			landingPage = node
 		}
 
-		filePath := note.URL
-		if !strings.HasSuffix(filePath, ".html") {
-			filePath += ".html"
-		}
-		cleanFilePath := strings.TrimPrefix(filePath, "/")
-
-		batchWriter.AddFile(cleanFilePath, "post.html", data)
-
-		previewPath := filepath.Join("previews", cleanFilePath)
-		batchWriter.AddFile(previewPath, "preview.html", data)
-	}
-
-	for _, tag := range tags {
-		if err := te.paginateTagPages(batchWriter, tag, postsByTag[tag.Slug], baseData); err != nil {
-			return time.Since(start), 0, err
+		if node.GetNoteType() == crawler.NoteTypeMarkdown {
+			markdownNodesSlice = append(markdownNodesSlice, node)
+		} else if node.IsDir {
+			folderNodesSlice = append(folderNodesSlice, node)
 		}
 	}
 
-	if err := te.paginateIndexPages(batchWriter, notes, baseData); err != nil {
-		return time.Since(start), 0, err
-	}
-
-	if err := te.addFolderPagesToBatchRecursive(batchWriter, fileTree, baseData); err != nil {
-		return time.Since(start), 0, err
-	}
-
-	batchWriter.AddFile("404.html", "404.html", baseData)
+	te.executeHomePage(markdownNodesSlice, landingPage, batchWriter)
+	te.executeMarkdowns(rootNode, batchWriter)
+	te.executeFolders(folderNodesSlice, batchWriter)
 
 	te.Logger.Debug("Writing all template files")
 	if err := batchWriter.WriteAllFiles(); err != nil {
 		return time.Since(start), 0, fmt.Errorf("failed to write template files: %w", err)
 	}
 
-	return time.Since(start), len(tags), nil
+	return time.Since(start), 69, nil
 }
 
-func (te *TemplateExecutor) addFolderPagesToBatchRecursive(
-	batchWriter *BatchWriter,
-	folder *models.Folder,
-	baseData BaseTemplateData,
-) error {
-	if folder.Path != "" {
-		if err := te.paginateFolderPages(batchWriter, folder, baseData); err != nil {
-			return err
+func (te *TemplateExecutor) executeHomePage(
+	markdownNodesSlice []*crawler.VaultNode,
+	landingPageNode *crawler.VaultNode,
+	batchWriter *BatchWriter) {
+	renderableNodes := make([]*crawler.VaultNode, 0)
+	for _, node := range markdownNodesSlice {
+		if node.NoteType == crawler.NoteTypeMarkdown || node.NoteType == crawler.NoteTypeExcalidraw {
+			renderableNodes = append(renderableNodes, node)
 		}
 	}
 
-	for _, child := range folder.Children {
-		if err := te.addFolderPagesToBatchRecursive(batchWriter, child, baseData); err != nil {
-			return err
-		}
+	numPages := 1
+	if te.SiteConfig.NotesPerPage != 0 {
+		numPages = len(renderableNodes) / te.SiteConfig.NotesPerPage
 	}
 
-	return nil
-}
-
-func (te *TemplateExecutor) paginateIndexPages(
-	batchWriter *BatchWriter,
-	notes []*models.ParsedNote,
-	baseData BaseTemplateData,
-) error {
-	if len(notes) == 0 {
-		data := struct {
-			BaseTemplateData
-			Notes      []*models.ParsedNote
-			Pagination PaginationData
-			AllTags    []models.Tag
-		}{
-			BaseTemplateData: baseData,
-			Notes:            notes,
-			Pagination:       PaginationData{},
-		}
-		return batchWriter.AddFile("index.html", "index.html", data)
+	pages := make([][]*crawler.VaultNode, 0)
+	for i := 0; i < len(renderableNodes); i = i + te.SiteConfig.NotesPerPage {
+		end := min(i+te.SiteConfig.NotesPerPage, len(renderableNodes))
+		pages = append(pages, renderableNodes[i:end])
 	}
 
-	var landingPage *models.ParsedNote
-	landingPageIndex := slices.IndexFunc(notes, func(note *models.ParsedNote) bool {
-		return note.IsLandingPage
-	})
-	if landingPageIndex != -1 {
-		landingPage = notes[landingPageIndex]
-	}
-	totalPages := (len(notes) + te.SiteConfig.NotesPerPage - 1) / te.SiteConfig.NotesPerPage
-
-	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * te.SiteConfig.NotesPerPage
-		end := min(start+te.SiteConfig.NotesPerPage, len(notes))
-		pageNotes := notes[start:end]
-
-		var pagePath string
-		if page == 1 {
-			pagePath = "index.html"
-		} else {
-			pagePath = filepath.Join("page", fmt.Sprintf("%d", page), "index.html")
+	for i, pageNodes := range pages {
+		pagination := &PaginationData{
+			HasPrev:     i > 0,
+			HasNext:     len(pages) > i+1,
+			CurrentPage: i + 1,
+			TotalPages:  numPages,
 		}
 
-		pagination := PaginationData{
-			CurrentPage: page,
-			TotalPages:  totalPages,
+		if pagination.HasNext {
+			pagination.NextPageURL = filepath.Join("/", "pages", fmt.Sprint(i+2))
 		}
-		if page > 1 {
-			pagination.HasPrev = true
-			if page == 2 {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL
-			} else {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("page/%d/", page-1)
-			}
-		}
-		if page < totalPages {
-			pagination.HasNext = true
-			pagination.NextPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("page/%d/", page+1)
+
+		if pagination.HasPrev && i == 1 {
+			// note: for root node, we just give it base url
+			pagination.PrevPageURL = te.SiteConfig.BaseURL
+		} else if pagination.HasPrev {
+			pagination.PrevPageURL = filepath.Join("/", "pages", fmt.Sprint(i))
+
 		}
 
 		data := struct {
-			BaseTemplateData
-			Notes           []*models.ParsedNote
-			LandingPageNote *models.ParsedNote
+			LandingPageNote *crawler.VaultNode
+			Notes           []*crawler.VaultNode
+			SiteTitle       string
+			SiteSubtitle    string
+			BaseURL         string
+			CurrentYear     int
 			Pagination      PaginationData
 		}{
-			BaseTemplateData: baseData,
-			Notes:            pageNotes,
-			LandingPageNote:  landingPage,
-			Pagination:       pagination,
+			LandingPageNote: landingPageNode,
+			Notes:           pageNodes,
+			SiteTitle:       te.SiteConfig.SiteTitle,
+			SiteSubtitle:    te.SiteConfig.SiteSubtitle,
+			BaseURL:         te.SiteConfig.BaseURL,
+			CurrentYear:     time.Now().Year(),
+			Pagination:      *pagination,
 		}
 
-		if err := batchWriter.AddFile(pagePath, "index.html", data); err != nil {
-			return fmt.Errorf("failed to add index page %d: %w", page, err)
+		if i == 0 {
+			batchWriter.AddFile("index.html", "index.html", data)
+		} else {
+			pageDir := fmt.Sprintf("/pages/%d/index.html", i+1)
+			batchWriter.AddFile(pageDir, "index.html", data)
 		}
+
 	}
-
-	return nil
 }
 
-func (te *TemplateExecutor) paginateTagPages(
-	batchWriter *BatchWriter,
-	tag models.Tag,
-	posts []*models.ParsedNote,
-	baseData BaseTemplateData,
-) error {
-	if len(posts) == 0 {
-		return nil
+func (te *TemplateExecutor) executeMarkdowns(rootNode *crawler.VaultNode, batchWriter *BatchWriter) {
+	if rootNode.GetNoteType() == crawler.NoteTypeMarkdown {
+		data := struct {
+			Note         crawler.VaultNode
+			SiteTitle    string
+			SiteSubtitle string
+			BaseURL      string
+			CurrentYear  int
+		}{
+			Note:         *rootNode,
+			SiteTitle:    te.SiteConfig.SiteTitle,
+			SiteSubtitle: te.SiteConfig.SiteSubtitle,
+			BaseURL:      te.SiteConfig.BaseURL,
+			CurrentYear:  time.Now().Year(),
+		}
+
+		batchWriter.AddFile(rootNode.URL, "post.html", data)
+		previewUrl := filepath.Join("previews", rootNode.URL)
+		batchWriter.AddFile(previewUrl, "preview.html", data)
 	}
 
-	totalPages := (len(posts) + te.SiteConfig.NotesPerPage - 1) / te.SiteConfig.NotesPerPage
-	pathPrefix := filepath.Join("tag", tag.Slug)
+	for _, child := range rootNode.Children {
+		te.executeMarkdowns(child, batchWriter)
+	}
+}
 
-	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * te.SiteConfig.NotesPerPage
-		end := min(start+te.SiteConfig.NotesPerPage, len(posts))
-		pagePosts := posts[start:end]
-
-		var pagePath string
-		if page == 1 {
-			pagePath = filepath.Join(pathPrefix, "index.html")
-		} else {
-			pagePath = filepath.Join(pathPrefix, "page", fmt.Sprintf("%d", page), "index.html")
+func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, batchWriter *BatchWriter) {
+	for _, folderNode := range folderNodes {
+		if folderNode.Path == te.SiteConfig.InputDirectory || !folderNode.IsDir {
+			continue
 		}
 
-		pagination := PaginationData{
-			CurrentPage: page,
-			TotalPages:  totalPages,
-		}
-		if page > 1 {
-			pagination.HasPrev = true
-			if page == 2 {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL + strings.ReplaceAll(pathPrefix, "\\", "/") + "/"
-			} else {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page-1)
+		renderableNodes := make([]*crawler.VaultNode, 0)
+		subFolders := make([]*crawler.VaultNode, 0)
+		for _, node := range folderNode.Children {
+			if node.NoteType == crawler.NoteTypeMarkdown || node.NoteType == crawler.NoteTypeExcalidraw {
+				renderableNodes = append(renderableNodes, node)
+			}
+			if node.IsDir {
+				subFolders = append(subFolders, node)
 			}
 		}
-		if page < totalPages {
-			pagination.HasNext = true
-			pagination.NextPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(pathPrefix, "\\", "/"), page+1)
+
+		numPages := 1
+		if te.SiteConfig.NotesPerPage != 0 {
+			numPages = len(renderableNodes) / te.SiteConfig.NotesPerPage
 		}
 
-		data := struct {
-			BaseTemplateData
-			models.Tag
-			Posts      []*models.ParsedNote
-			Pagination PaginationData
-		}{
-			BaseTemplateData: baseData,
-			Tag:              tag,
-			Posts:            pagePosts,
-			Pagination:       pagination,
+		pages := make([][]*crawler.VaultNode, 0)
+		for i := 0; i < len(renderableNodes); i = i + te.SiteConfig.NotesPerPage {
+			end := min(i+te.SiteConfig.NotesPerPage, len(renderableNodes))
+			pages = append(pages, renderableNodes[i:end])
 		}
 
-		if err := batchWriter.AddFile(pagePath, "tag.html", data); err != nil {
-			return fmt.Errorf("failed to add tag page %s page %d: %w", tag.Slug, page, err)
-		}
-	}
-
-	return nil
-}
-
-func (te *TemplateExecutor) paginateFolderPages(
-	batchWriter *BatchWriter,
-	folder *models.Folder,
-	baseData BaseTemplateData,
-) error {
-	if len(folder.Posts) == 0 {
-		data := struct {
-			BaseTemplateData
-			Folder     *models.Folder
-			Posts      []*models.ParsedNote
-			Pagination PaginationData
-			AllTags    []models.Tag
-		}{
-			BaseTemplateData: baseData,
-			Folder:           folder,
-			Posts:            folder.Posts,
-			Pagination:       PaginationData{},
-		}
-		folderPath := filepath.Join(folder.Path, "index.html")
-		return batchWriter.AddFile(folderPath, "folder.html", data)
-	}
-
-	totalPages := (len(folder.Posts) + te.SiteConfig.NotesPerPage - 1) / te.SiteConfig.NotesPerPage
-
-	for page := 1; page <= totalPages; page++ {
-		start := (page - 1) * te.SiteConfig.NotesPerPage
-		end := min(start+te.SiteConfig.NotesPerPage, len(folder.Posts))
-		pagePosts := folder.Posts[start:end]
-
-		var pagePath string
-		if page == 1 {
-			pagePath = filepath.Join(folder.Path, "index.html")
-		} else {
-			pagePath = filepath.Join(folder.Path, "page", fmt.Sprintf("%d", page), "index.html")
-		}
-
-		pagination := PaginationData{
-			CurrentPage: page,
-			TotalPages:  totalPages,
-		}
-		if page > 1 {
-			pagination.HasPrev = true
-			if page == 2 {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL + strings.ReplaceAll(folder.Path, "\\", "/") + "/"
-			} else {
-				pagination.PrevPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page-1)
+		for i, pageNodes := range pages {
+			pagination := &PaginationData{
+				HasPrev:     i > 0,
+				HasNext:     len(pages) > i+1,
+				CurrentPage: i + 1,
+				TotalPages:  numPages,
 			}
-		}
-		if page < totalPages {
-			pagination.HasNext = true
-			pagination.NextPageURL = te.SiteConfig.BaseURL + fmt.Sprintf("%s/page/%d/", strings.ReplaceAll(folder.Path, "\\", "/"), page+1)
+
+			if pagination.HasNext {
+				pagination.NextPageURL = path.Join(te.SiteConfig.BaseURL, folderNode.URL, "pages", fmt.Sprint(i+2))
+			}
+
+			if pagination.HasPrev && i == 1 {
+				pagination.PrevPageURL = filepath.Clean("/" + folderNode.URL)
+			} else if pagination.HasPrev {
+				pagination.PrevPageURL = filepath.Clean(filepath.Join(te.SiteConfig.BaseURL, folderNode.URL, "pages", fmt.Sprint(i)))
+			}
+
+			data := struct {
+				Folder       *crawler.VaultNode
+				Subfolders   []*crawler.VaultNode
+				Notes        []*crawler.VaultNode
+				SiteTitle    string
+				SiteSubtitle string
+				BaseURL      string
+				CurrentYear  int
+				Pagination   PaginationData
+			}{
+				Folder:       folderNode,
+				Subfolders:   subFolders,
+				Notes:        pageNodes,
+				SiteTitle:    te.SiteConfig.SiteTitle,
+				SiteSubtitle: te.SiteConfig.SiteSubtitle,
+				BaseURL:      te.SiteConfig.BaseURL,
+				CurrentYear:  time.Now().Year(),
+				Pagination:   *pagination,
+			}
+
+			if i == 0 {
+				folderPath := path.Join(folderNode.URL, "index.html")
+				batchWriter.AddFile(folderPath, "folder.html", data)
+			} else {
+				folderPath := path.Join(folderNode.URL, "pages", fmt.Sprint(i+1), "index.html")
+				batchWriter.AddFile(folderPath, "folder.html", data)
+			}
+
 		}
 
-		data := struct {
-			BaseTemplateData
-			Folder     *models.Folder
-			Posts      []*models.ParsedNote
-			Pagination PaginationData
-		}{
-			BaseTemplateData: baseData,
-			Folder:           folder,
-			Posts:            pagePosts,
-			Pagination:       pagination,
-		}
-
-		if err := batchWriter.AddFile(pagePath, "folder.html", data); err != nil {
-			return fmt.Errorf("failed to add folder page %s page %d: %w", folder.Name, page, err)
-		}
-	}
-
-	return nil
-}
-
-func (te *TemplateExecutor) createBaseTemplateData(
-	fileTree *models.Folder,
-	tags []models.Tag,
-) BaseTemplateData {
-	return BaseTemplateData{
-		SiteTitle:    te.SiteConfig.SiteTitle,
-		SiteSubtitle: te.SiteConfig.SiteSubtitle,
-		BaseURL:      te.SiteConfig.BaseURL,
-		CurrentYear:  time.Now().Year(),
-		FileTree:     fileTree,
-		Tags:         tags,
 	}
 }
 

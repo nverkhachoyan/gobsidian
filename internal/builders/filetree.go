@@ -2,134 +2,81 @@ package builders
 
 import (
 	"encoding/json"
-	"fmt"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
-	"gobsidian/internal/utils"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
 )
 
-type FileTreeBuilder struct {
-	Logger *log.Logger
+type ExplorerBuilder struct {
+	Logger      *log.Logger
+	folderIndex map[int64]*models.FolderNode
 }
 
-type FileTreeBuilderResult struct {
+type ExplorerBuilderResult struct {
 	Duration        time.Duration
-	Root            *models.Folder
+	Root            *models.FolderNode
 	NumberOfFolders int
 	JSON            []byte
 }
 
-func NewFileTreeBuilder(logger *log.Logger) *FileTreeBuilder {
-	return &FileTreeBuilder{Logger: logger}
+func NewExplorerBuilder(logger *log.Logger) *ExplorerBuilder {
+	return &ExplorerBuilder{Logger: logger,
+		folderIndex: make(map[int64]*models.FolderNode, 0)}
 }
 
-func (ft *FileTreeBuilder) Build(
-	notesByPath map[string]*models.ParsedNote,
-) (*FileTreeBuilderResult, error) {
+func (ft *ExplorerBuilder) Build(rootNode *crawler.VaultNode) *ExplorerBuilderResult {
 	start := time.Now()
-	root := &models.Folder{
-		Name:     "Home",
-		Path:     "",
-		Posts:    []*models.ParsedNote{},
-		Children: make(map[string]*models.Folder),
-	}
-	numberOfFolders := 0
+	rootFolderNode := &models.FolderNode{}
+	ft.buildFolder(rootNode, rootFolderNode)
 
-	for _, note := range notesByPath {
-		if !note.IsInsideFolder {
-			root.Posts = append(root.Posts, note)
-			continue
-		}
+	ft.sortFolderTree(rootFolderNode)
 
-		htmlFileName := utils.Slugify(note.FileName) + ".html"
-		url := strings.TrimRight(note.URL, htmlFileName)
-		parts := strings.Split(url, string(filepath.Separator))
-		currentNode := root
-
-		for _, part := range parts {
-			if part == "" {
-				continue
-			}
-
-			lowercasePart := strings.ToLower(part)
-			name := utils.Deslugify(lowercasePart)
-
-			if _, ok := currentNode.Children[lowercasePart]; !ok {
-				childPath := filepath.ToSlash(filepath.Join(currentNode.Path, lowercasePart))
-
-				currentNode.Children[lowercasePart] = &models.Folder{
-					Name:     name,
-					Path:     childPath,
-					Posts:    []*models.ParsedNote{},
-					Children: make(map[string]*models.Folder),
-				}
-				numberOfFolders++
-			}
-			currentNode = currentNode.Children[lowercasePart]
-		}
-
-		currentNode.Posts = append(currentNode.Posts, note)
-	}
-
-	ft.sortFolderTree(root)
-
-	jsonTree := ft.convertFolderToNode(root)
-	jsonBytes, err := json.Marshal(jsonTree)
+	filetreeJSON, err := json.Marshal(rootFolderNode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal folder tree to JSON: %w", err)
+		ft.Logger.Debug("Failed to unmarshal file tree", err)
 	}
 
-	return &FileTreeBuilderResult{
-		Duration:        time.Since(start),
-		Root:            root,
-		NumberOfFolders: numberOfFolders,
-		JSON:            jsonBytes,
-	}, nil
+	return &ExplorerBuilderResult{
+		Duration: time.Since(start),
+		Root:     rootFolderNode,
+		JSON:     filetreeJSON,
+	}
 }
 
-func (ft *FileTreeBuilder) sortFolderTree(folder *models.Folder) {
-	sort.Slice(folder.Posts, func(i, j int) bool {
-		return folder.Posts[i].Title < folder.Posts[j].Title
+func (ft *ExplorerBuilder) buildFolder(rootNode *crawler.VaultNode, rootFolderNode *models.FolderNode) {
+	rootFolderNode.Name = rootNode.Name
+	rootFolderNode.Path = rootNode.URL
+	for _, node := range rootNode.Children {
+		if node.IsDir {
+			folder := &models.FolderNode{
+				Name: node.Name,
+				Path: node.URL,
+			}
+			rootFolderNode.Children = append(rootFolderNode.Children, folder)
+			ft.folderIndex[node.ID] = folder
+			ft.buildFolder(node, folder)
+		} else if node.NoteType == crawler.NoteTypeMarkdown {
+			rootFolderNode.Files = append(rootFolderNode.Files, &models.File{
+				Name: node.Name,
+				URL:  node.URL,
+			})
+		}
+	}
+}
+
+func (ft *ExplorerBuilder) GetFolderIndex() map[int64]*models.FolderNode {
+	return ft.folderIndex
+}
+
+func (ft *ExplorerBuilder) sortFolderTree(folder *models.FolderNode) {
+	sort.Slice(folder.Files, func(i, j int) bool {
+		return folder.Files[i].Name < folder.Files[j].Name
 	})
 
 	for _, child := range folder.Children {
 		ft.sortFolderTree(child)
 	}
-}
-
-func (ft *FileTreeBuilder) convertFolderToNode(folder *models.Folder) *models.FolderNode {
-	node := &models.FolderNode{
-		Name:     folder.Name,
-		Path:     folder.Path,
-		Children: make([]*models.FolderNode, 0),
-		Files:    make([]*models.File, 0),
-	}
-
-	for _, post := range folder.Posts {
-		node.Files = append(node.Files, &models.File{
-			Name: post.Title,
-			URL:  post.URL,
-		})
-	}
-	sort.Slice(node.Files, func(i, j int) bool {
-		return node.Files[i].Name < node.Files[j].Name
-	})
-
-	childKeys := make([]string, 0, len(folder.Children))
-	for key := range folder.Children {
-		childKeys = append(childKeys, key)
-	}
-	sort.Strings(childKeys)
-
-	for _, key := range childKeys {
-		childFolder := folder.Children[key]
-		node.Children = append(node.Children, ft.convertFolderToNode(childFolder))
-	}
-
-	return node
 }

@@ -3,7 +3,7 @@ package generators
 import (
 	"bytes"
 	"fmt"
-	"gobsidian/internal/models"
+	"gobsidian/internal/crawler"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,45 +17,37 @@ import (
 	"regexp"
 )
 
-func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNote, fileTreeJSON []byte) time.Duration {
+func (g *StaticSiteGenerator) copyImages(nodesIndex map[string]*crawler.VaultNode) time.Duration {
 	start := time.Now()
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
 
-	fullImagePaths := make(map[string]string)
-	for _, p := range notesByPath {
-		for _, img := range p.Images {
-			fullPath := filepath.Join(filepath.Dir(p.FullPath), img.RelativePath)
-			fullImagePaths[img.RelativePath] = fullPath
-		}
-	}
-
-	g.Logger.Debug("Copying images 🖼️ ", "type", "images", "count", len(fullImagePaths))
-	for name, path := range fullImagePaths {
+	for _, node := range nodesIndex {
 		wg.Add(1)
 		go func(name, path string) {
 			defer wg.Done()
 			destPath := filepath.Join(g.SiteConfig.OutputDirectory, imagesDir, name)
 			if err := utils.CopyFile(path, destPath); err != nil {
 				errorChan <- fmt.Errorf("image %s: %w", name, err)
+
 			}
-		}(name, path)
+		}(node.Name, node.Path)
 	}
 
-	if len(fileTreeJSON) > 0 {
-		g.Logger.Debug("Writing explorer.json 📊")
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			destPath := filepath.Join(g.SiteConfig.OutputDirectory, generatedDir, fileTreeFilename)
-			if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-				errorChan <- fmt.Errorf("failed to create directory: %w", err)
-			}
-			if err := os.WriteFile(destPath, fileTreeJSON, 0644); err != nil {
-				errorChan <- fmt.Errorf("%s: %w", fileTreeFilename, err)
-			}
-		}()
+	wg.Wait()
+	close(errorChan)
+
+	for err := range errorChan {
+		g.Logger.Debugf("%s\n", err.Error())
 	}
+
+	return time.Since(start)
+}
+
+func (g *StaticSiteGenerator) copyAssetsDir() time.Duration {
+	start := time.Now()
+	var wg sync.WaitGroup
+	errorChan := make(chan error, 100)
 
 	for _, dir := range []string{assetsDir, generatedDir, srcDir} {
 		wg.Add(1)
@@ -75,6 +67,23 @@ func (g *StaticSiteGenerator) copyAssets(notesByPath map[string]*models.ParsedNo
 
 	for err := range errorChan {
 		g.Logger.Debugf("%s\n", err.Error())
+	}
+
+	return time.Since(start)
+}
+
+func (g *StaticSiteGenerator) exportFiletreeJSON(fileTreeJSON []byte) time.Duration {
+	start := time.Now()
+
+	if len(fileTreeJSON) > 0 {
+
+		destPath := filepath.Join(g.SiteConfig.OutputDirectory, generatedDir, fileTreeFilename)
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			g.Logger.Debugf("%s\n", err.Error())
+		}
+		if err := os.WriteFile(destPath, fileTreeJSON, 0644); err != nil {
+			g.Logger.Debugf("%s\n", err.Error())
+		}
 	}
 
 	return time.Since(start)

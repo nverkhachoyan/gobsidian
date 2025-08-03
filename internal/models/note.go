@@ -14,13 +14,26 @@ type Frontmatter struct {
 	UpdatedAt string `yaml:"updatedAt"`
 }
 
+type NoteType string
+
+const (
+	NoteTypeMarkdown   NoteType = "markdown"
+	NoteTypeExcalidraw NoteType = "excalidraw"
+)
+
 type ScannedNote struct {
 	ID             int64
 	FileName       string
+	ParentDir      string
 	RelativePath   string
 	FullPath       string
 	IsInsideFolder bool
 	IsLandingPage  bool
+	NoteType       NoteType
+}
+
+func (s *ScannedNote) GetNoteType() NoteType {
+	return s.NoteType
 }
 
 type ParsedNote struct {
@@ -29,6 +42,8 @@ type ParsedNote struct {
 	Title             string
 	RawBody           []byte
 	HTMLContent       template.HTML
+	Excalidraw        *Excalidraw
+	ExcalidrawPayload ExcalidrawPayload
 	Date              time.Time
 	Author            string
 	UpdatedAt         *time.Time
@@ -43,6 +58,10 @@ type ParsedNote struct {
 	Footnotes         []Footnote
 	EmbeddedFootnotes []Footnote
 	Breadcrumbs       []Breadcrumb
+}
+
+type ExcalidrawPayload struct {
+	Data string `json:"data"`
 }
 
 type Breadcrumb struct {
@@ -111,4 +130,8 @@ func (p *ParsedNote) GetMissingFilesString() string {
 		return ""
 	}
 	return fmt.Sprintf("missing files: %s", strings.Join(p.MissingFiles, ", "))
+}
+
+func (p *ParsedNote) GetNoteType() NoteType {
+	return p.NoteType
 }

@@ -7,10 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"gobsidian/internal/models"
-	"gobsidian/internal/repository"
-
-	"strings"
+	"gobsidian/internal/crawler"
 
 	"github.com/charmbracelet/log"
 )
@@ -21,7 +18,6 @@ type GraphBuilder struct {
 	generatedDirectory string
 	fileName           string
 	graph              *Graph
-	notesRepository    *repository.NoteRepository
 }
 
 type Node struct {
@@ -40,65 +36,41 @@ type Graph struct {
 	Edges []*Edge `json:"edges"`
 }
 
-func NewGraphBuilder(logger *log.Logger, outputDirectory string, generatedDirectory string, fileName string, notesRepository *repository.NoteRepository) *GraphBuilder {
+func NewGraphBuilder(logger *log.Logger, outputDirectory string, generatedDirectory string, fileName string) *GraphBuilder {
 	return &GraphBuilder{
 		Logger:             logger,
 		outputDirectory:    outputDirectory,
 		generatedDirectory: generatedDirectory,
 		fileName:           fileName,
 		graph:              &Graph{},
-		notesRepository:    notesRepository,
 	}
 }
 
-func (g *GraphBuilder) Build(notes map[string]*models.ParsedNote) time.Duration {
+func (g *GraphBuilder) Build(fileIndex map[string]*crawler.VaultNode, IDToNodeIndex map[int64]*crawler.VaultNode) time.Duration {
 	start := time.Now()
-	notesByPath := g.notesRepository.GetAllByPath()
 
 	nodes := make([]*Node, 0)
 	edges := make([]*Edge, 0)
 
-	for _, note := range notes {
-		nodes = append(nodes, &Node{ID: note.ID, Label: note.Title, URL: note.URL})
-
-		for _, linkedPost := range note.Wikilinks {
-			if _, ok := notesByPath[linkedPost]; ok {
-				edges = append(edges, &Edge{From: (*notesByPath[linkedPost]).ID, To: note.ID})
-			} else {
-				postID := g.handleLinksInsideFolders(linkedPost, notesByPath)
-				if postID != 0 {
-					edges = append(edges, &Edge{From: postID, To: note.ID})
-				}
-			}
+	for _, node := range fileIndex {
+		if node.NoteType != crawler.NoteTypeMarkdown {
+			continue
 		}
 
+		nodes = append(nodes, &Node{ID: node.ID, Label: node.Title, URL: node.URL})
+		for _, backlink := range node.Backlinks {
+			edges = append(edges, &Edge{
+				From: backlink.TargetID,
+				To:   node.ID,
+			})
+
+		}
 	}
 
 	g.graph.Nodes = nodes
 	g.graph.Edges = edges
 
-	endTime := time.Since(start)
-
-	return endTime
-}
-
-func (g *GraphBuilder) handleLinksInsideFolders(relativePathText string, notesByPath map[string]*models.ParsedNote) int64 {
-	var lastPossibleMatch string
-	for relativePath := range notesByPath {
-		splitPath := strings.Split(relativePath, "/")
-		if len(splitPath) > 0 {
-			lastPossibleMatch = splitPath[len(splitPath)-1]
-
-			if lastPossibleMatch == relativePathText {
-				postFromMap, ok := notesByPath[relativePath]
-				if ok {
-					return postFromMap.ID
-				}
-			}
-
-		}
-	}
-	return 0
+	return time.Since(start)
 }
 
 func (g *GraphBuilder) ExportAndSaveAsJSON() error {

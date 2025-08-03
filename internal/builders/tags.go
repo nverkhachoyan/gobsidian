@@ -3,6 +3,7 @@ package builders
 import (
 	"encoding/json"
 	"fmt"
+	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 	"os"
 	"path/filepath"
@@ -29,12 +30,16 @@ func NewTagsBuilder(logger *log.Logger, outputDirectory string, generatedDirecto
 	}
 }
 
-func (t *TagsBuilder) Build(notes []*models.ParsedNote) time.Duration {
+func (t *TagsBuilder) Build(fileIndex map[string]*crawler.VaultNode) time.Duration {
 	start := time.Now()
 	tagsMap := make(map[string]*models.Tag)
-	for _, note := range notes {
-		for _, tag := range note.Tags {
-			tagsMap[tag.Slug] = &tag
+	for _, node := range fileIndex {
+		for _, tag := range node.Tags {
+			tag := &models.Tag{
+				Name: tag,
+				Slug: tag,
+			}
+			tagsMap[tag.Slug] = tag
 			tagsMap[tag.Slug].Count++
 		}
 	}
@@ -46,14 +51,6 @@ func (t *TagsBuilder) Build(notes []*models.ParsedNote) time.Duration {
 	sort.Slice(t.tags, func(i, j int) bool {
 		return t.tags[i].Name < t.tags[j].Name
 	})
-
-	postsByTag := make(map[string][]*models.ParsedNote, len(t.tags))
-
-	for _, note := range notes {
-		for _, tag := range note.Tags {
-			postsByTag[tag.Slug] = append(postsByTag[tag.Slug], note)
-		}
-	}
 
 	return time.Since(start)
 }

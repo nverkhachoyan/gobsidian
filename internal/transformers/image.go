@@ -2,7 +2,7 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/models"
+	"gobsidian/internal/crawler"
 	"regexp"
 )
 
@@ -20,7 +20,11 @@ func (ip *ImageProcessor) Name() string {
 	return "image-processor"
 }
 
-func (ip *ImageProcessor) Transform(content string, note *models.ParsedNote, ctx *TransformContext) (string, error) {
+func (ip *ImageProcessor) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
+	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+		return content, nil
+	}
+
 	result := content
 	return ip.imageLinkRegex.ReplaceAllStringFunc(result, func(match string) string {
 		parts := ip.imageLinkRegex.FindStringSubmatch(match)

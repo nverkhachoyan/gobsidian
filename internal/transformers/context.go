@@ -2,7 +2,6 @@ package transformers
 
 import (
 	"gobsidian/internal/models"
-	"gobsidian/internal/repository"
 	"html/template"
 	"sync"
 )
@@ -11,21 +10,21 @@ type TransformContext struct {
 	RenderedPostCache   map[string]template.HTML
 	RenderingInProgress map[string]bool
 	cacheMu             *sync.RWMutex
-	notesRepository     *repository.NoteRepository
 	EmbeddedPosts       map[string]models.EmbeddedPost
 
 	BaseURL         string
+	Port            int
 	OutputDirectory string
 }
 
-func NewTransformContext(baseURL, outputDir string, notesRepository *repository.NoteRepository) *TransformContext {
+func NewTransformContext(baseURL string, port int, outputDir string) *TransformContext {
 	return &TransformContext{
 		RenderedPostCache:   make(map[string]template.HTML),
 		RenderingInProgress: make(map[string]bool),
 		cacheMu:             &sync.RWMutex{},
-		notesRepository:     notesRepository,
 		EmbeddedPosts:       make(map[string]models.EmbeddedPost),
 		BaseURL:             baseURL,
+		Port:                port,
 		OutputDirectory:     outputDir,
 	}
 }
@@ -37,8 +36,8 @@ func (tc *TransformContext) Clone() *TransformContext {
 		RenderingInProgress: make(map[string]bool),
 		EmbeddedPosts:       make(map[string]models.EmbeddedPost),
 		cacheMu:             &sync.RWMutex{},
-		notesRepository:     tc.notesRepository,
 		BaseURL:             tc.BaseURL,
+		Port:                tc.Port,
 		OutputDirectory:     tc.OutputDirectory,
 	}
 }

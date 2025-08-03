@@ -1,13 +1,14 @@
 env = "production"
-input_directory = "posts"
-output_directory = "docs"
+input_directory = "vault"
+output_directory = "public"
 site_title = "Nver Khachoyan's Blog"
 site_subtitle = "My Personal Blog - Built with Go and Obsidian Notes"
-notes_per_page = 6
+notes_per_page = 3
 base_url = "/"
-template_dir = "templates"
+port = 8000
+template_dir = "templatesv2"
 exclude_dirs = ["shakeit"]
-landing_page = "index"
+landing_page = "landingPageNote"
 snippets_dir = ".obsidian/snippets"
 
 [theme]
