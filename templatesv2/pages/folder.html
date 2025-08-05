@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Folder.Name}} | {{.SiteTitle}}</title>
+    {{template "styles" .}}
+    <link rel="stylesheet" href="/css/folder.css" />
+  </head>
+  <body>
+    <div
+      class="gobsidian-container"
+      x-data="{}"
+      @keydown.escape.window="$store.sidebar.closeMobile()"
+    >
+      <div class="mobile-header">
+        <button
+          @click="$store.sidebar.toggleMobile()"
+          class="mobile-menu-button"
+          aria-label="Open menu"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a class="site-title" href="/"> {{.SiteTitle}} </a>
+        <button
+          @click="$store.theme.toggle()"
+          class="theme-switcher"
+          title="Toggle theme"
+        >
+          <span x-show="$store.theme.current === 'light'"
+            ><i class="fa-solid fa-sun"></i
+          ></span>
+          <span x-show="$store.theme.current === 'dark'"
+            ><i class="fa-solid fa-moon"></i
+          ></span>
+        </button>
+      </div>
+
+      <div class="gobsidian-wrapper">
+        {{template "left_sidebar" .}}
+
+        <main class="center">
+          <h1 class="tag-title">Folder: <span>{{.Folder.Name}}</span></h1>
+
+          {{if .Subfolders}}
+          <h2 class="folder-subtitle">Sub-folders</h2>
+          <div class="folder-list">
+            <ul>
+              {{range .Subfolders}}
+              <li><a href="/{{.URL}}">{{.Name}}</a></li>
+              {{end}}
+            </ul>
+          </div>
+          {{end}} {{if .Notes}}
+          <h2 class="folder-subtitle">Posts</h2>
+          <div class="post-grid">
+            {{range .Notes}} {{if not .IsDir}}
+            <div class="post-card">
+              <h2><a href="{{.URL}}">{{.Title}}</a></h2>
+              <div class="post-card-meta">
+                {{range .Tags}}
+                <a href="/tag/{{.}}/" class="tag-link">
+                  <span class="tag">{{.}}</span>
+                </a>
+                {{end}}
+                <span class="post-date"
+                  >{{.Date.Format "January 2, 2006"}}</span
+                >
+              </div>
+            </div>
+            {{end}} {{end}}
+          </div>
+
+          {{template "pagination" .Pagination}} {{else}} {{if not .Notes}}
+          <p>This folder is empty.</p>
+          {{else if not .Subfolders}}
+          <p>This folder is empty.</p>
+          {{end}} {{end}}
+        </main>
+
+        {{template "right_sidebar" .}}
+        <footer>
+          <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>

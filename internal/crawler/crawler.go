@@ -30,10 +30,11 @@ type YamlFrontmatter struct {
 type VaultCrawler struct {
 	RootPath       string
 	landingPageTag string
-	FileIndex      map[string]*VaultNode
-	DepthFileIndex map[string]*VaultNode
-	NameIndex      map[string][]*VaultNode
-	IDToNodeIndex  map[int64]*VaultNode
+	fileIndex      map[string]*VaultNode
+	depthFileIndex map[string]*VaultNode
+	nameIndex      map[string][]*VaultNode
+	idToNodeIndex  map[int64]*VaultNode
+	tagIndex       map[string][]*VaultNode
 	regexes        *config.Regexes
 }
 
@@ -41,10 +42,11 @@ func NewVaultCrawler(rootPath, landingPageTag string, regexes *config.Regexes) *
 	return &VaultCrawler{
 		RootPath:       rootPath,
 		landingPageTag: landingPageTag,
-		FileIndex:      make(map[string]*VaultNode),
-		DepthFileIndex: make(map[string]*VaultNode),
-		NameIndex:      make(map[string][]*VaultNode),
-		IDToNodeIndex:  make(map[int64]*VaultNode),
+		fileIndex:      make(map[string]*VaultNode),
+		depthFileIndex: make(map[string]*VaultNode),
+		nameIndex:      make(map[string][]*VaultNode),
+		idToNodeIndex:  make(map[int64]*VaultNode),
+		tagIndex:       make(map[string][]*VaultNode),
 		regexes:        regexes,
 	}
 }
@@ -81,8 +83,8 @@ func (vc *VaultCrawler) crawlDirectory(dirPath string, parent *VaultNode) (*Vaul
 		Parent:  parent,
 	}
 
-	vc.FileIndex[dirPath] = node
-	vc.IDToNodeIndex[ID] = node
+	vc.fileIndex[dirPath] = node
+	vc.idToNodeIndex[ID] = node
 
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
@@ -173,15 +175,21 @@ func (vc *VaultCrawler) crawlFile(filePath string, parent *VaultNode) (*VaultNod
 		if tag == vc.landingPageTag {
 			node.IsLandingPageNote = true
 		}
-	}
 
+		if _, exists := vc.tagIndex[tag]; !exists {
+			vc.tagIndex[tag] = make([]*VaultNode, 0)
+			vc.tagIndex[tag] = append(vc.tagIndex[tag], node)
+		} else {
+			vc.tagIndex[tag] = append(vc.tagIndex[tag], node)
+		}
+	}
 	return node, nil
 }
 
 func (vc *VaultCrawler) setIndexMaps(node *VaultNode) {
-	vc.FileIndex[node.Path] = node
-	vc.NameIndex[node.BaseName] = append(vc.NameIndex[node.BaseName], node)
-	vc.IDToNodeIndex[node.ID] = node
+	vc.fileIndex[node.Path] = node
+	vc.nameIndex[node.BaseName] = append(vc.nameIndex[node.BaseName], node)
+	vc.idToNodeIndex[node.ID] = node
 
 	cleanedDir := strings.TrimSuffix(strings.TrimPrefix(node.Path, vc.RootPath), node.Extension)
 	subdirs := strings.Split(cleanedDir, string(filepath.Separator))
@@ -190,6 +198,27 @@ func (vc *VaultCrawler) setIndexMaps(node *VaultNode) {
 		key := strings.Join(dirSlice, string(filepath.Separator))
 		key = vc.normalizeDir(key)
 
-		vc.DepthFileIndex[key] = node
+		vc.depthFileIndex[key] = node
 	}
+
+}
+
+func (vc *VaultCrawler) GetTagIndex() map[string][]*VaultNode {
+	return vc.tagIndex
+}
+
+func (vc *VaultCrawler) GetFileIndex() map[string]*VaultNode {
+	return vc.fileIndex
+}
+
+func (vc *VaultCrawler) GetNameIndex() map[string][]*VaultNode {
+	return vc.nameIndex
+}
+
+func (vc *VaultCrawler) GetFileDepthIndex() map[string]*VaultNode {
+	return vc.depthFileIndex
+}
+
+func (vc *VaultCrawler) GetIdToNodeIndex() map[int64]*VaultNode {
+	return vc.idToNodeIndex
 }

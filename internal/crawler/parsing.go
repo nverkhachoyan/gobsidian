@@ -219,7 +219,7 @@ func (vc *VaultCrawler) extractCssClasses(genericFrontmatter map[string]any) ([]
 }
 
 func (vc *VaultCrawler) resolveLinks() {
-	for _, node := range vc.FileIndex {
+	for _, node := range vc.fileIndex {
 		if node.IsDir {
 			continue
 		}
@@ -262,7 +262,7 @@ func (vc *VaultCrawler) resolveWikilink(sourceNode *VaultNode, linkTarget string
 	}
 
 	// For basename-only links, follow Obsidian's search order
-	candidates, exists := vc.NameIndex[linkTarget]
+	candidates, exists := vc.nameIndex[linkTarget]
 	if !exists {
 		return nil
 	}
@@ -306,14 +306,14 @@ func (vc *VaultCrawler) resolvePathBasedLink(sourceNode *VaultNode, linkTarget s
 
 	// Try absolute path from vault root
 	absolutePath := filepath.Join(vc.RootPath, linkTarget)
-	if node, exists := vc.FileIndex[absolutePath]; exists && !node.IsDir {
+	if node, exists := vc.fileIndex[absolutePath]; exists && !node.IsDir {
 		return node
 	}
 
 	// Try with .md extension if not present
 	if !strings.HasSuffix(linkTarget, ".md") {
 		absolutePathMd := absolutePath + ".md"
-		if node, exists := vc.FileIndex[absolutePathMd]; exists && !node.IsDir {
+		if node, exists := vc.fileIndex[absolutePathMd]; exists && !node.IsDir {
 			return node
 		}
 	}
@@ -321,26 +321,26 @@ func (vc *VaultCrawler) resolvePathBasedLink(sourceNode *VaultNode, linkTarget s
 	// Try relative path from source file's directory
 	sourceDir := filepath.Dir(sourceNode.Path)
 	relativePath := filepath.Join(sourceDir, linkTarget)
-	if node, exists := vc.FileIndex[relativePath]; exists && !node.IsDir {
+	if node, exists := vc.fileIndex[relativePath]; exists && !node.IsDir {
 		return node
 	}
 
 	// Try relative path with .md extension
 	if !strings.HasSuffix(linkTarget, ".md") {
 		relativePathMd := relativePath + ".md"
-		if node, exists := vc.FileIndex[relativePathMd]; exists && !node.IsDir {
+		if node, exists := vc.fileIndex[relativePathMd]; exists && !node.IsDir {
 			return node
 		}
 	}
 
 	// Try relative path from source file's directory WITH DEPTH INDEX
-	if node, exists := vc.DepthFileIndex[linkTarget]; exists && !node.IsDir {
+	if node, exists := vc.depthFileIndex[linkTarget]; exists && !node.IsDir {
 		return node
 	}
 
 	// Try relative path with .md extension
 	if !strings.HasSuffix(linkTarget, ".md") {
-		if node, exists := vc.DepthFileIndex[linkTarget+".md"]; exists && !node.IsDir {
+		if node, exists := vc.depthFileIndex[linkTarget+".md"]; exists && !node.IsDir {
 			return node
 		}
 	}

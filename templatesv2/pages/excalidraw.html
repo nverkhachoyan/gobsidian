@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Note.Title}} | {{.SiteTitle}}</title>
+    <link
+      rel="stylesheet"
+      href="https://esm.sh/@excalidraw/excalidraw@0.18.0/dist/dev/index.css"
+    />
+    {{template "styles" .}}
+    <script src="/src/js/excalidraw.js" type="module" defer></script>
+    <link rel="stylesheet" href="/src/css/excalidraw-page.css" />
+    <style>
+      /* Add scroll-margin-top to position footnotes in middle of viewport */
+      .footnote {
+        scroll-margin-top: 45vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="excalidraw-container"
+      x-data="{}"
+      @keydown.escape.window="$store.sidebar.closeMobile()"
+    >
+      <div class="mobile-header">
+        <button
+          @click="$store.sidebar.toggleMobile()"
+          class="mobile-menu-button"
+          aria-label="Open menu"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a class="site-title" href="/"> {{.SiteTitle}} </a>
+        <button
+          @click="$store.theme.toggle()"
+          class="theme-switcher"
+          title="Toggle theme"
+        >
+          <span x-show="$store.theme.current === 'light'"
+            ><i class="fa-solid fa-sun"></i
+          ></span>
+          <span x-show="$store.theme.current === 'dark'"
+            ><i class="fa-solid fa-moon"></i
+          ></span>
+        </button>
+      </div>
+
+      <div class="excalidraw-wrapper">
+        <main class=" {{range .Note.CssClasses}} {{.}} {{end}}">
+          <div class="breadcrumbs">
+            <a href="{{.BaseURL}}">Home</a>
+            <span class="breadcrumb-separator"
+              ><i class="fa-solid fa-chevron-right"></i
+            ></span>
+            {{range .Note.Breadcrumbs}}
+            <a href="{{.URL}}">{{.Title}}</a>
+            {{if not .IsLast}}
+            <span class="breadcrumb-separator"
+              ><i class="fa-solid fa-chevron-right"></i
+            ></span>
+            {{end}} {{end}}
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">{{.Note.Title}}</h1>
+
+            {{if .Note.Author}}
+            <span class="author">By {{.Note.Author}}</span>
+            {{end}}
+            <span class="post-date"
+              >{{.Note.Date.Format "January 2, 2006"}}</span
+            >
+            {{if .Note.UpdatedAt}}
+            <span class="post-date updated"
+              >Updated on {{.Note.UpdatedAt.Format "January 2, 2006"}}</span
+            >
+            {{end}}
+          </div>
+          <article id="excalidraw"></article>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

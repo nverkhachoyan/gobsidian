@@ -22,4 +22,6 @@ Feel free to explore the connections between notes using the [[excal/Map of Cont
 
 I'm excited to share this journey with you.
 
+#gamers
+
 #landingPageNote

@@ -3,9 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.Folder.Name}} | {{.SiteTitle}}</title>
+    <title>Tag: {{.Tag.Name}} | {{.SiteTitle}}</title>
     {{template "styles" .}}
-    <link rel="stylesheet" href="/css/folder.css" />
   </head>
   <body>
     <div
@@ -40,46 +39,32 @@
         {{template "left_sidebar" .}}
 
         <main class="center">
-          <h1 class="tag-title">Folder: <span>{{.Folder.Name}}</span></h1>
-
-          {{if .Subfolders}}
-          <h2 class="folder-subtitle">Sub-folders</h2>
-          <div class="folder-list">
-            <ul>
-              {{range .Subfolders}}
-              <li><a href="/{{.URL}}">{{.Name}}</a></li>
-              {{end}}
-            </ul>
-          </div>
-          {{end}} {{if .Notes}}
-          <h2 class="folder-subtitle">Posts</h2>
+          <h1 class="tag-title">Tag: <span>#{{.Tag.Name}}</span></h1>
+          {{if .Notes}}
           <div class="post-grid">
-            {{range .Notes}} {{if not .IsDir}}
+            {{range .Notes}}
             <div class="post-card">
               <h2><a href="{{.URL}}">{{.Title}}</a></h2>
               <div class="post-card-meta">
-                {{range .Tags}}
-                <a href="/tag/{{.}}/" class="tag-link">
-                  <span class="tag">{{.}}</span>
-                </a>
+                {{if .Author}}
+                <span class="author">{{.Author}}</span>
                 {{end}}
                 <span class="post-date"
                   >{{.Date.Format "January 2, 2006"}}</span
                 >
               </div>
             </div>
-            {{end}} {{end}}
+            {{end}}
           </div>
-
-          {{template "pagination" .Pagination}} {{else}} {{if not
-          .Folder.Children}}
-          <p>This folder is empty.</p>
-          {{end}} {{end}}
+          {{template "pagination" .Pagination}} {{else}}
+          <p>No posts found in this tag.</p>
+          {{end}}
         </main>
 
         {{template "right_sidebar" .}}
         <footer>
           <p>&copy; {{.CurrentYear}} {{.SiteTitle}}. All rights reserved.</p>
+          <p><a href="/">Back to Home</a></p>
         </footer>
       </div>
     </div>

@@ -92,8 +92,9 @@ func (g *StaticSiteGenerator) Generate() error {
 		fmt.Println(printer.Error("Failed to crawl vault", err))
 	}
 
-	fileIndex := g.Crawler.FileIndex
-	IDToNodeIndex := g.Crawler.IDToNodeIndex
+	fileIndex := g.Crawler.GetFileIndex()
+	IDToNodeIndex := g.Crawler.GetIdToNodeIndex()
+	tagIndex := g.Crawler.GetTagIndex()
 
 	// Run Transformations
 	transformTime := g.runTransformations(rootNode)
@@ -158,7 +159,7 @@ func (g *StaticSiteGenerator) Generate() error {
 	// }
 
 	// Execute templates
-	templateExecutor := executors.NewTemplateExecutor(rootNode, fileIndex, &g.SiteConfig, g.Logger, g.Templates)
+	templateExecutor := executors.NewTemplateExecutor(rootNode, fileIndex, tagIndex, &g.SiteConfig, g.Logger, g.Templates)
 	templateExecTime, _, err := templateExecutor.Execute()
 	if err != nil {
 		fmt.Println(printer.Error("Failed to execute templates", "error", err))
