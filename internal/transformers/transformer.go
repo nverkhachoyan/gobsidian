@@ -2,11 +2,11 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/crawler"
+	"gobsidian/internal/models"
 )
 
 type Transformer interface {
-	Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error)
+	Transform(content string, node *models.VaultNode, ctx *TransformContext) (string, error)
 	Name() string
 }
 
@@ -20,7 +20,7 @@ func NewPipeline(transformers ...Transformer) *Pipeline {
 	}
 }
 
-func (p *Pipeline) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
+func (p *Pipeline) Transform(content string, node *models.VaultNode, ctx *TransformContext) (string, error) {
 	result := content
 	var err error
 

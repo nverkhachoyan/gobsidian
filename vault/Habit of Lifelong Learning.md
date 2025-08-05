@@ -1,3 +1,11 @@
+---
+title: Habit of Lifelong Learning
+ping: pong
+tags:
+  - purple
+  - green
+  - red
+---
 Sike, this is empty!
 
 

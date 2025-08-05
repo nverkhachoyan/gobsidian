@@ -3,7 +3,7 @@ package transformers
 import (
 	"regexp"
 
-	"gobsidian/internal/crawler"
+	"gobsidian/internal/models"
 
 	"github.com/charmbracelet/log"
 )
@@ -29,10 +29,10 @@ func (ft *FootnoteEmbeddedTransformer) Name() string {
 
 func (ft *FootnoteEmbeddedTransformer) Transform(
 	body string,
-	node *crawler.VaultNode,
+	node *models.VaultNode,
 	ctx *TransformContext,
 ) (string, error) {
-	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+	if node.GetNoteType() != models.NoteTypeMarkdown {
 		return body, nil
 	}
 

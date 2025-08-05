@@ -31,7 +31,7 @@ func (ft *FootnoteTransformer) Name() string {
 
 func (ft *FootnoteTransformer) Transform(
 	body string,
-	note *models.ParsedNote,
+	note *models.VaultNode,
 	ctx *TransformContext,
 ) (string, error) {
 	if note.Footnotes != nil || len(note.Footnotes) > 0 {

@@ -2,7 +2,7 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/crawler"
+	"gobsidian/internal/models"
 	"regexp"
 )
 
@@ -20,8 +20,8 @@ func (ip *ImageProcessor) Name() string {
 	return "image-processor"
 }
 
-func (ip *ImageProcessor) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
-	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+func (ip *ImageProcessor) Transform(content string, node *models.VaultNode, ctx *TransformContext) (string, error) {
+	if node.GetNoteType() != models.NoteTypeMarkdown {
 		return content, nil
 	}
 
@@ -46,5 +46,4 @@ func (ip *ImageProcessor) Transform(content string, node *crawler.VaultNode, ctx
 
 		return match
 	}), nil
-
 }

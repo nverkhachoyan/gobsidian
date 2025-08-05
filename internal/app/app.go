@@ -7,10 +7,8 @@ import (
 
 	"gobsidian/internal/config"
 	"gobsidian/internal/crawler"
-	"gobsidian/internal/diff"
 	"gobsidian/internal/generators"
 	"gobsidian/internal/models"
-	"gobsidian/internal/parsers"
 	"gobsidian/internal/renderers"
 	"gobsidian/internal/server"
 	"gobsidian/internal/terminal"
@@ -25,10 +23,7 @@ type App struct {
 	Crawler   *crawler.VaultCrawler
 	Generator *generators.StaticSiteGenerator
 
-	obsidianParser   *parsers.ObsidianParser
-	excalidrawParser *parsers.ExcalidrawParser
-	parserManager    *parsers.Manager
-	renderer         *html.Renderer
+	renderer *html.Renderer
 }
 
 func NewApp() *App {
@@ -54,29 +49,8 @@ func (app *App) InitApp() error {
 		app.Config.SiteConfig.OutputDirectory = app.Flags.OutputDirectory
 	}
 
-	app.obsidianParser = parsers.NewObsidianParser(&parsers.ObsidianParser{
-		InputDirectory: app.Config.SiteConfig.InputDirectory,
-		Regexes:        &app.Config.Regexes,
-	})
-	app.excalidrawParser = parsers.NewExcalidrawParser(
-		app.Config.SiteConfig.InputDirectory,
-		app.Config.SiteConfig.OutputDirectory,
-		app.Config.SiteConfig.BaseURL,
-		app.Config.SiteConfig.Port,
-		&app.Config.Regexes,
-	)
-
-	app.parserManager = parsers.NewManager(
-		app.Config.SiteConfig,
-		map[models.NoteType]parsers.Parser{
-			models.NoteTypeMarkdown:   app.obsidianParser,
-			models.NoteTypeExcalidraw: app.excalidrawParser,
-		},
-	)
 	app.renderer = renderers.NewMarkdownRenderer()
-
 	app.Crawler = crawler.NewVaultCrawler(app.Config.SiteConfig.InputDirectory, app.Config.SiteConfig.LandingPage, &app.Config.Regexes)
-
 	gen, err := generators.NewStaticSiteGenerator(
 		app.Config.SiteConfig,
 		&app.Config.Regexes,
@@ -125,36 +99,6 @@ func (app *App) ClearOutputDirectory() error {
 	}
 	fmt.Println(app.Printer.Info("Output directory cleared"))
 	return nil
-}
-
-func (app *App) DetectChanges() ([]string, error) {
-	diffTracker := diff.NewTracker(
-		app.Config.SiteConfig.InputDirectory,
-		app.Config.SiteConfig.OutputDirectory,
-	)
-
-	hasChanges, err := diffTracker.HasChanges()
-	if err != nil {
-		return nil, fmt.Errorf("failed to check for changes: %w", err)
-	}
-
-	if !hasChanges {
-		return nil, nil
-	}
-
-	changedFiles, err := diffTracker.GetChangedFiles()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get changed files: %w", err)
-	}
-
-	_, err = diffTracker.UpdateLockFile()
-	if err != nil {
-		return nil, fmt.Errorf("failed to update lock file: %w", err)
-	}
-
-	// fmt.Println(app.Printer.PrintDiffsSummary(diffs))
-	// fmt.Println(app.Printer.PrintDiffsDetailed(diffs))
-	return changedFiles, nil
 }
 
 func (app *App) ServeSite() {

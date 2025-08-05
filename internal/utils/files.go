@@ -31,10 +31,7 @@ func CopyFile(src, dst string) error {
 	return nil
 }
 
-func CopyStaticDirectory(assetType, outputDir string) error {
-	sourceDir := filepath.Join("templatesv2", assetType)
-	destDir := filepath.Join(outputDir, assetType)
-
+func CopyStaticDirectory(sourceDir, destDir string) error {
 	// It's not an error if the source directory doesn't exist.
 	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
 		return nil

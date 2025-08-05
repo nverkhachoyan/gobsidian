@@ -50,6 +50,6 @@ I'm looking forward to diving deeper into web development with Go and exploring 
 [[NestedFolder/Map Of Content]]
 [[excal/Map of Content]]
 [[Map of Content]]
-[[Tomfoolery And Stuff/What are threads anyway?]]
-
+[[Tech/Tomfoolery And Stuff/What are threads anyway?]]
+[[Toomfoolery And Stuff/What are threads anyway?]]
 #golang

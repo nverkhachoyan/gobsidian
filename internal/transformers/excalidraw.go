@@ -22,7 +22,7 @@ func (ip *ExcalidrawEnricher) Name() string {
 	return "excalidraw-enricher"
 }
 
-func (he *ExcalidrawEnricher) Transform(content string, note *models.ParsedNote, ctx *TransformContext) (string, error) {
+func (he *ExcalidrawEnricher) Transform(content string, note *models.VaultNode, ctx *TransformContext) (string, error) {
 	if note.NoteType != models.NoteTypeExcalidraw {
 		return content, nil
 	}

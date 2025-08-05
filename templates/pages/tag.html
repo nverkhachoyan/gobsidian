@@ -40,9 +40,9 @@
 
         <main class="center">
           <h1 class="tag-title">Tag: <span>#{{.Tag.Name}}</span></h1>
-          {{if .Posts}}
+          {{if .Notes}}
           <div class="post-grid">
-            {{range .Posts}}
+            {{range .Notes}}
             <div class="post-card">
               <h2><a href="{{.URL}}">{{.Title}}</a></h2>
               <div class="post-card-meta">

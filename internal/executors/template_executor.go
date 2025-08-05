@@ -9,7 +9,6 @@ import (
 	"html/template"
 
 	"gobsidian/internal/config"
-	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 
 	"github.com/charmbracelet/log"
@@ -24,31 +23,19 @@ type PaginationData struct {
 	TotalPages  int
 }
 
-type BaseTemplateData struct {
-	SiteTitle    string
-	SiteSubtitle string
-	BaseURL      string
-	CurrentYear  int
-	FileTree     *models.Folder
-	Graph        template.JS
-	Tags         []models.Tag
-	AllTags      template.JS
-	FileTreeJSON template.JS
-}
-
 type TemplateExecutor struct {
 	SiteConfig *config.SiteConfig
 	Logger     *log.Logger
 	Templates  *template.Template
-	rootNode   *crawler.VaultNode
-	fileIndex  map[string]*crawler.VaultNode
-	tagIndex   map[string][]*crawler.VaultNode
+	rootNode   *models.VaultNode
+	fileIndex  map[string]*models.VaultNode
+	tagIndex   map[string][]*models.VaultNode
 }
 
 func NewTemplateExecutor(
-	rootNode *crawler.VaultNode,
-	fileIndex map[string]*crawler.VaultNode,
-	tagIndex map[string][]*crawler.VaultNode,
+	rootNode *models.VaultNode,
+	fileIndex map[string]*models.VaultNode,
+	tagIndex map[string][]*models.VaultNode,
 	siteConfig *config.SiteConfig,
 	logger *log.Logger,
 	templates *template.Template,
@@ -68,15 +55,15 @@ func (te *TemplateExecutor) Execute() (time.Duration, int, error) {
 	rootNode := te.rootNode
 	fileIndex := te.fileIndex
 	batchWriter := NewBatchWriter(te.SiteConfig.OutputDirectory, te.Logger, te.Templates)
-	var landingPage *crawler.VaultNode
-	var markdownNodesSlice []*crawler.VaultNode
-	var folderNodesSlice []*crawler.VaultNode
+	var landingPage *models.VaultNode
+	var markdownNodesSlice []*models.VaultNode
+	var folderNodesSlice []*models.VaultNode
 
 	for _, node := range fileIndex {
 		if node.IsLandingPageNote {
 			landingPage = node
 		}
-		if node.GetNoteType() == crawler.NoteTypeMarkdown {
+		if node.GetNoteType() == models.NoteTypeMarkdown {
 			markdownNodesSlice = append(markdownNodesSlice, node)
 		} else if node.IsDir {
 			folderNodesSlice = append(folderNodesSlice, node)
@@ -97,12 +84,12 @@ func (te *TemplateExecutor) Execute() (time.Duration, int, error) {
 }
 
 func (te *TemplateExecutor) executeHomePage(
-	markdownNodesSlice []*crawler.VaultNode,
-	landingPageNode *crawler.VaultNode,
+	markdownNodesSlice []*models.VaultNode,
+	landingPageNode *models.VaultNode,
 	batchWriter *BatchWriter) {
-	renderableNodes := make([]*crawler.VaultNode, 0)
+	renderableNodes := make([]*models.VaultNode, 0)
 	for _, node := range markdownNodesSlice {
-		if node.NoteType == crawler.NoteTypeMarkdown || node.NoteType == crawler.NoteTypeExcalidraw {
+		if node.NoteType == models.NoteTypeMarkdown || node.NoteType == models.NoteTypeExcalidraw {
 			renderableNodes = append(renderableNodes, node)
 		}
 	}
@@ -112,7 +99,7 @@ func (te *TemplateExecutor) executeHomePage(
 		numPages = len(renderableNodes) / te.SiteConfig.NotesPerPage
 	}
 
-	pages := make([][]*crawler.VaultNode, 0)
+	pages := make([][]*models.VaultNode, 0)
 	for i := 0; i < len(renderableNodes); i = i + te.SiteConfig.NotesPerPage {
 		end := min(i+te.SiteConfig.NotesPerPage, len(renderableNodes))
 		pages = append(pages, renderableNodes[i:end])
@@ -139,8 +126,8 @@ func (te *TemplateExecutor) executeHomePage(
 		}
 
 		data := struct {
-			LandingPageNote *crawler.VaultNode
-			Notes           []*crawler.VaultNode
+			LandingPageNote *models.VaultNode
+			Notes           []*models.VaultNode
 			SiteTitle       string
 			SiteSubtitle    string
 			BaseURL         string
@@ -159,6 +146,7 @@ func (te *TemplateExecutor) executeHomePage(
 		if i == 0 {
 			batchWriter.AddFile("index.html", "index.html", data)
 		} else {
+			data.LandingPageNote = nil
 			pageDir := fmt.Sprintf("/pages/%d/index.html", i+1)
 			batchWriter.AddFile(pageDir, "index.html", data)
 		}
@@ -166,25 +154,33 @@ func (te *TemplateExecutor) executeHomePage(
 	}
 }
 
-func (te *TemplateExecutor) executeMarkdowns(rootNode *crawler.VaultNode, batchWriter *BatchWriter) {
-	if rootNode.GetNoteType() == crawler.NoteTypeMarkdown {
-		data := struct {
-			Note         crawler.VaultNode
-			SiteTitle    string
-			SiteSubtitle string
-			BaseURL      string
-			CurrentYear  int
-		}{
-			Note:         *rootNode,
-			SiteTitle:    te.SiteConfig.SiteTitle,
-			SiteSubtitle: te.SiteConfig.SiteSubtitle,
-			BaseURL:      te.SiteConfig.BaseURL,
-			CurrentYear:  time.Now().Year(),
-		}
+func (te *TemplateExecutor) executeMarkdowns(rootNode *models.VaultNode, batchWriter *BatchWriter) {
+	noteType := rootNode.GetNoteType()
 
+	data := struct {
+		Note         models.VaultNode
+		SiteTitle    string
+		SiteSubtitle string
+		BaseURL      string
+		CurrentYear  int
+	}{
+		Note:         *rootNode,
+		SiteTitle:    te.SiteConfig.SiteTitle,
+		SiteSubtitle: te.SiteConfig.SiteSubtitle,
+		BaseURL:      te.SiteConfig.BaseURL,
+		CurrentYear:  time.Now().Year(),
+	}
+
+	switch noteType {
+	case "markdown":
 		batchWriter.AddFile(rootNode.URL, "post.html", data)
 		previewUrl := filepath.Join("previews", rootNode.URL)
 		batchWriter.AddFile(previewUrl, "preview.html", data)
+	case "excalidraw":
+		batchWriter.AddFile(rootNode.URL, "excalidraw.html", data)
+		previewUrl := filepath.Join("previews", rootNode.URL)
+		batchWriter.AddFile(previewUrl, "preview.html", data)
+	default:
 	}
 
 	for _, child := range rootNode.Children {
@@ -192,16 +188,16 @@ func (te *TemplateExecutor) executeMarkdowns(rootNode *crawler.VaultNode, batchW
 	}
 }
 
-func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, batchWriter *BatchWriter) {
+func (te *TemplateExecutor) executeFolders(folderNodes []*models.VaultNode, batchWriter *BatchWriter) {
 	for _, folderNode := range folderNodes {
 		if folderNode.Path == te.SiteConfig.InputDirectory || !folderNode.IsDir {
 			continue
 		}
 
-		renderableNodes := make([]*crawler.VaultNode, 0)
-		subFolders := make([]*crawler.VaultNode, 0)
+		renderableNodes := make([]*models.VaultNode, 0)
+		subFolders := make([]*models.VaultNode, 0)
 		for _, node := range folderNode.Children {
-			if node.NoteType == crawler.NoteTypeMarkdown || node.NoteType == crawler.NoteTypeExcalidraw {
+			if node.NoteType == models.NoteTypeMarkdown || node.NoteType == models.NoteTypeExcalidraw {
 				renderableNodes = append(renderableNodes, node)
 			}
 			if node.IsDir {
@@ -214,7 +210,7 @@ func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, bat
 			numPages = len(renderableNodes) / te.SiteConfig.NotesPerPage
 		}
 
-		pages := make([][]*crawler.VaultNode, 0)
+		pages := make([][]*models.VaultNode, 0)
 		for i := 0; i < len(renderableNodes); i = i + te.SiteConfig.NotesPerPage {
 			end := min(i+te.SiteConfig.NotesPerPage, len(renderableNodes))
 			pages = append(pages, renderableNodes[i:end])
@@ -222,9 +218,9 @@ func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, bat
 
 		if len(pages) == 0 {
 			data := struct {
-				Folder       *crawler.VaultNode
-				Subfolders   []*crawler.VaultNode
-				Notes        []*crawler.VaultNode
+				Folder       *models.VaultNode
+				Subfolders   []*models.VaultNode
+				Notes        []*models.VaultNode
 				SiteTitle    string
 				SiteSubtitle string
 				BaseURL      string
@@ -262,9 +258,9 @@ func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, bat
 			}
 
 			data := struct {
-				Folder       *crawler.VaultNode
-				Subfolders   []*crawler.VaultNode
-				Notes        []*crawler.VaultNode
+				Folder       *models.VaultNode
+				Subfolders   []*models.VaultNode
+				Notes        []*models.VaultNode
 				SiteTitle    string
 				SiteSubtitle string
 				BaseURL      string
@@ -294,11 +290,11 @@ func (te *TemplateExecutor) executeFolders(folderNodes []*crawler.VaultNode, bat
 	}
 }
 
-func (te *TemplateExecutor) executeTagPages(tagIndex map[string][]*crawler.VaultNode, batchWriter *BatchWriter) {
+func (te *TemplateExecutor) executeTagPages(tagIndex map[string][]*models.VaultNode, batchWriter *BatchWriter) {
 	for tagName, nodes := range tagIndex {
-		renderableNodes := make([]*crawler.VaultNode, 0)
+		renderableNodes := make([]*models.VaultNode, 0)
 		for _, node := range nodes {
-			if node.NoteType == crawler.NoteTypeMarkdown || node.NoteType == crawler.NoteTypeExcalidraw {
+			if node.NoteType == models.NoteTypeMarkdown || node.NoteType == models.NoteTypeExcalidraw {
 				renderableNodes = append(renderableNodes, node)
 			}
 		}
@@ -308,7 +304,7 @@ func (te *TemplateExecutor) executeTagPages(tagIndex map[string][]*crawler.Vault
 			numPages = len(renderableNodes) / te.SiteConfig.NotesPerPage
 		}
 
-		pages := make([][]*crawler.VaultNode, 0)
+		pages := make([][]*models.VaultNode, 0)
 		for i := 0; i < len(renderableNodes); i = i + te.SiteConfig.NotesPerPage {
 			end := min(i+te.SiteConfig.NotesPerPage, len(renderableNodes))
 			pages = append(pages, renderableNodes[i:end])
@@ -336,7 +332,7 @@ func (te *TemplateExecutor) executeTagPages(tagIndex map[string][]*crawler.Vault
 
 			data := struct {
 				Tag          models.Tag
-				Notes        []*crawler.VaultNode
+				Notes        []*models.VaultNode
 				SiteTitle    string
 				SiteSubtitle string
 				BaseURL      string

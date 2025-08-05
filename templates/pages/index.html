@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.SiteTitle}}</title>
     {{template "styles" .}}
+    <title>{{.SiteTitle}}</title>
   </head>
   <body>
     <div
@@ -42,9 +42,7 @@
 
           <aside class="landing-page-note">
             <h5 class="landing-title">{{.LandingPageNote.Title}}</h5>
-            <div class="landing-content prose">
-              {{.LandingPageNote.HTMLContent}}
-            </div>
+            <div class="landing-content prose">{{.LandingPageNote.HTML}}</div>
           </aside>
 
           {{end}} {{if .Notes}}
@@ -55,8 +53,8 @@
               <h2><a href="{{.URL}}">{{.Title}}</a></h2>
               <div class="post-card-meta">
                 {{range .Tags}}
-                <a href="/tag/{{.Slug}}/" class="tag-link">
-                  <span class="tag">{{.Name}}</span>
+                <a href="/tag/{{.}}/" class="tag-link">
+                  <span class="tag">{{.}}</span>
                 </a>
                 {{end}} {{if .Author}}
                 <span class="author">{{.Author}}</span>

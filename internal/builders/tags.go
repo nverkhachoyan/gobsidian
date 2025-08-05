@@ -3,7 +3,6 @@ package builders
 import (
 	"encoding/json"
 	"fmt"
-	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 	"os"
 	"path/filepath"
@@ -30,7 +29,7 @@ func NewTagsBuilder(logger *log.Logger, outputDirectory string, generatedDirecto
 	}
 }
 
-func (t *TagsBuilder) Build(fileIndex map[string]*crawler.VaultNode) time.Duration {
+func (t *TagsBuilder) Build(fileIndex map[string]*models.VaultNode) time.Duration {
 	start := time.Now()
 	tagsMap := make(map[string]*models.Tag)
 	for _, node := range fileIndex {

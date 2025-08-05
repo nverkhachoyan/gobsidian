@@ -3,7 +3,6 @@ package generators
 import (
 	"bytes"
 	"fmt"
-	"gobsidian/internal/crawler"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,11 +12,12 @@ import (
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/styles"
 
+	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 	"regexp"
 )
 
-func (g *StaticSiteGenerator) copyImages(nodesIndex map[string]*crawler.VaultNode) time.Duration {
+func (g *StaticSiteGenerator) copyImages(nodesIndex map[string]*models.VaultNode) time.Duration {
 	start := time.Now()
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 100)
@@ -51,11 +51,13 @@ func (g *StaticSiteGenerator) copyAssetsDir() time.Duration {
 
 	for _, dir := range []string{assetsDir, generatedDir, srcDir} {
 		wg.Add(1)
-		go func(dir string) {
+		go func(assetDir string) {
 			defer wg.Done()
-			g.Logger.Debug("Copying static assets 📦", "dir", dir)
-			if err := utils.CopyStaticDirectory(dir, g.SiteConfig.OutputDirectory); err != nil {
-				errorChan <- fmt.Errorf("asset folder '%s': %w", dir, err)
+			g.Logger.Debug("Copying static assets 📦", "dir", assetDir)
+			sourceDir := filepath.Join(g.SiteConfig.TemplateDir, assetDir)
+			destDir := filepath.Join(g.SiteConfig.OutputDirectory, assetDir)
+			if err := utils.CopyStaticDirectory(sourceDir, destDir); err != nil {
+				errorChan <- fmt.Errorf("asset folder '%s': %w", assetDir, err)
 			}
 		}(dir)
 	}

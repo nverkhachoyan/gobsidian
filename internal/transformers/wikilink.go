@@ -3,7 +3,6 @@ package transformers
 import (
 	"bytes"
 	"fmt"
-	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 	"gobsidian/internal/utils"
 	"html/template"
@@ -53,10 +52,10 @@ func (wt *WikilinkTransformer) Name() string {
 
 func (wt *WikilinkTransformer) Transform(
 	body string,
-	node *crawler.VaultNode,
+	node *models.VaultNode,
 	ctx *TransformContext,
 ) (string, error) {
-	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+	if node.GetNoteType() != models.NoteTypeMarkdown {
 		return body, nil
 	}
 
@@ -70,7 +69,7 @@ func (wt *WikilinkTransformer) Transform(
 			pseudoName = parts[2]
 		}
 
-		var foundNode *crawler.VaultNode
+		var foundNode *models.VaultNode
 
 		for _, link := range node.Links {
 			if (link.Target == wikilink || link.Display == pseudoName) && link.TargetNode != nil {
@@ -91,7 +90,7 @@ func (wt *WikilinkTransformer) Transform(
 }
 
 func (wt *WikilinkTransformer) handleEmbeddedPost(
-	embeddedPost *crawler.VaultNode,
+	embeddedPost *models.VaultNode,
 	ctx *TransformContext,
 ) string {
 	var uniqueID string
@@ -110,7 +109,7 @@ func (wt *WikilinkTransformer) handleEmbeddedPost(
 }
 
 func (wt *WikilinkTransformer) renderPostContent(
-	post *crawler.VaultNode,
+	post *models.VaultNode,
 	embeddedPosts map[string]models.EmbeddedPost,
 	parentCtx *TransformContext,
 ) template.HTML {
@@ -132,6 +131,7 @@ func (wt *WikilinkTransformer) renderPostContent(
 		NewWikilinkTransformer(wt.wikilinkRegex, wt.imageLinkRegex, wt.hashtagRegex, wt.calloutRegex, wt.footnotesRegex, wt.logger, wt.markdownRenderer),
 		NewSyntaxHighlighter(true),
 		NewFootnoteEmbeddedTransformer(wt.footnotesRegex, wt.logger),
+		NewExcalidrawEnricher(),
 	)
 
 	result, err := pipeline.Transform(string(post.Markdown), post, parentCtx)

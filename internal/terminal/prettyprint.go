@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"gobsidian/internal/diff"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -78,47 +76,6 @@ func (pp *PrettyPrinter) Header(title string) string {
 	return pp.headerStyle.Render(title)
 }
 
-func (pp *PrettyPrinter) Diff(title, oldText, newText string) string {
-	var output strings.Builder
-
-	if title != "" {
-		output.WriteString(pp.headerStyle.Render(title))
-		output.WriteString("\n")
-	}
-
-	oldLines := strings.Split(oldText, "\n")
-	newLines := strings.Split(newText, "\n")
-
-	maxLines := max(len(oldLines), len(newLines))
-
-	for i := 0; i < maxLines; i++ {
-		var oldLine, newLine string
-
-		if i < len(oldLines) {
-			oldLine = oldLines[i]
-		}
-		if i < len(newLines) {
-			newLine = newLines[i]
-		}
-
-		if oldLine != newLine {
-			if oldLine != "" {
-				output.WriteString(pp.diffDelStyle.Render("- " + oldLine))
-				output.WriteString("\n")
-			}
-			if newLine != "" {
-				output.WriteString(pp.diffAddStyle.Render("+ " + newLine))
-				output.WriteString("\n")
-			}
-		} else if oldLine != "" {
-			output.WriteString(lipgloss.NewStyle().Foreground(pp.gray).Render("  " + oldLine))
-			output.WriteString("\n")
-		}
-	}
-
-	return output.String()
-}
-
 func (pp *PrettyPrinter) Box(title, content string) string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -182,124 +139,4 @@ func (pp *PrettyPrinter) formatMessage(message string, keyvals ...any) string {
 	}
 
 	return strings.Join(parts, " ")
-}
-
-func (pp *PrettyPrinter) PrintDiffs(diffs []diff.Diff) string {
-	if len(diffs) == 0 {
-		return pp.Info("No changes detected")
-	}
-
-	var output strings.Builder
-
-	output.WriteString(pp.headerStyle.Render("📄 FILE CHANGES"))
-	output.WriteString("\n\n")
-
-	changesByType := make(map[diff.ChangeType][]diff.Diff)
-	for _, d := range diffs {
-		changesByType[d.ChangeType] = append(changesByType[d.ChangeType], d)
-	}
-
-	for changeType, changes := range changesByType {
-		if len(changes) == 0 {
-			continue
-		}
-
-		var icon, color string
-		var style lipgloss.Style
-
-		switch changeType {
-		case diff.Added:
-			icon = "+"
-			color = "42" // green
-			style = lipgloss.NewStyle().Foreground(lipgloss.Color(color))
-		case diff.Modified:
-			icon = "~"
-			color = "220" // yellow
-			style = lipgloss.NewStyle().Foreground(lipgloss.Color(color))
-		case diff.Deleted:
-			icon = "-"
-			color = "196" // red
-			style = lipgloss.NewStyle().Foreground(lipgloss.Color(color))
-		}
-
-		sectionHeader := fmt.Sprintf("%s %s (%d)", icon, changeType.String(), len(changes))
-		output.WriteString(style.Bold(true).Render(sectionHeader))
-		output.WriteString("\n")
-
-		for _, change := range changes {
-			fileEntry := fmt.Sprintf("  %s %s", icon, change.File)
-			output.WriteString(style.Render(fileEntry))
-			output.WriteString("\n")
-		}
-		output.WriteString("\n")
-	}
-
-	summary := fmt.Sprintf("Total changes: %d", len(diffs))
-	output.WriteString(pp.infoStyle.Render(summary))
-
-	return output.String()
-}
-
-func (pp *PrettyPrinter) PrintDiffsSummary(diffs []diff.Diff) string {
-	if len(diffs) == 0 {
-		return pp.Info("No changes detected")
-	}
-
-	counts := make(map[diff.ChangeType]int)
-	for _, d := range diffs {
-		counts[d.ChangeType]++
-	}
-
-	var parts []string
-	if counts[diff.Added] > 0 {
-		parts = append(parts, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42")).
-			Render(fmt.Sprintf("+%d", counts[diff.Added])))
-	}
-	if counts[diff.Modified] > 0 {
-		parts = append(parts, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("220")).
-			Render(fmt.Sprintf("~%d", counts[diff.Modified])))
-	}
-	if counts[diff.Deleted] > 0 {
-		parts = append(parts, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")).
-			Render(fmt.Sprintf("-%d", counts[diff.Deleted])))
-	}
-
-	summary := fmt.Sprintf("📄 Changes: %s", strings.Join(parts, " "))
-	return pp.infoStyle.Render(summary)
-}
-
-func (pp *PrettyPrinter) PrintDiffsDetailed(diffs []diff.Diff) string {
-	if len(diffs) == 0 {
-		return pp.Info("No changes detected")
-	}
-
-	var output strings.Builder
-
-	output.WriteString("\n")
-
-	for _, d := range diffs {
-		var icon string
-		var style lipgloss.Style
-
-		switch d.ChangeType {
-		case diff.Added:
-			icon = "+"
-			style = lipgloss.NewStyle().Foreground(pp.green)
-		case diff.Modified:
-			icon = "~"
-			style = lipgloss.NewStyle().Foreground(pp.yellow)
-		case diff.Deleted:
-			icon = "-"
-			style = lipgloss.NewStyle().Foreground(pp.red)
-		}
-
-		line := fmt.Sprintf("  %s %s", icon, d.File)
-		output.WriteString(style.Render(line))
-		output.WriteString("\n")
-	}
-
-	return output.String()
 }

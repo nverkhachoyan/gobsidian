@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"gobsidian/internal/crawler"
 	"gobsidian/internal/models"
 
 	"github.com/charmbracelet/log"
@@ -33,7 +32,7 @@ func NewSearchIndexBuilder(logger *log.Logger, outputDirectory string, generated
 	}
 }
 
-func (s *SearchIndexBuilder) Build(fileIndex map[string]*crawler.VaultNode) time.Duration {
+func (s *SearchIndexBuilder) Build(fileIndex map[string]*models.VaultNode) time.Duration {
 	start := time.Now()
 	s.searchIndex = &models.SearchIndex{
 		Notes: s.searchIndex.Notes,

@@ -2,38 +2,171 @@ package crawler
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"gobsidian/internal/models"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	lzstring "github.com/daku10/go-lz-string"
 	"github.com/goccy/go-yaml"
 )
 
-func (vc *VaultCrawler) processMarkdownFile(node *VaultNode) {
+func (vc *VaultCrawler) processMarkdownFile(node *models.VaultNode) {
 	fileContent, err := os.ReadFile(node.Path)
 	if err != nil {
 		return
 	}
 
-	frontMatterBytes, bodyBytes, err := vc.splitFrontmatterAndBody(fileContent)
-	if err != nil {
-		fmt.Println("failed to split frontmatter and body")
-	}
+	frontMatterBytes, bodyBytes := vc.splitFrontmatterAndBody(fileContent)
 
 	node.Markdown = string(bodyBytes)
 	bodyStr := string(bodyBytes)
 
-	frontMatter, err := vc.parseFrontmatter(frontMatterBytes, node.Path, node.BaseName)
-	if err != nil {
-		fmt.Println("failed when parsing frontmatter", err)
+	vc.parseAndSetFrontmatter(frontMatterBytes, node)
+
+	node.IsLandingPageNote = slices.Contains(node.Tags, vc.landingPageTag)
+	if slices.Contains(node.Tags, "excalidraw") {
+		node.NoteType = models.NoteTypeExcalidraw
 	}
 
-	node.Title = frontMatter.title
-	node.Date = frontMatter.date
+	if node.NoteType != models.NoteTypeExcalidraw {
+		vc.parseAndSetWikilinks(bodyStr, node)
+		vc.parseAndSetMarkdownLinks(bodyStr, node)
+		vc.parseAndSetTagsInMarkdownBody(bodyStr, node)
 
-	// Extract wikilinks
+		// Word count (rough estimate)
+		words := strings.Fields(bodyStr)
+		node.WordCount = len(words)
+	} else {
+		vc.parseAndSetExcalidraw(bodyStr, node)
+	}
+}
+
+func (vc *VaultCrawler) parseAndSetExcalidraw(bodyStr string, node *models.VaultNode) {
+	textElements := parseTextElements(bodyStr)
+	embeddedFilesMap := parseEmbeddedFiles(bodyStr)
+	initialDataBase64 := extractExcalidrawBase64(bodyStr)
+	_ = vc.populateExcalidrawImages(embeddedFilesMap)
+
+	if initialDataBase64 == "" {
+		fmt.Printf("no excalidraw base64 data found in %s\n", node.Path)
+		fmt.Println("could not find excalidraw base64 data")
+	}
+
+	initialDataString, err := lzstring.DecompressFromBase64(initialDataBase64)
+	if err != nil {
+		fmt.Printf("failed to decompress excalidraw base64 data: %v\n", err)
+
+	}
+
+	var initialData models.InitialDataExcalidraw
+	if err := json.Unmarshal([]byte(initialDataString), &initialData); err != nil {
+		fmt.Printf("failed to unmarshal excalidraw initial data: %v\n", err)
+
+	}
+
+	node.Excalidraw = &models.Excalidraw{
+
+		InitialData:   &initialData,
+		TextElements:  textElements,
+		EmbeddedFiles: embeddedFilesMap,
+	}
+}
+
+func (vc *VaultCrawler) splitFrontmatterAndBody(markdownInput []byte) ([]byte, []byte) {
+	frontmatterMatch := vc.regexes.FrontmatterRegex.FindSubmatch(markdownInput)
+
+	if len(frontmatterMatch) > 1 {
+		markdownInput = bytes.ReplaceAll(markdownInput, frontmatterMatch[0], []byte(""))
+		return frontmatterMatch[1], markdownInput
+	}
+
+	return nil, markdownInput
+}
+
+func (vc *VaultCrawler) parseAndSetFrontmatter(frontmatterBytes []byte, node *models.VaultNode) {
+	var warnings []string
+
+	var genericFrontmatter map[string]any
+	if err := yaml.Unmarshal(frontmatterBytes, &genericFrontmatter); err != nil {
+		fmt.Printf("failed to unmarshal frontmatter: %v", err)
+	}
+
+	node.GenericFrontmatter = genericFrontmatter
+
+	if title, ok := genericFrontmatter["title"].(string); ok {
+		node.Title = title
+	}
+	if author, ok := genericFrontmatter["author"].(string); ok {
+		node.Author = author
+	}
+	if date, ok := genericFrontmatter["date"].(string); ok {
+		var postDate time.Time
+		if date != "" {
+			layouts := []string{"2006-01-02", time.RFC3339}
+			for _, layout := range layouts {
+				t, err := time.Parse(layout, date)
+				if err == nil {
+					postDate = t
+					break
+				}
+			}
+		}
+		if postDate.IsZero() {
+			fileInfo, err := os.Stat(node.Path)
+			if err != nil {
+				fmt.Printf("failed to get file info %s: %v", node.Path, err)
+			}
+			postDate = fileInfo.ModTime()
+		}
+
+		node.Date = postDate
+	}
+
+	if updatedAt, ok := genericFrontmatter["date"].(string); ok {
+		var updatedAtDate time.Time
+		if updatedAt != "" {
+			layouts := []string{"2006-01-02", time.RFC3339}
+			for _, layout := range layouts {
+				t, err := time.Parse(layout, updatedAt)
+				if err == nil {
+					updatedAtDate = t
+					break
+				}
+			}
+		}
+
+		if updatedAtDate.IsZero() {
+			fileInfo, err := os.Stat(node.Path)
+			if err != nil {
+				fmt.Printf("failed to get file info %s: %v", node.Path, err)
+			}
+			updatedAtDate = fileInfo.ModTime()
+		}
+
+		node.UpdatedAt = updatedAtDate
+	}
+
+	cssClasses, cssWarnings := vc.parseCssClasses(genericFrontmatter)
+	warnings = append(warnings, cssWarnings...)
+	node.CssClasses = cssClasses
+
+	var stringTags []string
+	if tags, ok := genericFrontmatter["tags"].([]any); ok {
+		for _, tag := range tags {
+			if strTag, ok := tag.(string); ok {
+				stringTags = append(stringTags, strTag)
+			}
+		}
+	}
+	node.Tags = append(node.Tags, stringTags...)
+}
+
+func (vc *VaultCrawler) parseAndSetWikilinks(bodyStr string, node *models.VaultNode) {
 	wikilinks := vc.regexes.WikilinkRegex.FindAllStringSubmatch(bodyStr, -1)
 	for i, match := range wikilinks {
 		if len(match) > 1 {
@@ -48,7 +181,7 @@ func (vc *VaultCrawler) processMarkdownFile(node *VaultNode) {
 				display = parts[1]
 			}
 
-			link := Link{
+			link := models.Link{
 				Target:  target,
 				Display: display,
 				Type:    "wikilink",
@@ -57,12 +190,13 @@ func (vc *VaultCrawler) processMarkdownFile(node *VaultNode) {
 			node.Links = append(node.Links, link)
 		}
 	}
+}
 
-	// Extract markdown links
-	mdlinks := vc.regexes.WikilinkRegex.FindAllStringSubmatch(bodyStr, -1)
+func (vc *VaultCrawler) parseAndSetMarkdownLinks(bodyStr string, node *models.VaultNode) {
+	mdlinks := vc.regexes.MarkdownRegex.FindAllStringSubmatch(bodyStr, -1)
 	for i, match := range mdlinks {
 		if len(match) > 2 {
-			link := Link{
+			link := models.Link{
 				Target:  match[2],
 				Display: match[1],
 				Type:    "markdown",
@@ -71,125 +205,18 @@ func (vc *VaultCrawler) processMarkdownFile(node *VaultNode) {
 			node.Links = append(node.Links, link)
 		}
 	}
+}
 
-	// Extract tags
-	// TODO: make sure to get tags from frontmatter as well
+func (vc *VaultCrawler) parseAndSetTagsInMarkdownBody(bodyStr string, node *models.VaultNode) {
 	tags := vc.regexes.HashtagRegex.FindAllStringSubmatch(bodyStr, -1)
 	for _, match := range tags {
-		if len(match) > 1 {
+		if len(match) > 1 && !slices.Contains(node.Tags, match[1]) {
 			node.Tags = append(node.Tags, match[1])
 		}
 	}
-
-	// Calculate word count (rough estimate)
-	words := strings.Fields(bodyStr)
-	node.WordCount = len(words)
 }
 
-func (vc *VaultCrawler) splitFrontmatterAndBody(markdownInput []byte) ([]byte, []byte, error) {
-	frontmatterMatch := vc.regexes.FrontmatterRegex.FindSubmatch(markdownInput)
-
-	if len(frontmatterMatch) > 1 {
-		markdownInput = bytes.ReplaceAll(markdownInput, frontmatterMatch[0], []byte(""))
-		return frontmatterMatch[1], markdownInput, nil
-	}
-
-	return nil, markdownInput, nil
-}
-
-func (p *VaultCrawler) parseFrontmatter(frontmatterBytes []byte, filePath string, fileName string) (Frontmatter, error) {
-	var warnings []string
-
-	var genericFrontmatter map[string]any
-	if err := yaml.Unmarshal(frontmatterBytes, &genericFrontmatter); err != nil {
-		return Frontmatter{}, fmt.Errorf("failed to unmarshal frontmatter: %w", err)
-	}
-
-	var frontmatter YamlFrontmatter
-	if err := yaml.Unmarshal(frontmatterBytes, &frontmatter); err != nil {
-		if title, ok := genericFrontmatter["title"].(string); ok {
-			frontmatter.Title = title
-		}
-		if author, ok := genericFrontmatter["author"].(string); ok {
-			frontmatter.Author = author
-		}
-		if date, ok := genericFrontmatter["date"].(string); ok {
-			frontmatter.Date = date
-		}
-		if updatedAt, ok := genericFrontmatter["updatedAt"].(string); ok {
-			frontmatter.UpdatedAt = updatedAt
-		}
-
-		warnings = append(warnings, fmt.Sprintf("frontmatter parsing issues detected, some fields may be ignored: %v", err))
-	}
-
-	knownFields := map[string]bool{
-		"title":      true,
-		"date":       true,
-		"author":     true,
-		"updatedAt":  true,
-		"tags":       true,
-		"cssclasses": true,
-		"aliases":    true,
-	}
-
-	for field := range genericFrontmatter {
-		if !knownFields[field] {
-			warnings = append(warnings, fmt.Sprintf("unknown frontmatter field: %s", field))
-		}
-	}
-
-	title := frontmatter.Title
-	if title == "" {
-		title = fileName
-	}
-
-	var postDate time.Time
-	if frontmatter.Date != "" {
-		layouts := []string{"2006-01-02", time.RFC3339}
-		for _, layout := range layouts {
-			t, err := time.Parse(layout, frontmatter.Date)
-			if err == nil {
-				postDate = t
-				break
-			}
-		}
-	}
-
-	if postDate.IsZero() {
-		fileInfo, err := os.Stat(filePath)
-		if err != nil {
-			return Frontmatter{}, fmt.Errorf("failed to get file info %s: %w", filePath, err)
-		}
-		postDate = fileInfo.ModTime()
-	}
-
-	var updatedAt *time.Time
-	if frontmatter.UpdatedAt != "" {
-		layouts := []string{"2006-01-02", time.RFC3339}
-		for _, layout := range layouts {
-			t, err := time.Parse(layout, frontmatter.UpdatedAt)
-			if err == nil {
-				updatedAt = &t
-				break
-			}
-		}
-	}
-
-	cssClasses, cssWarnings := p.extractCssClasses(genericFrontmatter)
-	warnings = append(warnings, cssWarnings...)
-
-	return Frontmatter{
-		author:     frontmatter.Author,
-		title:      title,
-		date:       postDate,
-		updatedAt:  updatedAt,
-		cssClasses: cssClasses,
-		warnings:   warnings,
-	}, nil
-}
-
-func (vc *VaultCrawler) extractCssClasses(genericFrontmatter map[string]any) ([]string, []string) {
+func (vc *VaultCrawler) parseCssClasses(genericFrontmatter map[string]any) ([]string, []string) {
 	var warnings []string
 	var cssClasses []string
 
@@ -236,7 +263,7 @@ func (vc *VaultCrawler) resolveLinks() {
 					link.TargetNode = resolvedNode
 					link.URL = resolvedNode.URL
 
-					backlink := Link{
+					backlink := models.Link{
 						Target:       node.BaseName,
 						TargetID:     node.ID,
 						TargetNode:   node,
@@ -253,15 +280,12 @@ func (vc *VaultCrawler) resolveLinks() {
 	}
 }
 
-// resolveWikilink implements Obsidian's wikilink resolution algorithm
-func (vc *VaultCrawler) resolveWikilink(sourceNode *VaultNode, linkTarget string) *VaultNode {
-	// Handle path-based links (contains / or \)
+func (vc *VaultCrawler) resolveWikilink(sourceNode *models.VaultNode, linkTarget string) *models.VaultNode {
 	if strings.Contains(linkTarget, "/") || strings.Contains(linkTarget, "\\") {
-		// TODO: we need an index of all possible nested links
-		return vc.resolvePathBasedLink(sourceNode, linkTarget)
+		return vc.resolvePathBasedLink(linkTarget)
 	}
 
-	// For basename-only links, follow Obsidian's search order
+	// For basename-only links, we follow Obsidian's search order
 	candidates, exists := vc.nameIndex[linkTarget]
 	if !exists {
 		return nil
@@ -296,49 +320,18 @@ func (vc *VaultCrawler) resolveWikilink(sourceNode *VaultNode, linkTarget string
 	}
 
 	// If still not found, return the first candidate as fallback
-	// (this shouldn't happen in normal Obsidian behavior, but provides robustness)
+	// (this shouldn't happen, but just in case)
 	return candidates[0]
 }
 
-// resolvePathBasedLink handles links that contain path separators
-func (vc *VaultCrawler) resolvePathBasedLink(sourceNode *VaultNode, linkTarget string) *VaultNode {
+func (vc *VaultCrawler) resolvePathBasedLink(linkTarget string) *models.VaultNode {
 	linkTarget = vc.normalizeDir(linkTarget)
 
-	// Try absolute path from vault root
-	absolutePath := filepath.Join(vc.RootPath, linkTarget)
-	if node, exists := vc.fileIndex[absolutePath]; exists && !node.IsDir {
-		return node
-	}
-
-	// Try with .md extension if not present
-	if !strings.HasSuffix(linkTarget, ".md") {
-		absolutePathMd := absolutePath + ".md"
-		if node, exists := vc.fileIndex[absolutePathMd]; exists && !node.IsDir {
-			return node
-		}
-	}
-
-	// Try relative path from source file's directory
-	sourceDir := filepath.Dir(sourceNode.Path)
-	relativePath := filepath.Join(sourceDir, linkTarget)
-	if node, exists := vc.fileIndex[relativePath]; exists && !node.IsDir {
-		return node
-	}
-
-	// Try relative path with .md extension
-	if !strings.HasSuffix(linkTarget, ".md") {
-		relativePathMd := relativePath + ".md"
-		if node, exists := vc.fileIndex[relativePathMd]; exists && !node.IsDir {
-			return node
-		}
-	}
-
-	// Try relative path from source file's directory WITH DEPTH INDEX
 	if node, exists := vc.depthFileIndex[linkTarget]; exists && !node.IsDir {
 		return node
 	}
 
-	// Try relative path with .md extension
+	// Try with .md extension
 	if !strings.HasSuffix(linkTarget, ".md") {
 		if node, exists := vc.depthFileIndex[linkTarget+".md"]; exists && !node.IsDir {
 			return node
@@ -346,76 +339,4 @@ func (vc *VaultCrawler) resolvePathBasedLink(sourceNode *VaultNode, linkTarget s
 	}
 
 	return nil
-}
-
-// findInDirectory looks for candidates in a specific directory
-func (vc *VaultCrawler) findInDirectory(candidates []*VaultNode, dirPath string) *VaultNode {
-	for _, candidate := range candidates {
-		if filepath.Dir(candidate.Path) == dirPath {
-			return candidate
-		}
-	}
-	return nil
-}
-
-// findInSubdirectories looks for candidates in subdirectories of the given directory
-func (vc *VaultCrawler) findInSubdirectories(candidates []*VaultNode, parentDir string) *VaultNode {
-	for _, candidate := range candidates {
-		candidateDir := filepath.Dir(candidate.Path)
-
-		// Check if candidate is in a subdirectory of parentDir
-		if vc.isSubdirectory(candidateDir, parentDir) {
-			return candidate
-		}
-	}
-	return nil
-}
-
-// findInVault searches the entire vault, excluding already searched locations
-func (vc *VaultCrawler) findInVault(candidates []*VaultNode, excludeDir string) *VaultNode {
-	// Sort candidates by depth (prefer files closer to root)
-	sortedCandidates := make([]*VaultNode, len(candidates))
-	copy(sortedCandidates, candidates)
-
-	// Simple depth-based sorting (count path separators)
-	for i := 0; i < len(sortedCandidates)-1; i++ {
-		for j := i + 1; j < len(sortedCandidates); j++ {
-			depthI := strings.Count(sortedCandidates[i].Path, string(filepath.Separator))
-			depthJ := strings.Count(sortedCandidates[j].Path, string(filepath.Separator))
-
-			if depthI > depthJ {
-				sortedCandidates[i], sortedCandidates[j] = sortedCandidates[j], sortedCandidates[i]
-			}
-		}
-	}
-
-	for _, candidate := range sortedCandidates {
-		candidateDir := filepath.Dir(candidate.Path)
-
-		// Skip if we already checked this location
-		if candidateDir == vc.RootPath ||
-			candidateDir == excludeDir ||
-			vc.isSubdirectory(candidateDir, excludeDir) {
-			continue
-		}
-
-		return candidate
-	}
-
-	return nil
-}
-
-func (vc *VaultCrawler) findLineNumber(content, needle string, occurrence int) int {
-	lines := strings.Split(content, "\n")
-	found := 0
-
-	for i, line := range lines {
-		if strings.Contains(line, needle) {
-			if found == occurrence {
-				return i + 1
-			}
-			found++
-		}
-	}
-	return 0
 }

@@ -42,19 +42,19 @@
         <main class="center">
           <h1 class="tag-title">Folder: <span>{{.Folder.Name}}</span></h1>
 
-          {{if .Folder.Children}}
+          {{if .Subfolders}}
           <h2 class="folder-subtitle">Sub-folders</h2>
           <div class="folder-list">
             <ul>
-              {{range .Folder.Children}}
-              <li><a href="/{{.Path}}">{{.Name}}</a></li>
+              {{range .Subfolders}}
+              <li><a href="/{{.URL}}">{{.Name}}</a></li>
               {{end}}
             </ul>
           </div>
-          {{end}} {{if .Folder.Posts}}
+          {{end}} {{if .Notes}}
           <h2 class="folder-subtitle">Posts</h2>
           <div class="post-grid">
-            {{range .Posts}}
+            {{range .Notes}} {{if not .IsDir}}
             <div class="post-card">
               <h2><a href="{{.URL}}">{{.Title}}</a></h2>
               <div class="post-card-meta">
@@ -68,10 +68,12 @@
                 >
               </div>
             </div>
-            {{end}}
+            {{end}} {{end}}
           </div>
-          {{template "pagination" .Pagination}} {{else}} {{if not
-          .Folder.Children}}
+
+          {{template "pagination" .Pagination}} {{else}} {{if not .Notes}}
+          <p>This folder is empty.</p>
+          {{else if not .Subfolders}}
           <p>This folder is empty.</p>
           {{end}} {{end}}
         </main>

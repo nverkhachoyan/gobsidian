@@ -9,7 +9,7 @@ This note serves as a starting point to navigate my digital garden.
 - **Technology & Programming:** Notes on software development, languages, and tools.
 
   - [[Exploring Go]]
-  - [[What are threads anyway?]]
+  - [[Tech/Tomfoolery And Stuff/What are threads anyway?]]
  
 - **Personal Growth:** Thoughts on learning, habits, and life.
   - [[Reading Habits]]
@@ -21,7 +21,7 @@ This note serves as a starting point to navigate my digital garden.
 
 This is an ever-evolving map that will grow as I add more to this space.
 
-![[Personal/Tomfoolery And Stuff/What are threads anyway?]]
+![[Tech/Tomfoolery And Stuff/What are threads anyway?]]
 
 Here's an example of an embed
 

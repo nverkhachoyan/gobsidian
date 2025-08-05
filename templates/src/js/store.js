@@ -98,19 +98,31 @@ export function initializeStores(Alpine) {
   });
 
   Alpine.store("graph", {
-    data: null,
+    localGraphData: null,
+    globalGraphData: null,
     modalOpen: false,
     modalHasBeenInitialized: false,
     graphObject: null,
     graphModalObject: null,
 
     async init() {
-      this.data = await loadJsonData("/generated/graph.json");
+      this.globalGraphData = await loadJsonData("/generated/graph.json");
+
+      if (window.location.pathname === "/") {
+        this.localGraphData = await loadJsonData(
+          "/generated/graphs/gobsidian-homepagegraph.json"
+        );
+      } else {
+        let localGraphFile = "/generated/graphs" + window.location.pathname;
+        localGraphFile = localGraphFile.replace(".html", ".json");
+        this.localGraphData = await loadJsonData(localGraphFile);
+      }
+
       this.initSmallGraph();
     },
 
     initSmallGraph() {
-      if (this.graphObject || !this.data || !graphCanvas) return;
+      if (this.graphObject || !this.localGraphData || !graphCanvas) return;
       if (!Alpine.store("theme").themeInitialized) {
         // Defer initialization until theme is ready
         window.addEventListener(
@@ -121,8 +133,8 @@ export function initializeStores(Alpine) {
         return;
       }
 
-      const nodes = this.data.nodes.map((node) => ({ ...node }));
-      const edges = this.data.edges.map((edge) => ({ ...edge }));
+      const nodes = this.localGraphData.nodes.map((node) => ({ ...node }));
+      const edges = this.localGraphData.edges.map((edge) => ({ ...edge }));
 
       this.graphObject = new ObsiGraph(graphCanvas, nodes, edges, {
         ...graphConfig,
@@ -138,8 +150,8 @@ export function initializeStores(Alpine) {
       this.modalOpen = true;
       if (!this.modalHasBeenInitialized) {
         if (!modalGraphCanvas) return;
-        const nodes = this.data.nodes.map((node) => ({ ...node }));
-        const edges = this.data.edges.map((edge) => ({ ...edge }));
+        const nodes = this.globalGraphData.nodes.map((node) => ({ ...node }));
+        const edges = this.globalGraphData.edges.map((edge) => ({ ...edge }));
         this.graphModalObject = new ObsiGraph(modalGraphCanvas, nodes, edges, {
           ...graphConfig,
         });

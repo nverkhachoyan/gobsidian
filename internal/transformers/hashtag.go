@@ -2,7 +2,7 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/crawler"
+	"gobsidian/internal/models"
 	"regexp"
 )
 
@@ -20,7 +20,7 @@ func (ip *HashtagEnricher) Name() string {
 	return "hashtag-enricher"
 }
 
-func (he *HashtagEnricher) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
+func (he *HashtagEnricher) Transform(content string, node *models.VaultNode, ctx *TransformContext) (string, error) {
 	result := content
 	return he.hashtagRegex.ReplaceAllStringFunc(result, func(match string) string {
 		parts := he.hashtagRegex.FindStringSubmatch(match)

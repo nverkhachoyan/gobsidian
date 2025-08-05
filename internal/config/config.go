@@ -15,6 +15,7 @@ var frontmatterRegex = regexp.MustCompile(`(?s)^---\s*\n(.*?)\n---`)
 var ObsidianImageRegex = regexp.MustCompile(`!\[\[([^|\]]+\.(?:png|jpg|jpeg|gif|bmp|svg))(?:\|(\d+)(?:x(\d+))?)?\]\]`)
 var hashtagRegex = regexp.MustCompile(`\B#([a-zA-Z0-9-_]+)`)
 var wikilinkRegex = regexp.MustCompile(`!?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]`)
+var markdownRegex = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 var obsidianCalloutRegex = regexp.MustCompile(`(?m)^>\[!(\w+)\]\s*\n((?:^>.*\n?)*)`)
 var footnotesRegex = regexp.MustCompile(`(?m)\^\[([\d\s\w-]+)\]`)
 
@@ -46,6 +47,7 @@ type Regexes struct {
 	FrontmatterRegex     *regexp.Regexp
 	HashtagRegex         *regexp.Regexp
 	WikilinkRegex        *regexp.Regexp
+	MarkdownRegex        *regexp.Regexp
 	ObsidianCalloutRegex *regexp.Regexp
 	FootnoteRegex        *regexp.Regexp
 }
@@ -82,6 +84,7 @@ func LoadConfig(filePath string) (Config, error) {
 				FrontmatterRegex:     frontmatterRegex,
 				HashtagRegex:         hashtagRegex,
 				WikilinkRegex:        wikilinkRegex,
+				MarkdownRegex:        markdownRegex,
 				ObsidianCalloutRegex: obsidianCalloutRegex,
 				FootnoteRegex:        footnotesRegex,
 			},
@@ -101,6 +104,7 @@ func LoadConfig(filePath string) (Config, error) {
 		FrontmatterRegex:     frontmatterRegex,
 		HashtagRegex:         hashtagRegex,
 		WikilinkRegex:        wikilinkRegex,
+		MarkdownRegex:        markdownRegex,
 		ObsidianCalloutRegex: obsidianCalloutRegex,
 		FootnoteRegex:        footnotesRegex,
 	}

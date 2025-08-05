@@ -11,6 +11,8 @@ tags:
 
 ![[geh.png]]
 
+[Googel](https://google.com)
+
 Welcome to my little corner of the internet! This space is a digital garden, a place where I'll share my thoughts, learnings, and explorations.
 
 ## What is a Digital Garden?

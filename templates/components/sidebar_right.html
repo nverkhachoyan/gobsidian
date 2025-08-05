@@ -4,7 +4,7 @@
   <div
     x-data="{}"
     x-init="$store.graph.init(); $store.collapsible.init('graph', true) "
-    x-show="$store.graph.data"
+    x-show="$store.graph.localGraphData"
     class="collapsible-container"
   >
     <h5 @click="$store.collapsible.toggle('graph')">

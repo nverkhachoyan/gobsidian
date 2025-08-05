@@ -2,7 +2,7 @@ package transformers
 
 import (
 	"fmt"
-	"gobsidian/internal/crawler"
+	"gobsidian/internal/models"
 	"regexp"
 	"strings"
 )
@@ -21,8 +21,8 @@ func (ct *CalloutTransformer) Name() string {
 	return "callout-transformer"
 }
 
-func (ct *CalloutTransformer) Transform(content string, node *crawler.VaultNode, ctx *TransformContext) (string, error) {
-	if node.GetNoteType() != crawler.NoteTypeMarkdown {
+func (ct *CalloutTransformer) Transform(content string, node *models.VaultNode, ctx *TransformContext) (string, error) {
+	if node.GetNoteType() != models.NoteTypeMarkdown {
 		return content, nil
 	}
 
